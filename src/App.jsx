@@ -1,4 +1,4 @@
-import { Routes, Route, useLocation } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
 
 import Navbar from "./Components/Navbar";
 import Footer from "./Components/Footer";
@@ -9,14 +9,10 @@ import Connexion from "./Pages/Connexion";
 import Inscription from "./Pages/Inscription";
 
 function App() {
-  const { pathname } = useLocation();
-  const isAuthPage = ["/connexion", "/inscription"].includes(
-    pathname.replace(/\/$/, ""),
-  );
-
   return (
     <>
-      {!isAuthPage && <Navbar />}
+      {" "}
+      <Navbar />
       <Routes>
         <Route
           path="/"
@@ -32,7 +28,7 @@ function App() {
         <Route path="/connexion" element={<Connexion />} />
         <Route path="/inscription" element={<Inscription />} />
       </Routes>
-      {!isAuthPage && <Footer />}
+      <Footer />
     </>
   );
 }

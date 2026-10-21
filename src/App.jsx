@@ -4,6 +4,7 @@ import Navbar from "./Components/Navbar";
 import Footer from "./Components/Footer";
 
 import Accueil from "./Pages/Accueil";
+import Createurs from "./Pages/createurs";
 import Connexion from "./Pages/Connexion";
 import Inscription from "./Pages/Inscription";
 
@@ -25,6 +26,9 @@ function App() {
             </main>
           }
         />
+
+        <Route path="/Createurs" element={<Createurs />} />
+
         <Route path="/connexion" element={<Connexion />} />
         <Route path="/inscription" element={<Inscription />} />
       </Routes>

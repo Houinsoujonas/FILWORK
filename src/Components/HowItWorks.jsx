@@ -129,6 +129,9 @@ function HowItWorks() {
 
         <motion.div
           className="how-it-works__grid"
+          role="region"
+          aria-label="Étapes pour utiliser FILWORK"
+          tabIndex={0}
           variants={containerVariants}
           initial="hidden"
           whileInView="visible"

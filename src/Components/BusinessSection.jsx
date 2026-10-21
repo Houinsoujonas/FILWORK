@@ -47,7 +47,15 @@ function BusinessSection() {
     const visual = visualRef.current;
     const button = buttonRef.current;
 
-    if (!section || !content || !visual || !button) return;
+    if (
+      !section ||
+      !content ||
+      !visual ||
+      !button ||
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    ) {
+      return undefined;
+    }
 
     const ctx = gsap.context(() => {
       const benefitCards = content.querySelectorAll(".business-benefit");
@@ -156,7 +164,7 @@ function BusinessSection() {
               à vos idées.
             </p>
             <div className="business-benefits">
-              {benefits.map((benefit, index) => (
+              {benefits.map((benefit) => (
                 <article className="business-benefit" key={benefit.title}>
                   <div className="business-benefit-icon">{benefit.icon}</div>
 

@@ -393,8 +393,8 @@
   }
 
   .hero__eyebrow {
-    font-size: 0.49rem;
-    letter-spacing: 0.09em;
+    font-size: 0.52rem;
+    letter-spacing: 0.08em;
   }
 
   .hero__eyebrow-line {
@@ -410,7 +410,7 @@
   }
 
   .hero__signature {
-    font-size: 0.46rem;
+    font-size: 0.52rem;
     letter-spacing: 0.08em;
   }
 }

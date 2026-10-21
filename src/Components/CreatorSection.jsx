@@ -1,4 +1,4 @@
-import { useRef, useLayoutEffect } from "react";
+import { useRef, useLayoutEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -84,6 +84,7 @@ const benefits = [
 
 function CreatorSection() {
   const sectionRef = useRef(null);
+  const [activeCardId, setActiveCardId] = useState(null);
   const navigate = useNavigate();
 
   useLayoutEffect(() => {
@@ -265,14 +266,25 @@ function CreatorSection() {
         <div
           className="creator-section__visuals"
           aria-label="Découvrez les possibilités offertes aux créateurs"
+          role="region"
+          tabIndex={0}
         >
           {creatorImages.map((image) => (
             <article
-              className="creator-section__image-card"
+              className={`creator-section__image-card ${
+                activeCardId === image.id ? "is-active" : ""
+              }`}
               key={image.id}
               tabIndex={0}
               aria-labelledby={`creator-card-title-${image.id}`}
               aria-describedby={`creator-card-description-${image.id}`}
+              onClick={(event) => {
+                if (event.nativeEvent.pointerType === "mouse") return;
+
+                setActiveCardId((currentId) =>
+                  currentId === image.id ? null : image.id,
+                );
+              }}
             >
               <div className="creator-section__image-frame">
                 <img src={image.src} alt={image.alt} loading="lazy" />
@@ -292,7 +304,10 @@ function CreatorSection() {
                 </span>
               </div>
 
-              <div className="creator-section__image-details">
+              <div
+                className="creator-section__image-details"
+                id={`creator-card-details-${image.id}`}
+              >
                 <span
                   className="creator-section__caption-dot"
                   aria-hidden="true"

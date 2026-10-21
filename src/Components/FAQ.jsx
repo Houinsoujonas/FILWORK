@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { FiPlus, FiMinus } from "react-icons/fi";
 import "./FAQ.css";
 
@@ -36,39 +36,42 @@ const questions = [
   },
 ];
 
-const sectionVariants = {
+const createSectionVariants = (shouldReduceMotion) => ({
   hidden: {
     opacity: 0,
-    y: 35,
+    y: shouldReduceMotion ? 0 : 35,
   },
   visible: {
     opacity: 1,
     y: 0,
     transition: {
-      duration: 0.65,
+      duration: shouldReduceMotion ? 0 : 0.65,
       ease: "easeOut",
-      staggerChildren: 0.1,
+      staggerChildren: shouldReduceMotion ? 0 : 0.1,
     },
   },
-};
+});
 
-const itemVariants = {
+const createItemVariants = (shouldReduceMotion) => ({
   hidden: {
     opacity: 0,
-    y: 18,
+    y: shouldReduceMotion ? 0 : 18,
   },
   visible: {
     opacity: 1,
     y: 0,
     transition: {
-      duration: 0.45,
+      duration: shouldReduceMotion ? 0 : 0.45,
       ease: "easeOut",
     },
   },
-};
+});
 
 function FAQ() {
   const [activeIndex, setActiveIndex] = useState(0);
+  const shouldReduceMotion = useReducedMotion() ?? false;
+  const sectionVariants = createSectionVariants(shouldReduceMotion);
+  const itemVariants = createItemVariants(shouldReduceMotion);
 
   const toggleQuestion = (index) => {
     setActiveIndex((currentIndex) => (currentIndex === index ? null : index));
@@ -110,7 +113,7 @@ function FAQ() {
                 className={`faq-item ${isOpen ? "is-open" : ""}`}
                 key={item.question}
                 variants={itemVariants}
-                layout
+                layout={!shouldReduceMotion}
               >
                 <button
                   className="faq-question"
@@ -129,7 +132,7 @@ function FAQ() {
                     className="faq-toggle"
                     aria-hidden="true"
                     animate={{ rotate: isOpen ? 180 : 0 }}
-                    transition={{ duration: 0.25 }}
+                    transition={{ duration: shouldReduceMotion ? 0 : 0.25 }}
                   >
                     {isOpen ? <FiMinus /> : <FiPlus />}
                   </motion.span>
@@ -141,12 +144,19 @@ function FAQ() {
                       className="faq-answer"
                       id={answerId}
                       key="answer"
-                      initial={{ height: 0, opacity: 0 }}
+                      initial={
+                        shouldReduceMotion
+                          ? false
+                          : { height: 0, opacity: 0 }
+                      }
                       animate={{ height: "auto", opacity: 1 }}
                       exit={{ height: 0, opacity: 0 }}
                       transition={{
-                        height: { duration: 0.3, ease: "easeInOut" },
-                        opacity: { duration: 0.2 },
+                        height: {
+                          duration: shouldReduceMotion ? 0 : 0.3,
+                          ease: "easeInOut",
+                        },
+                        opacity: { duration: shouldReduceMotion ? 0 : 0.2 },
                       }}
                     >
                       <p>{item.answer}</p>

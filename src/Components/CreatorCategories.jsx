@@ -1,4 +1,4 @@
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 
 import CircularCarousel from "./CircularCarousel";
 
@@ -57,16 +57,20 @@ const categories = [
 ];
 
 function CreatorCategories() {
+  const shouldReduceMotion = useReducedMotion() ?? false;
+
   return (
     <section className="creator-categories" id="categories">
       {" "}
       <div className="creator-categories__container">
         <motion.div
           className="creator-categories__header"
-          initial={{ opacity: 0, y: 35 }}
+          initial={
+            shouldReduceMotion ? false : { opacity: 0, y: 35 }
+          }
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, amount: 0.25 }}
-          transition={{ duration: 0.7, ease: "easeOut" }}
+          transition={{ duration: shouldReduceMotion ? 0 : 0.7, ease: "easeOut" }}
         >
           {" "}
           <div className="creator-categories__eyebrow">
@@ -90,10 +94,16 @@ function CreatorCategories() {
 
         <motion.div
           className="creator-categories__carousel"
-          initial={{ opacity: 0, y: 45 }}
+          initial={
+            shouldReduceMotion ? false : { opacity: 0, y: 45 }
+          }
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, amount: 0.1 }}
-          transition={{ duration: 0.9, delay: 0.15, ease: "easeOut" }}
+          transition={{
+            duration: shouldReduceMotion ? 0 : 0.9,
+            delay: shouldReduceMotion ? 0 : 0.15,
+            ease: "easeOut",
+          }}
         >
           <CircularCarousel
             items={categories}
@@ -109,10 +119,13 @@ function CreatorCategories() {
 
         <motion.div
           className="creator-categories__footer"
-          initial={{ opacity: 0 }}
+          initial={shouldReduceMotion ? false : { opacity: 0 }}
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.7, delay: 0.2 }}
+          transition={{
+            duration: shouldReduceMotion ? 0 : 0.7,
+            delay: shouldReduceMotion ? 0 : 0.2,
+          }}
         >
           <span>
             <span className="creator-categories__status-dot" />

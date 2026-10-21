@@ -82,6 +82,11 @@ gap: 24px;
 align-items: stretch;
 }
 
+.how-it-works__grid:focus-visible {
+outline: 2px solid #d6a354;
+outline-offset: 5px;
+}
+
 /* 
 CARD
  */
@@ -384,8 +389,24 @@ line-height: 1.8;
 }
 
 .how-it-works__grid {
-grid-template-columns: 1fr;
+display: flex;
+flex-wrap: nowrap;
+overflow-x: auto;
+overscroll-behavior-x: contain;
+scroll-snap-type: x proximity;
+scrollbar-width: none;
+-webkit-overflow-scrolling: touch;
 gap: 20px;
+}
+
+.how-it-works__grid::-webkit-scrollbar {
+display: none;
+}
+
+.how-it-works__card {
+flex: 0 0 min(82vw, 320px);
+min-width: 260px;
+scroll-snap-align: start;
 }
 
 .how-it-works__card:last-child {

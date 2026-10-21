@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef } from "react";
+import { useReducedMotion } from "framer-motion";
 import gsap from "gsap";
 
 import "./CircularCarousel.css";
@@ -13,10 +14,12 @@ function CircularCarousel({
   pauseOnHover = true,
   captions = true,
 }) {
+  const shouldReduceMotion = useReducedMotion() ?? false;
   const stageRef = useRef(null);
   const ringRef = useRef(null);
   const cardsRef = useRef([]);
   const frameRef = useRef(null);
+  const animationLoopRef = useRef(null);
   const resizeTimerRef = useRef(null);
 
   const rotationRef = useRef(0);
@@ -120,13 +123,13 @@ function CircularCarousel({
   }, [items.length, normalizeAngle]);
 
   const animationLoop = useCallback(
-    (time) => {
+    () => {
       if (!draggingRef.current && !pausedRef.current) {
         rotationRef.current += velocityRef.current * Math.min(32, 16);
       }
 
       renderRing();
-      frameRef.current = requestAnimationFrame(animationLoop);
+      frameRef.current = requestAnimationFrame(animationLoopRef.current);
     },
     [renderRing],
   );
@@ -143,6 +146,12 @@ function CircularCarousel({
       while (difference > 180) difference -= 360;
       while (difference < -180) difference += 360;
 
+      if (shouldReduceMotion) {
+        rotationRef.current = current + difference;
+        renderRing();
+        return;
+      }
+
       if (frameRef.current) {
         cancelAnimationFrame(frameRef.current);
       }
@@ -153,13 +162,13 @@ function CircularCarousel({
         ease: "power3.out",
         onUpdate: renderRing,
         onComplete: () => {
-          frameRef.current = requestAnimationFrame(animationLoop);
+          frameRef.current = requestAnimationFrame(animationLoopRef.current);
         },
       });
 
       velocityRef.current = 0;
     },
-    [animationLoop, renderRing],
+    [renderRing, shouldReduceMotion],
   );
 
   const handlePointerDown = (event) => {
@@ -207,8 +216,13 @@ function CircularCarousel({
   useEffect(() => {
     calculateGeometry();
     renderRing();
+    animationLoopRef.current = animationLoop;
 
-    frameRef.current = requestAnimationFrame(animationLoop);
+    if (shouldReduceMotion) {
+      renderRing();
+    } else {
+      frameRef.current = requestAnimationFrame(animationLoopRef.current);
+    }
 
     const handleResize = () => {
       clearTimeout(resizeTimerRef.current);
@@ -227,7 +241,7 @@ function CircularCarousel({
       window.removeEventListener("resize", handleResize);
       gsap.killTweensOf(rotationRef);
     };
-  }, [calculateGeometry, renderRing, animationLoop]);
+  }, [calculateGeometry, renderRing, animationLoop, shouldReduceMotion]);
 
   return (
     <div

@@ -20,7 +20,12 @@ function Footer() {
   useLayoutEffect(() => {
     const footer = footerRef.current;
 
-    if (!footer) return;
+    if (
+      !footer ||
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    ) {
+      return undefined;
+    }
 
     const ctx = gsap.context(() => {
       const brand = footer.querySelector(".footer__brand");

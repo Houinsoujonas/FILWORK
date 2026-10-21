@@ -128,7 +128,6 @@ function Hero() {
             <Button
               variant="outline"
               size="large"
-              showIcon={false}
               onClick={() => {
                 window.location.href = "/inscription";
               }}

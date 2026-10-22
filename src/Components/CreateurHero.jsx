@@ -1,5 +1,4 @@
 import { useRef, useLayoutEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { gsap } from "gsap";
 
 import Button from "./Button";
@@ -8,7 +7,6 @@ import "./CreateurHero.css";
 
 function CreateurHero() {
   const sectionRef = useRef(null);
-  const navigate = useNavigate();
 
   useLayoutEffect(() => {
     const section = sectionRef.current;
@@ -52,7 +50,7 @@ function CreateurHero() {
           </p>
 
           <div className="createur-hero__actions">
-            <Button onClick={() => navigate("/inscription")}>
+            <Button to="/inscription">
               Créer mon profil
             </Button>
           </div>

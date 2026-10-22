@@ -1,5 +1,4 @@
 import "./Button.css";
-import { Link } from "react-router-dom";
 
 function Button({
   children,
@@ -28,11 +27,11 @@ function Button({
     .join(" ");
 
   const isLink = Boolean(to) && !disabled && !loading;
-  const Element = isLink ? Link : "button";
+  const Element = isLink ? "a" : "button";
   return (
     <Element
       type={isLink ? undefined : type}
-      to={isLink ? to : undefined}
+      href={isLink ? to : undefined}
       className={classes}
       onClick={onClick}
       {...(!isLink ? { disabled: disabled || loading } : {})}

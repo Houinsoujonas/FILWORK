@@ -1344,3 +1344,22 @@ animation-iteration-count: 1 !important;
 transition-duration: 0.01ms !important;
 }
 }
+
+/* Connexion reste animée, mais avec une entrée courte et sans boucle. */
+.login-page *,
+.login-page *::before,
+.login-page *::after {
+  animation-delay: 0s !important;
+  animation-duration: 0.35s !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.15s !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-page *,
+  .login-page *::before,
+  .login-page *::after {
+    animation: none !important;
+    transition-duration: 0.01ms !important;
+  }
+}

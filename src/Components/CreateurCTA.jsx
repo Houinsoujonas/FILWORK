@@ -1,5 +1,4 @@
 import { useRef, useLayoutEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
@@ -10,7 +9,6 @@ gsap.registerPlugin(ScrollTrigger);
 
 function CreateurCTA() {
   const sectionRef = useRef(null);
-  const navigate = useNavigate();
 
   useLayoutEffect(() => {
     const section = sectionRef.current;
@@ -44,7 +42,7 @@ function CreateurCTA() {
         <div className="createur-cta__box">
           <h2>Prêt à montrer ce que vous savez faire&nbsp;?</h2>
           <p>Votre profil est visible par les entreprises dès sa création.</p>
-          <Button onClick={() => navigate("/inscription")}>
+          <Button to="/inscription">
             Rejoindre Filwork
           </Button>
         </div>

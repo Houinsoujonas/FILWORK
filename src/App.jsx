@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+import { Component, lazy, Suspense } from "react";
 import { Route, Routes, useLocation } from "react-router-dom";
 
 import Navbar from "./Components/Navbar";
@@ -23,7 +23,7 @@ const NotFound = lazy(() => import("./Pages/NotFound"));
 
 function SiteLayout({ children }) {
   const { pathname } = useLocation();
-  const isDashboard = pathname.startsWith("/espace/") || pathname === "/administration";
+  const isDashboard = pathname.startsWith("/espace/") || pathname.startsWith("/administration");
 
   return (
     <>
@@ -34,9 +34,31 @@ function SiteLayout({ children }) {
   );
 }
 
+class RouteErrorBoundary extends Component {
+  state = { hasError: false };
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <main className="route-error" role="alert">
+          <h1>Cette page est momentanément indisponible</h1>
+          <p>Un problème est survenu pendant son affichage. Rechargez la page pour réessayer.</p>
+          <button type="button" onClick={() => window.location.reload()}>Recharger la page</button>
+        </main>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 function App() {
   return (
     <SiteLayout>
+      <RouteErrorBoundary>
       <Suspense fallback={<main className="route-loading" role="status">Chargement de la page…</main>}>
       <Routes>
         <Route path="/" element={<main><Accueil /></main>} />
@@ -58,6 +80,7 @@ function App() {
         <Route path="*" element={<NotFound />} />
       </Routes>
       </Suspense>
+      </RouteErrorBoundary>
     </SiteLayout>
   );
 }

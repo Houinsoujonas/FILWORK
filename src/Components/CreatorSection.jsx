@@ -1,5 +1,4 @@
 import { useRef, useLayoutEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
@@ -84,7 +83,6 @@ const benefits = [
 function CreatorSection() {
   const sectionRef = useRef(null);
   const [activeCardId, setActiveCardId] = useState(null);
-  const navigate = useNavigate();
 
   useLayoutEffect(() => {
     const section = sectionRef.current;
@@ -322,7 +320,7 @@ function CreatorSection() {
         </div>
         {/* BOUTON CENTRÉ SOUS LES IMAGES */}
         <div className="creator-section__action">
-          <Button onClick={() => navigate("/inscription")}>
+          <Button to="/inscription">
             Rejoindre Filwork
           </Button>
 

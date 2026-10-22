@@ -334,6 +334,25 @@ transition-duration: 0.01ms !important;
 }
 }
 
+/* Garder seulement des mouvements courts sur l'écran d'inscription. */
+.register-page *,
+.register-page *::before,
+.register-page *::after {
+  animation-delay: 0s !important;
+  animation-duration: 0.35s !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.15s !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .register-page *,
+  .register-page *::before,
+  .register-page *::after {
+    animation: none !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 /* Animation d'apparition du formulaire */
 .register-container {
 animation: register-fade-in-down 0.7s ease-out both;

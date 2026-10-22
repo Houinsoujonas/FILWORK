@@ -127,6 +127,14 @@
   outline-offset:3px
 }
 
+/* Les espaces privés n'utilisent pas d'animations décoratives. */
+.workspace *,
+.workspace *::before,
+.workspace *::after {
+  animation: none !important;
+  transition: none !important;
+}
+
 @media(max-width:850px) {
   .workspace {
   grid-template-columns:1fr

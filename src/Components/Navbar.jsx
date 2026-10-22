@@ -95,21 +95,21 @@ function Navbar() {
           </div>
 
           <div className="navbar__actions">
-            <Link
-              to="/connexion"
+            <a
+              href="/connexion"
               className="navbar__action navbar__login"
               onClick={closeMenu}
             >
               Connexion
-            </Link>
+            </a>
 
-            <Link
-              to="/inscription"
+            <a
+              href="/inscription"
               className="navbar__action navbar__signup"
               onClick={closeMenu}
             >
               <span>S'inscrire</span>
-            </Link>
+            </a>
           </div>
         </nav>
       </div>

@@ -7,7 +7,6 @@ import {
 } from "react-icons/fi";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { useNavigate } from "react-router-dom";
 
 import entr from "../assets/entr.jpg";
 import "./BusinessSection.css";
@@ -36,7 +35,6 @@ const benefits = [
 ];
 
 function BusinessSection() {
-  const navigate = useNavigate();
   const sectionRef = useRef(null);
   const contentRef = useRef(null);
   const visualRef = useRef(null);
@@ -229,13 +227,12 @@ function BusinessSection() {
           </div>
         </div>
         <div className="business-bottom-cta" ref={buttonRef}>
-          <button
+          <a
+            href="/inscription"
             className="business-cta"
-            type="button"
-            onClick={() => navigate("/inscription")}
           >
             <span>Rejoindre Filwork</span>
-          </button>
+          </a>
         </div>
       </div>
     </section>

@@ -178,7 +178,8 @@
   border-radius:10px;
   background:#141618;
   color:#b9babe;
-  font:600 14px inherit
+  font:600 14px var(--font-body, sans-serif);
+  cursor:not-allowed
 }
 .filter-button:disabled {
   opacity:.7
@@ -277,10 +278,6 @@
   margin-top:34px
 }
 
-}
-
-.filter-button {
-  font:600 14px var(--font-body)
 }
 
 .auth-page {

@@ -144,6 +144,12 @@ width: fit-content;
 color: var(--login-text);
 }
 
+.login-brand img {
+width: 164px;
+height: auto;
+display: block;
+}
+
 .login-brand__symbol {
 display: grid;
 place-items: center;
@@ -395,6 +401,12 @@ min-height: 42px;
 display: none;
 align-items: center;
 gap: 9px;
+}
+
+.login-mobile-brand img {
+display: block;
+width: 140px;
+height: auto;
 }
 
 .login-mobile-brand .login-brand__symbol {
@@ -810,7 +822,7 @@ BOUTON PRINCIPAL
 display: flex;
 align-items: center;
 justify-content: center;
-gap: 10px;
+  gap: 0;
 width: 100%;
 min-height: 48px;
 padding: 0 16px;
@@ -828,11 +840,6 @@ transition: background 0.2s ease, transform 0.2s ease;
 .login-submit:hover {
 background: #e4b76f;
 transform: translateY(-1px);
-}
-
-.login-submit svg {
-flex-shrink: 0;
-font-size: 17px;
 }
 
 
@@ -858,27 +865,6 @@ outline-offset: 4px;
 .login-submit > span:first-child {
 position: relative;
 z-index: 1;
-}
-
-.login-submit__icon {
-position: relative;
-z-index: 1;
-display: grid;
-flex-shrink: 0;
-place-items: center;
-width: 35px;
-height: 35px;
-border-radius: 8px;
-background: rgba(24, 18, 10, 0.1);
-font-size: 18px;
-transition:
-transform 0.25s ease,
-background 0.25s ease;
-}
-
-.login-submit:hover .login-submit__icon {
-transform: translate(2px, -2px);
-background: rgba(24, 18, 10, 0.16);
 }
 
 /* =========================================

@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import {
   FiArrowLeft,
-  FiArrowRight,
   FiBriefcase,
   FiCamera,
   FiEye,
@@ -15,6 +14,7 @@ function Inscription() {
   const [accountType, setAccountType] = useState("creator");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [submitMessage, setSubmitMessage] = useState("");
 
   const handleSubmit = (event) => {
     event.preventDefault();
@@ -25,12 +25,16 @@ const password = formData.get("password");
 const confirmPassword = formData.get("confirmPassword");
 
 if (password !== confirmPassword) {
-  alert("Les mots de passe ne correspondent pas.");
+  setSubmitMessage("Les mots de passe ne correspondent pas.");
   return;
 }
 
-console.log("Type de compte :", accountType);
-console.log("Données du formulaire :", Object.fromEntries(formData));
+  const visibleFormData = Object.fromEntries(formData.entries());
+  delete visibleFormData.password;
+  delete visibleFormData.confirmPassword;
+  console.info("Type de compte :", accountType);
+  console.info("Données du formulaire (hors mots de passe) :", visibleFormData);
+  setSubmitMessage("La création de compte sera activée dès que le service sera relié à FILWORK.");
 ;
   };
 
@@ -40,11 +44,7 @@ console.log("Données du formulaire :", Object.fromEntries(formData));
       <div className="register-container">
         {" "}
         <Link to="/" className="register-brand" aria-label="FILWORK, accueil">
-          {" "}
-          <span className="register-brand__symbol">F</span>{" "}
-          <span className="register-brand__name">
-            fil<span>work</span>{" "}
-          </span>{" "}
+          <img src="/filwork-logo.svg" alt="" />
         </Link>
         
         <div className="register-heading">
@@ -84,6 +84,7 @@ console.log("Données du formulaire :", Object.fromEntries(formData));
           </button>
         </div>
         <form className="register-form" onSubmit={handleSubmit}>
+          {submitMessage && <p className="form-notice" role="status">{submitMessage}</p>}
           {accountType === "creator" ? (
             <>
               <div className="register-field">
@@ -220,7 +221,6 @@ console.log("Données du formulaire :", Object.fromEntries(formData));
 
           <button type="submit" className="register-submit">
             Créer mon compte
-            <FiArrowRight aria-hidden="true" />
           </button>
         </form>
         <p className="register-login">

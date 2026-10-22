@@ -4,7 +4,6 @@ import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 import {
-  FiArrowUpRight,
   FiCheckCircle,
   FiFolder,
   FiTarget,
@@ -300,7 +299,6 @@ function CreatorSection() {
 
                 <span className="creator-section__image-indicator">
                   Explorer
-                  <FiArrowUpRight aria-hidden="true" />
                 </span>
               </div>
 
@@ -326,7 +324,6 @@ function CreatorSection() {
         <div className="creator-section__action">
           <Button onClick={() => navigate("/inscription")}>
             Rejoindre Filwork
-            <FiArrowUpRight aria-hidden="true" />
           </Button>
 
           <p className="creator-section__action-note">

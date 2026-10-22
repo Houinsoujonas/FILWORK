@@ -283,6 +283,10 @@ flex-direction: column;
 gap: 26px;
 }
 
+.featured-campaigns__header > div {
+  align-self: center;
+}
+
 .featured-campaigns__showcase {
 grid-template-columns: 1fr 1fr;
 }

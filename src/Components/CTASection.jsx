@@ -1,5 +1,5 @@
 import { motion, useReducedMotion } from "framer-motion";
-import { FiArrowUpRight, FiUsers, FiBriefcase } from "react-icons/fi";
+import { FiUsers, FiBriefcase } from "react-icons/fi";
 
 import Button from "./Button";
 
@@ -89,10 +89,7 @@ function CTASection() {
             <Button
               variant="primary"
               size="large"
-              icon={<FiArrowUpRight aria-hidden="true" />}
-              onClick={() => {
-                window.location.href = "/inscription";
-              }}
+              to="/inscription"
             >
               Rejoindre Filwork
             </Button>
@@ -100,10 +97,7 @@ function CTASection() {
             <Button
               variant="outline"
               size="large"
-              icon={<FiArrowUpRight aria-hidden="true" />}
-              onClick={() => {
-                window.location.href = "/connexion";
-              }}
+              to="/connexion"
             >
               Se connecter
             </Button>

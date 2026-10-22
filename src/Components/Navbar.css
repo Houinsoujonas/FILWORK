@@ -18,11 +18,8 @@
   width: 100%;
   min-height: 82px;
 
-  background: rgba(8, 9, 10, 0.9);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.055);
-
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background: #08090a;
+  border-bottom: 1px solid #292b2e;
 }
 
 .navbar *,
@@ -59,11 +56,17 @@
   text-decoration: none;
 }
 
+.filwork-logo img {
+  display: block;
+  width: 159px;
+  height: auto;
+}
+
 .filwork-logo__symbol {
   display: block;
 
-  width: 43px;
-  height: 43px;
+  width: 44px;
+  height: 44px;
 
   flex-shrink: 0;
   overflow: visible;
@@ -264,7 +267,8 @@
 /* Connexion */
 
 .navbar__login {
-  background: transparent;
+  background: #17191b;
+  border-color: #383b3f;
   color: var(--navbar-text);
 }
 
@@ -272,8 +276,8 @@
   transform: translateY(-2px);
 
   color: var(--navbar-gold);
-  background: rgba(214, 163, 84, 0.11);
-  border-color: rgba(214, 163, 84, 0.2);
+  background: rgba(214, 163, 84, 0.15);
+  border-color: rgba(214, 163, 84, 0.55);
 }
 
 
@@ -297,6 +301,12 @@
   color: #15110a;
 
   box-shadow: 0 7px 22px rgba(214, 163, 84, 0.2);
+}
+
+.navbar__login:focus-visible,
+.navbar__signup:focus-visible {
+  outline: 2px solid var(--navbar-gold);
+  outline-offset: 3px;
 }
 
 .navbar__signup-icon {
@@ -333,8 +343,8 @@
   align-items: center;
   justify-content: center;
 
-  width: 43px;
-  height: 43px;
+  width: 44px;
+  height: 44px;
   padding: 0;
 
   border: 1px solid var(--navbar-border);
@@ -439,13 +449,13 @@
     gap: 20px;
     padding: 20px;
 
-    background: rgba(16, 17, 18, 0.98);
-    border-bottom: 1px solid var(--navbar-border);
+    z-index: 1;
+    background: #101112;
+    border: 1px solid #292b2e;
+    border-top: 0;
+    border-radius: 0 0 14px 14px;
 
-    box-shadow: 0 20px 35px rgba(0, 0, 0, 0.22);
-
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+    box-shadow: 0 22px 38px rgba(0, 0, 0, 0.55);
   }
 
   .navbar__navigation--open {

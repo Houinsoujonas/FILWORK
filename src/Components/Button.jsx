@@ -1,4 +1,5 @@
 import "./Button.css";
+import { Link } from "react-router-dom";
 
 function Button({
   children,
@@ -12,6 +13,7 @@ function Button({
   loading = false,
   className = "",
   onClick,
+  to,
   ...props
 }) {
   const classes = [
@@ -25,12 +27,15 @@ function Button({
     .filter(Boolean)
     .join(" ");
 
+  const isLink = Boolean(to) && !disabled && !loading;
+  const Element = isLink ? Link : "button";
   return (
-    <button
-      type={type}
+    <Element
+      type={isLink ? undefined : type}
+      to={isLink ? to : undefined}
       className={classes}
       onClick={onClick}
-      disabled={disabled || loading}
+      {...(!isLink ? { disabled: disabled || loading } : {})}
       aria-busy={loading || undefined}
       {...props}
     >
@@ -53,7 +58,7 @@ function Button({
           )}
         </>
       )}
-    </button>
+    </Element>
   );
 }
 

@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import {
-  FiArrowUpRight,
   FiEye,
   FiEyeOff,
   FiBriefcase,
@@ -19,12 +18,13 @@ function Connexion() {
   const [accountType, setAccountType] = useState("creator");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
+  const [submitMessage, setSubmitMessage] = useState("");
 
   const handleSubmit = (event) => {
     event.preventDefault();
 
     // L'authentification sera connectée au backend ultérieurement.
-    console.log("Type de compte sélectionné :", accountType);
+    setSubmitMessage("La connexion sera activée dès que le service de compte sera relié à FILWORK.");
   };
 
   return (
@@ -43,11 +43,7 @@ function Connexion() {
           <div className="login-visual__overlay" aria-hidden="true" />
 
           <Link to="/" className="login-brand" aria-label="FILWORK, accueil">
-            <span className="login-brand__symbol">F</span>
-
-            <span className="login-brand__name">
-              fil<span>work</span>
-            </span>
+            <img src="/filwork-logo.svg" alt="" />
           </Link>
 
           <div className="login-visual__top-label">
@@ -115,18 +111,15 @@ function Connexion() {
         {/* PANNEAU DU FORMULAIRE */}
         <section className="login-form-panel">
           <div className="login-form-panel__top">
-            <Link to="/" className="login-mobile-brand">
-              <span className="login-brand__symbol">F</span>
-              <span className="login-brand__name">
-                fil<span>work</span>
-              </span>
+            <Link to="/" className="login-mobile-brand" aria-label="FILWORK, accueil">
+              <img src="/filwork-logo.svg" alt="" />
             </Link>
 
             <div className="login-form-panel__register">
               <span>Pas encore membre ?</span>
 
               <Link to="/inscription">
-                S'inscrire <FiArrowUpRight aria-hidden="true" />
+                S'inscrire
               </Link>
             </div>
           </div>
@@ -151,6 +144,7 @@ function Connexion() {
             </div>
 
             <form className="login-form" onSubmit={handleSubmit}>
+              {submitMessage && <p className="form-notice" role="status">{submitMessage}</p>}
               <fieldset className="login-account">
                 <legend>Vous êtes sur FILWORK en tant que...</legend>
 
@@ -282,9 +276,6 @@ function Connexion() {
               <button type="submit" className="login-submit">
                 <span>Se connecter</span>
 
-                <span className="login-submit__icon">
-                  <FiArrowUpRight aria-hidden="true" />
-                </span>
               </button>
 
               <div className="login-security">

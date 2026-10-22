@@ -1,6 +1,5 @@
 import { useLayoutEffect, useRef } from "react";
 import {
-  FiArrowUpRight,
   FiUsers,
   FiTarget,
   FiTrendingUp,
@@ -8,6 +7,7 @@ import {
 } from "react-icons/fi";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { useNavigate } from "react-router-dom";
 
 import entr from "../assets/entr.jpg";
 import "./BusinessSection.css";
@@ -36,6 +36,7 @@ const benefits = [
 ];
 
 function BusinessSection() {
+  const navigate = useNavigate();
   const sectionRef = useRef(null);
   const contentRef = useRef(null);
   const visualRef = useRef(null);
@@ -231,12 +232,9 @@ function BusinessSection() {
           <button
             className="business-cta"
             type="button"
-            onClick={() => {
-              window.location.href = "/inscription";
-            }}
+            onClick={() => navigate("/inscription")}
           >
             <span>Rejoindre Filwork</span>
-            <FiArrowUpRight aria-hidden="true" />
           </button>
         </div>
       </div>

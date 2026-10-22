@@ -1,47 +1,21 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, NavLink } from "react-router-dom";
-import { FiMenu, FiX, FiArrowUpRight } from "react-icons/fi";
+import { FiMenu, FiX } from "react-icons/fi";
 
 import "./Navbar.css";
 
 const navLinks = [
   { label: "Accueil", path: "/" },
+  { label: "Créateur", path: "/createurs" },
+  { label: "Annuaire", path: "/annuaire-createurs" },
+  { label: "Campagne", path: "/campagnes" },
   { label: "À propos", path: "/a-propos" },
-  { label: "Campagnes", path: "/campagnes" },
-  { label: "Créateurs", path: "/createurs" },
 ];
 
 function FilworkLogo() {
   return (
     <Link to="/" className="filwork-logo" aria-label="Filwork — Accueil">
-      <svg
-        className="filwork-logo__symbol"
-        viewBox="0 0 48 48"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-        aria-hidden="true"
-      >
-        <path
-          d="M9 14.5L24 6L39 14.5V31.5L24 40L9 31.5V14.5Z"
-          className="filwork-logo__frame"
-        />
-
-        <path d="M17 18H31" className="filwork-logo__line" />
-
-        <path d="M17 18V30" className="filwork-logo__line" />
-
-        <path d="M17 30H29" className="filwork-logo__line" />
-
-        <path d="M24 18V30" className="filwork-logo__line-accent" />
-
-        <circle cx="31" cy="18" r="3" className="filwork-logo__node" />
-
-        <circle cx="29" cy="30" r="3" className="filwork-logo__node" />
-      </svg>
-
-      <span className="filwork-logo__word">
-        fil<span>work</span>
-      </span>
+      <img src="/filwork-logo.svg" alt="" />
     </Link>
   );
 }
@@ -135,10 +109,6 @@ function Navbar() {
               onClick={closeMenu}
             >
               <span>S'inscrire</span>
-              <FiArrowUpRight
-                className="navbar__signup-icon"
-                aria-hidden="true"
-              />
             </Link>
           </div>
         </nav>

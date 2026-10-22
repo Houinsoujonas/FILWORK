@@ -1,7 +1,6 @@
 import { useRef, useLayoutEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { gsap } from "gsap";
-import { FiArrowUpRight } from "react-icons/fi";
 
 import Button from "./Button";
 
@@ -55,7 +54,6 @@ function CreateurHero() {
           <div className="createur-hero__actions">
             <Button onClick={() => navigate("/inscription")}>
               Créer mon profil
-              <FiArrowUpRight aria-hidden="true" />
             </Button>
           </div>
         </div>

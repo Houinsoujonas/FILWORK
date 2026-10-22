@@ -1,0 +1,83 @@
+.campaign-form {
+  max-width: 860px;
+  padding: clamp(20px, 4vw, 36px);
+  border: 1px solid #292c30;
+  border-radius: 16px;
+  background: #131517;
+}
+
+.campaign-form__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.campaign-form label {
+  display: grid;
+  gap: 8px;
+  color: #e7e5df;
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.campaign-form input,
+.campaign-form textarea {
+  width: 100%;
+  min-height: 46px;
+  padding: 11px 13px;
+  border: 1px solid #414449;
+  border-radius: 9px;
+  background: #0b0c0d;
+  color: #f5f3ee;
+  font: 400 15px/1.5 var(--font-body, Inter, sans-serif);
+}
+
+.campaign-form textarea {
+  resize: vertical;
+}
+
+.campaign-form input:focus-visible,
+.campaign-form textarea:focus-visible {
+  outline: 2px solid #e4b76f;
+  outline-offset: 2px;
+}
+
+.campaign-form__wide {
+  grid-column: 1 / -1;
+}
+
+.campaign-form__note {
+  margin: 18px 0 0;
+  color: #b9babe;
+  font-size: 13px;
+}
+
+.campaign-form__submit {
+  min-height: 48px;
+  margin-top: 20px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: 9px;
+  background: #d6a354;
+  color: #17130c;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.campaign-form__submit:hover {
+  background: #e4b76f;
+}
+
+@media (max-width: 620px) {
+  .campaign-form__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .campaign-form__wide {
+    grid-column: auto;
+  }
+
+  .campaign-form__submit {
+    width: 100%;
+  }
+}

@@ -118,9 +118,7 @@ function Hero() {
             <Button
               variant="primary"
               size="large"
-              onClick={() => {
-                window.location.href = "/campagnes";
-              }}
+              to="/campagnes"
             >
               Explorer les campagnes
             </Button>
@@ -128,9 +126,7 @@ function Hero() {
             <Button
               variant="outline"
               size="large"
-              onClick={() => {
-                window.location.href = "/inscription";
-              }}
+              to="/inscription"
             >
               Rejoindre Filwork
             </Button>

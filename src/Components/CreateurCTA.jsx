@@ -2,7 +2,6 @@ import { useRef, useLayoutEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { FiArrowUpRight } from "react-icons/fi";
 
 import Button from "./Button";
 import "./CreateurCTA.css";
@@ -47,7 +46,6 @@ function CreateurCTA() {
           <p>Votre profil est visible par les entreprises dès sa création.</p>
           <Button onClick={() => navigate("/inscription")}>
             Rejoindre Filwork
-            <FiArrowUpRight aria-hidden="true" />
           </Button>
         </div>
       </div>

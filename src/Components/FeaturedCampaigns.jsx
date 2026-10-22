@@ -1,5 +1,5 @@
 import { motion, useReducedMotion } from "framer-motion";
-import { FiArrowRight, FiBriefcase } from "react-icons/fi";
+import { FiBriefcase } from "react-icons/fi";
 
 import Button from "./Button";
 import campImage from "../assets/camp.jpg";
@@ -105,10 +105,7 @@ function FeaturedCampaigns() {
           <motion.div variants={fadeUp}>
             <Button
               variant="outline"
-              icon={<FiArrowRight />}
-              onClick={() => {
-                window.location.href = "/campagnes";
-              }}
+              to="/campagnes"
             >
               Voir les campagnes
             </Button>
@@ -221,27 +218,23 @@ function FeaturedCampaigns() {
                 className="featured-campaigns__empty-label"
                 variants={fadeUp}
               >
-                ESPACE EN CONSTRUCTION
+                CAMPAGNES FILWORK
               </motion.span>
             </motion.div>
 
             <motion.h3 variants={fadeUp}>
-              Les opportunités arrivent bientôt.
+              Les campagnes seront affichées ici.
             </motion.h3>
 
             <motion.p variants={fadeUp}>
-              Filwork prépare un espace où les créateurs pourront découvrir des
-              projets, proposer leurs idées et collaborer avec des entreprises.
-              Les campagnes publiées seront affichées ici.
+              Les campagnes publiées par les entreprises seront affichées ici
+              dès que leurs données seront accessibles.
             </motion.p>
 
             <motion.div variants={fadeUp}>
               <Button
                 variant="primary"
-                icon={<FiArrowRight />}
-                onClick={() => {
-                  window.location.href = "/inscription";
-                }}
+                to="/inscription"
               >
                 Rejoindre Filwork
               </Button>

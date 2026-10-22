@@ -125,7 +125,7 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: center;
   gap: 14px;
   margin-top: 32px;
 }
@@ -293,10 +293,14 @@
   }
 
   .cta-section__actions {
-    align-items: flex-start;
+    align-items: center;
     flex-direction: column;
     gap: 13px;
     margin-top: 27px;
+  }
+
+  .cta-section__actions button {
+    width: min(100%, 320px);
   }
 
   .cta-section__audiences {

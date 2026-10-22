@@ -22,23 +22,28 @@ padding-bottom: 60px;
 max-width: 330px;
 }
 
+.footer__signature {
+margin: 14px 0 12px;
+color: #d6a354;
+font-size: 9px;
+font-weight: 700;
+letter-spacing: 1.5px;
+}
+
+.footer__brand .footer__socials {
+margin-bottom: 18px;
+}
+
 .footer__logo {
 display: inline-flex;
-align-items: baseline;
-color: #f5f3ee;
-font-family: var(--font-heading, "Manrope"), sans-serif;
-font-size: 27px;
-font-weight: 800;
-letter-spacing: -1.5px;
+align-items: center;
 text-decoration: none;
 }
 
-.footer__logo > span:first-child {
-color: #d6a354;
-}
-
-.footer__logo-dot {
-color: #d6a354;
+.footer__logo img {
+display: block;
+width: 159px;
+height: auto;
 }
 
 .footer__description {
@@ -47,24 +52,6 @@ margin: 20px 0 24px;
 color: #99958d;
 font-size: 13px;
 line-height: 1.9;
-}
-
-.footer__contact {
-display: inline-flex;
-align-items: center;
-gap: 10px;
-color: #d6a354;
-font-size: 13px;
-text-decoration: none;
-transition: color 0.25s ease;
-}
-
-.footer__contact:hover {
-color: #f0c982;
-}
-
-.footer__contact svg {
-font-size: 16px;
 }
 
 .footer__column h3 {
@@ -106,15 +93,9 @@ border-top: 1px solid #242424;
 
 .footer__bottom > p {
 margin: 0;
-color: #777168;
+  color: #928d84;
 font-size: 11px;
 line-height: 1.8;
-}
-
-.footer__signature {
-font-size: 9px !important;
-font-weight: 700;
-letter-spacing: 2px;
 }
 
 .footer__socials {
@@ -125,8 +106,8 @@ gap: 10px;
 
 .footer__socials a {
 display: grid;
-width: 36px;
-height: 36px;
+  width: 44px;
+  height: 44px;
 place-items: center;
 border: 1px solid #2c2c2c;
 border-radius: 10px;
@@ -199,13 +180,6 @@ flex-direction: column;
 gap: 18px;
 }
 
-.footer__signature {
-order: 1;
-}
-
-.footer__socials {
-order: 2;
-}
 }
 
 @media (prefers-reduced-motion: reduce) {

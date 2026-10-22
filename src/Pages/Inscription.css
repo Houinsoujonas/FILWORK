@@ -30,6 +30,12 @@ gap: 10px;
 margin-bottom: 36px;
 }
 
+.register-brand img {
+display: block;
+width: 164px;
+height: auto;
+}
+
 .register-brand__symbol {
 display: grid;
 place-items: center;
@@ -234,7 +240,7 @@ text-decoration: underline;
 display: flex;
 align-items: center;
 justify-content: center;
-gap: 10px;
+  gap: 0;
 width: 100%;
 min-height: 48px;
 margin-top: 2px;
@@ -256,19 +262,10 @@ transform: translateY(-1px);
 background: #e4b76f;
 }
 
-.register-submit svg {
-flex-shrink: 0;
-font-size: 17px;
-}
-
 
 .register-submit:hover {
 transform: translateY(-1px);
 background: #e4b76f;
-}
-
-.register-submit svg {
-font-size: 17px;
 }
 
 .register-login {

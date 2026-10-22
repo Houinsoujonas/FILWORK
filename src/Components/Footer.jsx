@@ -1,9 +1,7 @@
 import { useLayoutEffect, useRef } from "react";
 import {
-  FiArrowUpRight,
   FiInstagram,
   FiLinkedin,
-  FiMail,
 } from "react-icons/fi";
 import { FaWhatsapp, FaFacebookF } from "react-icons/fa";
 import { gsap } from "gsap";
@@ -84,18 +82,19 @@ function Footer() {
           <div className="footer__brand">
             {" "}
             <a href="/" className="footer__logo" aria-label="Filwork, accueil">
-              FIL<span>WORK</span>{" "}
-              <span className="footer__logo-dot">.</span>{" "}
+              <img src="/filwork-logo.svg" alt="" />
             </a>
+            <p className="footer__signature">IMAGINER. CONNECTER. RÉALISER.</p>
             <p className="footer__description">
               La plateforme qui rapproche les créateurs de contenu et les
               entreprises pour donner vie à de nouvelles collaborations.
             </p>
-            <a href="mailto:contact@filwork.com" className="footer__contact">
-              <FiMail aria-hidden="true" />
-              <span>Nous contacter</span>
-              <FiArrowUpRight aria-hidden="true" />
-            </a>
+            <div className="footer__socials" aria-label="Réseaux sociaux">
+              <a href="https://www.instagram.com/" target="_blank" rel="noreferrer" aria-label="Instagram"><FiInstagram aria-hidden="true" /></a>
+              <a href="https://www.linkedin.com/" target="_blank" rel="noreferrer" aria-label="LinkedIn"><FiLinkedin aria-hidden="true" /></a>
+              <a href="https://www.whatsapp.com/" target="_blank" rel="noreferrer" aria-label="WhatsApp"><FaWhatsapp aria-hidden="true" /></a>
+              <a href="https://www.facebook.com/" target="_blank" rel="noreferrer" aria-label="Facebook"><FaFacebookF aria-hidden="true" /></a>
+            </div>
           </div>
           <div className="footer__column">
             <h3>Navigation</h3>
@@ -104,7 +103,13 @@ function Footer() {
                 <a href="/">Accueil</a>
               </li>
               <li>
+                <a href="/a-propos">À propos</a>
+              </li>
+              <li>
                 <a href="/campagnes">Campagnes</a>
+              </li>
+              <li>
+                <a href="/annuaire-createurs">Annuaire des créateurs</a>
               </li>
               <li>
                 <a href="/inscription">Créer un compte</a>
@@ -146,45 +151,6 @@ function Footer() {
         <div className="footer__bottom">
           <p>© {currentYear} Filwork. Tous droits réservés.</p>
 
-          <p className="footer__signature">IMAGINER. CONNECTER. RÉALISER.</p>
-
-          <div className="footer__socials">
-            <a
-              href="https://www.instagram.com/"
-              target="_blank"
-              rel="noreferrer"
-              aria-label="Instagram"
-            >
-              <FiInstagram aria-hidden="true" />
-            </a>
-
-            <a
-              href="https://www.linkedin.com/"
-              target="_blank"
-              rel="noreferrer"
-              aria-label="LinkedIn"
-            >
-              <FiLinkedin aria-hidden="true" />
-            </a>
-
-            <a
-              href="https://www.whatsapp.com/"
-              target="_blank"
-              rel="noreferrer"
-              aria-label="WhatsApp"
-            >
-              <FaWhatsapp aria-hidden="true" />
-            </a>
-
-            <a
-              href="https://www.facebook.com/"
-              target="_blank"
-              rel="noreferrer"
-              aria-label="Facebook"
-            >
-              <FaFacebookF aria-hidden="true" />
-            </a>
-          </div>
         </div>
       </div>
     </footer>

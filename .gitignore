@@ -22,3 +22,5 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+# Sauvegardes locales des anciens sprints
+FILWORK-Sprint5-backup-*/

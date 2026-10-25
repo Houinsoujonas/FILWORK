@@ -4,7 +4,10 @@ import EmptyState from "../Components/EmptyState";
 
 export default function AnnuaireCreateurs() {
   const [query, setQuery] = useState("");
+<<<<<<< Updated upstream
 
+=======
+>>>>>>> Stashed changes
   return (
     <main className="public-page listing-page">
       <header className="listing-heading">
@@ -15,7 +18,10 @@ export default function AnnuaireCreateurs() {
           projets.
         </p>
       </header>
+<<<<<<< Updated upstream
 
+=======
+>>>>>>> Stashed changes
       <section
         className="listing-controls"
         aria-label="Rechercher des créateurs"
@@ -24,7 +30,10 @@ export default function AnnuaireCreateurs() {
           <FiSearch aria-hidden="true" />
           <span className="sr-only">Rechercher un créateur</span>
           <input
+<<<<<<< Updated upstream
             type="search"
+=======
+>>>>>>> Stashed changes
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Rechercher un créateur ou une spécialité"
@@ -39,12 +48,24 @@ export default function AnnuaireCreateurs() {
           <FiSliders aria-hidden="true" /> Filtres
         </button>
       </section>
+<<<<<<< Updated upstream
 
       <EmptyState
         title={query ? "Recherche prête" : "Les profils arriveront ici"}
         description={
           query
             ? "Votre recherche sera appliquée dès que les profils autorisés seront disponibles."
+=======
+      <EmptyState
+        title={
+          query
+            ? "Aucun résultat pour cette recherche"
+            : "Les profils arriveront ici"
+        }
+        description={
+          query
+            ? "Essayez un autre terme ou revenez lorsque les profils seront disponibles."
+>>>>>>> Stashed changes
             : "Les profils autorisés apparaîtront ici dès que les données seront accessibles."
         }
       />

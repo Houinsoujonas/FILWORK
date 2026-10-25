@@ -1,0 +1,388 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["partialIndexes"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  CREATOR
+  COMPANY
+  ADMIN
+}
+
+enum CampaignStatus {
+  DRAFT
+  PUBLISHED
+  PAUSED
+  CLOSED
+}
+
+enum ApplicationStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
+}
+
+enum NotificationType {
+  APPLICATION_ACCEPTED
+  APPLICATION_REJECTED
+  INVITATION_RECEIVED
+  INVITATION_ACCEPTED
+  INVITATION_REJECTED
+  INVITATION_WITHDRAWN
+}
+
+enum CollaborationStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum DeliverableStatus {
+  PENDING
+  SUBMITTED
+  REVISION_REQUESTED
+  APPROVED
+}
+
+enum PaymentStatus {
+  PLANNED
+  PENDING
+  PAID
+  FAILED
+  CANCELLED
+}
+
+enum CreatorAvailability {
+  AVAILABLE
+  LIMITED
+  UNAVAILABLE
+}
+
+enum SocialPlatform {
+  INSTAGRAM
+  TIKTOK
+  YOUTUBE
+  LINKEDIN
+  FACEBOOK
+  TWITCH
+}
+
+enum PortfolioItemType {
+  IMAGE
+  VIDEO
+  LINK
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  role         UserRole
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  creatorProfile      CreatorProfile?
+  companyProfile      CompanyProfile?
+  notifications       Notification[]
+  passwordResetTokens PasswordResetToken[]
+  tokenVersion Int @default(0)
+}
+
+model CreatorProfile {
+  id              String  @id @default(cuid())
+  userId          String  @unique
+  displayName     String
+  bio             String? @db.Text
+  niche           String?
+  location        String?
+  profileImageUrl String?
+  mediaKitUrl     String?
+  instagramUrl    String?
+  tiktokUrl       String?
+  youtubeUrl      String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  applications       Application[]
+  invitations Invitation[]
+  country            String?
+  city               String?
+  startingRate       Decimal?            @db.Decimal(12, 2)
+  rateCurrency       String              @default("XOF")
+  availabilityStatus CreatorAvailability @default(AVAILABLE)
+
+  creatorSocials CreatorSocial[]
+  portfolioItems PortfolioItem[]
+}
+
+model CompanyProfile {
+  id          String  @id @default(cuid())
+  userId      String  @unique
+  companyName String
+  industry    String?
+  description String? @db.Text
+  websiteUrl  String?
+  logoUrl     String?
+  location    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  campaigns    Campaign[]
+  contactEmail String?
+  contactPhone String?
+  country      String?
+  city         String?
+}
+
+model Campaign {
+  id               String @id @default(cuid())
+  companyProfileId String
+
+  title        String
+  description  String  @db.Text
+  objectives   String? @db.Text
+  deliverables String? @db.Text
+  location     String?
+
+  platforms String[] @default([])
+
+  budget   Decimal? @db.Decimal(12, 2)
+  currency String   @default("XOF")
+
+  startDate DateTime?
+  endDate   DateTime?
+
+  status      CampaignStatus @default(DRAFT)
+  publishedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  companyProfile CompanyProfile @relation(fields: [companyProfileId], references: [id], onDelete: Cascade)
+  applications   Application[]
+  invitations Invitation[]
+
+  @@index([companyProfileId])
+  @@index([status, createdAt])
+}
+
+model Application {
+  id               String @id @default(cuid())
+  campaignId       String
+  creatorProfileId String
+
+  message String? @db.Text
+
+  status    ApplicationStatus @default(PENDING)
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  campaign       Campaign       @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  creatorProfile CreatorProfile @relation(fields: [creatorProfileId], references: [id], onDelete: Cascade)
+  notifications  Notification[]
+  collaboration  Collaboration?
+
+  @@unique([campaignId, creatorProfileId])
+  @@index([creatorProfileId, status])
+  @@index([campaignId, status])
+}
+
+model Invitation {
+  id               String @id @default(cuid())
+  campaignId       String
+  creatorProfileId String
+
+  message String? @db.Text
+  proposedAmount Decimal? @db.Decimal(12, 2)
+currency       String   @default("XOF")
+
+  status      InvitationStatus @default(PENDING)
+  respondedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  campaign       Campaign       @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  creatorProfile CreatorProfile @relation(fields: [creatorProfileId], references: [id], onDelete: Cascade)
+
+  notifications Notification[]
+  collaboration Collaboration?
+
+    @@index([campaignId, status])
+  @@index([creatorProfileId, status])
+  @@index([campaignId, creatorProfileId, status])
+  @@unique([campaignId, creatorProfileId], where: raw("(status = ANY (ARRAY['PENDING'::\"InvitationStatus\", 'ACCEPTED'::\"InvitationStatus\"]))"), map: "Invitation_one_active_per_campaign_creator_key")
+}
+
+model Notification {
+  id            String  @id @default(cuid())
+  userId        String
+  applicationId String?
+  invitationId String?
+
+  type    NotificationType
+  title   String
+  message String           @db.Text
+
+  isRead Boolean   @default(false)
+  readAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  application Application? @relation(fields: [applicationId], references: [id], onDelete: SetNull)
+  invitation Invitation? @relation(fields: [invitationId], references: [id], onDelete: SetNull)
+
+  @@index([userId, isRead, createdAt])
+  @@index([applicationId])
+  @@index([invitationId])
+}
+
+model Collaboration {
+  id            String  @id @default(cuid())
+  applicationId String? @unique
+  invitationId  String? @unique
+
+  agreedAmount Decimal? @db.Decimal(12, 2)
+  currency     String   @default("XOF")
+
+  status CollaborationStatus @default(ACTIVE)
+
+  startDate DateTime  @default(now())
+  endDate   DateTime?
+
+  terms String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  application Application? @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  invitation  Invitation?  @relation(fields: [invitationId], references: [id], onDelete: Restrict)
+
+  deliverables Deliverable[]
+  payments     Payment[]
+
+  @@index([status, createdAt])
+}
+
+model Deliverable {
+  id              String @id @default(cuid())
+  collaborationId String
+
+  title       String
+  description String? @db.Text
+
+  status DeliverableStatus @default(PENDING)
+
+  dueDate     DateTime?
+  submittedAt DateTime?
+  assetUrl    String?
+  feedback    String?   @db.Text
+  reviewedAt  DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  collaboration Collaboration @relation(fields: [collaborationId], references: [id], onDelete: Cascade)
+
+  @@index([collaborationId, status])
+  @@index([dueDate])
+}
+
+model Payment {
+  id              String @id @default(cuid())
+  collaborationId String
+
+  amount   Decimal @db.Decimal(12, 2)
+  currency String  @default("XOF")
+
+  status PaymentStatus @default(PLANNED)
+
+  dueDate DateTime?
+  paidAt  DateTime?
+
+  reference String?
+  notes     String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  collaboration Collaboration @relation(fields: [collaborationId], references: [id], onDelete: Cascade)
+
+  @@index([collaborationId, status])
+  @@index([dueDate])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+  @@index([expiresAt])
+}
+
+model RevokedToken {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([expiresAt])
+}
+
+model CreatorSocial {
+  id               String         @id @default(cuid())
+  creatorProfileId String
+  platform         SocialPlatform
+  profileUrl       String
+  followerCount    Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  creatorProfile CreatorProfile @relation(fields: [creatorProfileId], references: [id], onDelete: Cascade)
+
+  @@unique([creatorProfileId, platform])
+  @@index([platform])
+}
+
+model PortfolioItem {
+  id               String @id @default(cuid())
+  creatorProfileId String
+
+  title        String
+  description  String?           @db.Text
+  type         PortfolioItemType
+  url          String
+  campaignName String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  creatorProfile CreatorProfile @relation(fields: [creatorProfileId], references: [id], onDelete: Cascade)
+
+  @@index([creatorProfileId, createdAt])
+}

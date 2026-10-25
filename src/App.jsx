@@ -24,7 +24,11 @@ const NotFound = lazy(() => import("./Pages/NotFound"));
 function SiteLayout({ children }) {
   const { pathname } = useLocation();
   const isDashboard =
+<<<<<<< Updated upstream
     pathname.startsWith("/espace/") || pathname.startsWith("/administration");
+=======
+    pathname.startsWith("/espace/") || pathname === "/administration";
+>>>>>>> Stashed changes
 
   return (
     <>
@@ -64,6 +68,7 @@ class RouteErrorBoundary extends Component {
 function App() {
   return (
     <SiteLayout>
+<<<<<<< Updated upstream
       <RouteErrorBoundary>
         <Suspense
           fallback={
@@ -123,6 +128,72 @@ function App() {
           </Routes>
         </Suspense>
       </RouteErrorBoundary>
+=======
+      <Suspense
+        fallback={
+          <main className="route-loading" role="status">
+            Chargement de la page…
+          </main>
+        }
+      >
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <main>
+                <Accueil />
+              </main>
+            }
+          />
+          <Route path="/a-propos" element={<APropos />} />
+          <Route path="/campagnes" element={<Campagnes />} />
+          <Route path="/campagnes/:campaignId" element={<CampagneDetail />} />
+          <Route path="/createurs" element={<Createurs />} />
+          <Route path="/annuaire-createurs" element={<AnnuaireCreateurs />} />
+          <Route
+            path="/annuaire-createurs/:creatorId"
+            element={<CreateurProfil />}
+          />
+          <Route path="/connexion" element={<Connexion />} />
+          <Route path="/inscription" element={<Inscription />} />
+          <Route path="/mot-de-passe-oublie" element={<MotDePasseOublie />} />
+          <Route path="/contact" element={<Contact />} />
+          <Route
+            path="/conditions"
+            element={<InformationsLegales type="conditions" />}
+          />
+          <Route
+            path="/confidentialite"
+            element={<InformationsLegales type="confidentialite" />}
+          />
+          <Route
+            path="/espace/createur/*"
+            element={
+              <DashboardLayout role="creator">
+                <DashboardCreateur />
+              </DashboardLayout>
+            }
+          />
+          <Route
+            path="/espace/entreprise/*"
+            element={
+              <DashboardLayout role="business">
+                <DashboardEntreprise />
+              </DashboardLayout>
+            }
+          />
+          <Route
+            path="/administration/*"
+            element={
+              <DashboardLayout role="admin">
+                <DashboardAdmin />
+              </DashboardLayout>
+            }
+          />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </Suspense>
+>>>>>>> Stashed changes
     </SiteLayout>
   );
 }

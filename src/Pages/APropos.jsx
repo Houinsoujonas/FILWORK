@@ -3,6 +3,7 @@ import teamImage from "../assets/hero1.jpg";
 import studioImage from "../assets/entr.jpg";
 import creatorImage from "../assets/creator.jpg";
 
+<<<<<<< Updated upstream
 const principles = [
   { icon: FiUsers, number: "01", title: "Des profils qui racontent leur savoir-faire", text: "Les créateurs présentent leurs compétences, leur univers et leurs réalisations dans un espace professionnel." },
   { icon: FiBriefcase, number: "02", title: "Des campagnes compréhensibles", text: "Les entreprises décrivent leurs objectifs, leur public et leurs attentes pour trouver les bons partenaires." },
@@ -13,11 +14,30 @@ const journey = [
   ["Découvrir", "Explorez les profils et les campagnes à partir de votre besoin."],
   ["Se rencontrer", "Présentez votre projet et échangez sur les attentes de chacun."],
   ["Collaborer", "Faites avancer les étapes et suivez les livrables dans un cadre clair."],
+=======
+const roles = [
+  {
+    icon: FiCamera,
+    title: "Pour les créateurs",
+    text: "Présentez votre activité, votre portfolio et vos compétences. Repérez les projets qui correspondent à votre univers et suivez vos candidatures.",
+  },
+  {
+    icon: FiBriefcase,
+    title: "Pour les entreprises",
+    text: "Décrivez vos besoins, découvrez des profils pertinents et organisez vos campagnes et collaborations au même endroit.",
+  },
+  {
+    icon: FiCheckCircle,
+    title: "Des collaborations suivies",
+    text: "Gardez une vision claire des échanges, des échéances et des livrables tout au long du projet.",
+  },
+>>>>>>> Stashed changes
 ];
 
 export default function APropos() {
   return (
     <main className="public-page about-page">
+<<<<<<< Updated upstream
       <section className="about-hero" aria-labelledby="about-title">
         <div className="about-hero__copy">
           <span className="section-label">À PROPOS DE FILWORK</span>
@@ -42,10 +62,44 @@ export default function APropos() {
             <article className="about-principle" key={number}>
               <div className="about-principle__meta"><span className="about-principle__icon"><Icon aria-hidden="true" /></span><span>{number}</span></div>
               <h3>{title}</h3><p>{text}</p>
+=======
+      <section className="public-hero">
+        <span className="section-label">À PROPOS DE FILWORK</span>
+        <h1>
+          Les bonnes idées avancent <span>ensemble.</span>
+        </h1>
+        <p>
+          FILWORK rapproche les créateurs de contenu et les entreprises pour
+          faciliter la rencontre, la collaboration et le suivi des projets.
+        </p>
+        <Link className="public-button" to="/inscription">
+          Rejoindre FILWORK
+        </Link>
+      </section>
+      <section className="public-section">
+        <div className="public-section__heading">
+          <span className="section-label">NOTRE MISSION</span>
+          <h2>Rendre la collaboration plus simple.</h2>
+          <p>
+            De la découverte d’un profil ou d’une campagne au suivi des
+            livrables, FILWORK organise les étapes essentielles d’un partenariat
+            professionnel.
+          </p>
+        </div>
+        <div className="public-card-grid">
+          {roles.map(({ icon: Icon, title, text }) => (
+            <article className="public-card" key={title}>
+              <span className="public-card__icon">
+                <Icon aria-hidden="true" />
+              </span>
+              <h3>{title}</h3>
+              <p>{text}</p>
+>>>>>>> Stashed changes
             </article>
           ))}
         </div>
       </section>
+<<<<<<< Updated upstream
 
       <section className="about-story" aria-labelledby="about-story-title">
         <figure className="about-story__visual"><img src={studioImage} alt="Une équipe prépare une production de contenu" loading="lazy" /><figcaption>CRÉATION · ÉQUIPE · PROJET</figcaption></figure>
@@ -72,6 +126,20 @@ export default function APropos() {
       <section className="about-callout">
         <div><span className="section-label">IMAGINER · CONNECTER · RÉALISER</span><h2>Un projet commence par une rencontre.</h2><p>Créez votre espace et commencez votre parcours sur FILWORK.</p></div>
         <a className="public-button" href="/inscription">Créer un compte <FiArrowRight aria-hidden="true" /></a>
+=======
+      <section className="public-callout">
+        <div>
+          <span className="section-label">IMAGINER. CONNECTER. RÉALISER.</span>
+          <h2>Un projet commence par une rencontre.</h2>
+          <p>Créez votre espace pour préparer votre parcours sur FILWORK.</p>
+        </div>
+        <Link
+          className="public-button public-button--outline"
+          to="/inscription"
+        >
+          Créer un compte
+        </Link>
+>>>>>>> Stashed changes
       </section>
     </main>
   );

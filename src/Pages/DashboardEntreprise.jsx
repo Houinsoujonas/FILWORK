@@ -1,6 +1,11 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { FiArrowUpRight, FiBriefcase, FiUsers, FiPlusCircle } from "react-icons/fi";
+import {
+  FiArrowUpRight,
+  FiBriefcase,
+  FiUsers,
+  FiPlusCircle,
+} from "react-icons/fi";
 import EmptyState from "../Components/EmptyState";
 
 const actions = [
@@ -23,7 +28,10 @@ const actions = [
     FiBriefcase,
   ],
 ];
+<<<<<<< Updated upstream
 
+=======
+>>>>>>> Stashed changes
 export default function DashboardEntreprise() {
   const { pathname } = useLocation();
   const titles = {
@@ -41,10 +49,17 @@ export default function DashboardEntreprise() {
         <span className="section-label">ESPACE ENTREPRISE</span>
         <h1>{pageTitle}</h1>
         <p>
+<<<<<<< Updated upstream
           Préparez vos campagnes et suivez vos collaborations avec les créateurs.
         </p>
       </header>
 
+=======
+          Préparez vos campagnes et suivez vos collaborations avec les
+          créateurs.
+        </p>
+      </header>
+>>>>>>> Stashed changes
       {pathname === "/espace/entreprise" ? (
         <>
           <div className="dashboard-notice" role="status">
@@ -95,12 +110,16 @@ export default function DashboardEntreprise() {
             </label>
             <label>
               Budget indicatif
+<<<<<<< Updated upstream
               <input
                 name="budget"
                 type="number"
                 min="0"
                 inputMode="decimal"
               />
+=======
+              <input name="budget" type="number" min="0" inputMode="decimal" />
+>>>>>>> Stashed changes
             </label>
             <label className="campaign-form__wide">
               Description du projet

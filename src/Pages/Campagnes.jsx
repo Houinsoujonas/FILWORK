@@ -4,7 +4,10 @@ import EmptyState from "../Components/EmptyState";
 
 export default function Campagnes() {
   const [query, setQuery] = useState("");
+<<<<<<< Updated upstream
 
+=======
+>>>>>>> Stashed changes
   return (
     <main className="public-page listing-page">
       <header className="listing-heading">
@@ -15,7 +18,10 @@ export default function Campagnes() {
           projets qui vous correspondent.
         </p>
       </header>
+<<<<<<< Updated upstream
 
+=======
+>>>>>>> Stashed changes
       <section
         className="listing-controls"
         aria-label="Rechercher des campagnes"
@@ -24,7 +30,10 @@ export default function Campagnes() {
           <FiSearch aria-hidden="true" />
           <span className="sr-only">Rechercher une campagne</span>
           <input
+<<<<<<< Updated upstream
             type="search"
+=======
+>>>>>>> Stashed changes
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Rechercher une campagne"
@@ -39,12 +48,24 @@ export default function Campagnes() {
           <FiSliders aria-hidden="true" /> Filtres
         </button>
       </section>
+<<<<<<< Updated upstream
 
       <EmptyState
         title={query ? "Recherche prête" : "Les campagnes arrivent ici"}
         description={
           query
             ? "Votre recherche sera appliquée dès que les campagnes publiées seront disponibles."
+=======
+      <EmptyState
+        title={
+          query
+            ? "Aucun résultat pour cette recherche"
+            : "Les campagnes arrivent ici"
+        }
+        description={
+          query
+            ? "Essayez un autre terme ou revenez lorsque les campagnes seront disponibles."
+>>>>>>> Stashed changes
             : "Les campagnes vérifiées et publiées par les entreprises apparaîtront ici dès que les données seront accessibles."
         }
       />

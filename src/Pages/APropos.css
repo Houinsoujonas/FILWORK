@@ -1,0 +1,269 @@
+/* Page À propos : structure, surfaces et responsive. */
+.about-page {
+  width: min(1320px, calc(100% - 64px));
+  margin: 0 auto;
+  padding: clamp(32px, 5vw, 72px) 0;
+  background: transparent;
+}
+
+.about-page > section,
+.about-page :is(.about-hero__copy, .about-hero__visual, .about-story__copy,
+  .about-story__visual, .about-section__heading, .about-principle,
+  .about-journey__step) {
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.about-page > .about-hero {
+  --section-accent: #426a4a;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, .95fr);
+  align-items: center;
+  gap: clamp(24px, 5vw, 64px);
+  padding: clamp(26px, 4vw, 54px);
+  border: 1px solid #d9eadd;
+  border-radius: 26px;
+  background: #eaf5ed;
+}
+
+.about-hero__copy { width: 100%; }
+.about-page .about-hero__copy h1 {
+  max-width: 13ch;
+  margin: 18px 0;
+  font-size: clamp(2.35rem, 5.3vw, 4.5rem);
+  line-height: 1.04;
+  letter-spacing: -.055em;
+  overflow-wrap: break-word;
+  text-wrap: balance;
+}
+.about-page .about-hero__copy h1 span { color: #426a4a; }
+.about-page .about-hero__copy p,
+.about-page .about-section__heading p,
+.about-page .about-story__copy > p {
+  max-width: 58ch;
+  color: var(--brand-muted);
+  font-size: 1rem;
+  line-height: 1.75;
+  overflow-wrap: break-word;
+}
+
+.about-page .about-hero__visual,
+.about-page .about-story__visual {
+  position: relative;
+  min-width: 0;
+  height: clamp(280px, 37vw, 460px);
+  overflow: hidden;
+  margin: 0;
+  border: 1px solid var(--brand-border);
+  border-radius: 22px;
+  background: #e9e8e1;
+}
+.about-page :is(.about-hero__visual, .about-story__visual) img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.about-page :is(.about-hero__visual, .about-story__visual) figcaption {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  left: 12px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: fit-content;
+  max-width: calc(100% - 24px);
+  padding: 9px 12px;
+  border: 1px solid rgba(23, 24, 20, .08);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .96);
+  color: var(--brand-ink);
+  font-size: .78rem;
+  font-weight: 650;
+}
+.about-hero__dot { flex: 0 0 8px; width: 8px; height: 8px; border-radius: 50%; }
+
+.about-page > .about-section {
+  --section-accent: #66509d;
+  margin-top: 20px;
+  padding: clamp(26px, 4.5vw, 54px);
+  border: 1px solid #e4dcf5;
+  border-radius: 24px;
+  background: #f1edff;
+}
+.about-page .about-section__heading {
+  width: min(100%, 760px);
+  margin: 0 0 28px;
+}
+.about-page .about-section__heading h2 {
+  max-width: 22ch;
+  margin: 12px 0;
+  font-size: clamp(1.9rem, 4vw, 3.1rem);
+  line-height: 1.12;
+  letter-spacing: -.045em;
+  overflow-wrap: break-word;
+  text-wrap: balance;
+}
+.about-page .about-principles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+.about-page .about-principle {
+  min-height: 190px;
+  padding: 22px;
+  border: 1px solid var(--brand-border);
+  border-radius: 18px;
+  background: #fff;
+}
+.about-page .about-principle__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 22px;
+  color: #66509d;
+  font-size: .78rem;
+  font-weight: 700;
+  letter-spacing: .1em;
+}
+.about-page .about-principle__icon {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border-radius: 13px;
+  background: #f1edff;
+  color: var(--brand-ink);
+}
+.about-page .about-principle h3 {
+  margin: 0 0 9px;
+  font-size: 1.05rem;
+  line-height: 1.35;
+  overflow-wrap: break-word;
+}
+.about-page .about-principle p {
+  margin: 0;
+  color: var(--brand-muted);
+  font-size: .91rem;
+  line-height: 1.65;
+}
+
+.about-page > .about-story {
+  --section-accent: #a94f2c;
+  display: grid;
+  grid-template-columns: minmax(0, .95fr) minmax(0, 1.05fr);
+  align-items: center;
+  gap: clamp(24px, 5vw, 60px);
+  margin: 20px 0;
+  padding: clamp(24px, 4vw, 52px);
+  border: 1px solid #f1dfd4;
+  border-radius: 24px;
+  background: #fff0e8;
+}
+.about-page .about-story__visual { height: clamp(260px, 34vw, 410px); }
+.about-page .about-story__copy h2 {
+  margin: 12px 0;
+  font-size: clamp(1.9rem, 3.7vw, 3rem);
+  line-height: 1.12;
+  letter-spacing: -.04em;
+  text-wrap: balance;
+}
+.about-page .about-story__copy ul {
+  display: grid;
+  gap: 12px;
+  margin: 22px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.about-page .about-story__copy li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  color: var(--brand-ink);
+  font-size: .93rem;
+  line-height: 1.55;
+}
+.about-page .about-story__copy li svg { flex: 0 0 auto; margin-top: 2px; color: #a94f2c; }
+
+.about-page > .about-journey {
+  --section-accent: #425fae;
+  margin-block: 20px;
+  padding: clamp(24px, 4vw, 52px);
+  border: 1px solid #dbe3f6;
+  border-radius: 24px;
+  background: #edf1ff;
+}
+.about-page .about-journey__list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin: 24px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.about-page .about-journey__step {
+  padding: 20px;
+  border: 1px solid var(--brand-border);
+  border-radius: 16px;
+  background: #fff;
+}
+.about-page .about-journey__step > span { color: #425fae; font-size: .8rem; font-weight: 750; letter-spacing: .12em; }
+.about-page .about-journey__step h3 { margin: 12px 0 7px; font-size: 1.08rem; line-height: 1.35; }
+.about-page .about-journey__step p { margin: 0; color: var(--brand-muted); font-size: .9rem; line-height: 1.65; }
+
+.about-page > .about-callout {
+  --section-accent: #805d17;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-top: 20px;
+  padding: clamp(24px, 4vw, 44px);
+  border: 1px solid #eee3bf;
+  border-radius: 22px;
+  background: #fff8dc;
+}
+.about-page .about-callout h2 { margin: 12px 0 8px; font-size: clamp(1.8rem, 3.3vw, 2.6rem); line-height: 1.15; text-wrap: balance; }
+.about-page .about-callout p { margin: 0; color: var(--brand-muted); }
+.about-page .section-label,
+.about-page .about-principle__meta,
+.about-page .about-journey__step > span { color: var(--section-accent, var(--brand-accent-ink)); }
+.about-page .about-hero__copy h1 span { color: #426a4a; }
+.about-page .about-story__copy li svg { color: #a94f2c; }
+
+@media (max-width: 900px) {
+  .about-page > .about-hero,
+  .about-page > .about-story { grid-template-columns: minmax(0, 1fr); }
+  .about-page > .about-hero { gap: 24px; }
+  .about-page .about-hero__visual { height: clamp(250px, 48vw, 390px); }
+  .about-page .about-story__visual { height: clamp(240px, 45vw, 360px); }
+}
+
+@media (max-width: 700px) {
+  .about-page { width: calc(100% - 32px); padding-block: 28px; }
+  .about-page > .about-hero,
+  .about-page > .about-section,
+  .about-page > .about-story,
+  .about-page > .about-journey,
+  .about-page > .about-callout { padding: 24px; border-radius: 20px; }
+  .about-page .about-principles,
+  .about-page .about-journey__list { grid-template-columns: minmax(0, 1fr); }
+  .about-page .about-principle { min-height: 0; }
+  .about-page > .about-callout { align-items: stretch; flex-direction: column; }
+  .about-page .about-callout .public-button { justify-content: center; }
+}
+
+@media (max-width: 420px) {
+  .about-page { width: calc(100% - 24px); padding-block: 20px; }
+  .about-page > .about-hero,
+  .about-page > .about-section,
+  .about-page > .about-story,
+  .about-page > .about-journey,
+  .about-page > .about-callout { padding: 20px 16px; border-radius: 18px; }
+  .about-page .about-hero__copy h1 { font-size: clamp(2rem, 10vw, 2.65rem); }
+  .about-page .about-section__heading h2 { font-size: clamp(1.75rem, 8vw, 2.25rem); }
+  .about-page .about-hero__visual,
+  .about-page .about-story__visual { height: 240px; }
+}

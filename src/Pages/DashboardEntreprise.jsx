@@ -36,7 +36,7 @@ export default function DashboardEntreprise() {
   const pageTitle = titles[pathname] ?? "Votre espace entreprise";
   const [notice, setNotice] = useState("");
   return (
-    <div className="dashboard-page">
+    <div className="dashboard-page dashboard-page--enterprise">
       <header className="dashboard-heading">
         <span className="section-label">ESPACE ENTREPRISE</span>
         <h1>{pageTitle}</h1>

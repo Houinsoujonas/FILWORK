@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="254" height="56" viewBox="0 0 254 56" fill="none" role="img" aria-labelledby="logo-title">
+  <title id="logo-title">FILWORK</title>
+  <rect x="1" y="1" width="54" height="54" rx="15" fill="#141512"/>
+  <path d="M10 17 28 7l18 10v21L28 48 10 38V17Z" stroke="#D5F36A" stroke-width="1.8" stroke-linejoin="round"/>
+  <path d="M18 20h17M18 20v16M18 28h11M27 28l4 8 5-6 5 6 3-8" stroke="#D5F36A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="66" y="41" font-family="Arial, Helvetica, sans-serif" font-size="31" font-weight="700" letter-spacing="-1.7" fill="#FFFFFF">FIL</text>
+  <text x="117" y="41" font-family="Arial, Helvetica, sans-serif" font-size="31" font-weight="700" letter-spacing="-1.7" fill="#D5F36A">WORK</text>
+  <circle cx="224" cy="36" r="4" fill="#D5F36A"/>
+</svg>

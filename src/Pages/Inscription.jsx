@@ -17,36 +17,25 @@ function Inscription() {
   const handleSubmit = (event) => {
     event.preventDefault();
 
-    
-const formData = new FormData(event.currentTarget);
-const password = formData.get("password");
-const confirmPassword = formData.get("confirmPassword");
+    const formData = new FormData(event.currentTarget);
+    const password = formData.get("password");
+    const confirmPassword = formData.get("confirmPassword");
 
-if (password !== confirmPassword) {
-  setSubmitMessage("Les mots de passe ne correspondent pas.");
-  return;
-}
+    if (password !== confirmPassword) {
+      setSubmitMessage("Les mots de passe ne correspondent pas.");
+      return;
+    }
 
-  const visibleFormData = Object.fromEntries(formData.entries());
-  delete visibleFormData.password;
-  delete visibleFormData.confirmPassword;
-  console.info("Type de compte :", accountType);
-  console.info("Données du formulaire (hors mots de passe) :", visibleFormData);
-  setSubmitMessage("La création de compte sera activée dès que le service sera relié à FILWORK.");
-;
+    setSubmitMessage(
+      "La création de compte sera activée dès que le service sera relié à FILWORK.",
+    );
   };
 
   return (
     <main className="register-page">
-      {" "}
       <div className="register-container">
-        {" "}
-        <Link to="/" className="register-brand" aria-label="FILWORK, accueil">
-          <img src="/filwork-logo.svg" alt="" />
-        </Link>
-        
         <div className="register-heading">
-          <span className="register-eyebrow">REJOIGNEZ FILWORK</span>
+          <span className="register-eyebrow">CRÉEZ VOTRE ESPACE</span>
 
           <h1>Créez votre compte</h1>
 
@@ -82,7 +71,11 @@ if (password !== confirmPassword) {
           </button>
         </div>
         <form className="register-form" onSubmit={handleSubmit}>
-          {submitMessage && <p className="form-notice" role="status">{submitMessage}</p>}
+          {submitMessage && (
+            <p className="form-notice" role="status">
+              {submitMessage}
+            </p>
+          )}
           {accountType === "creator" ? (
             <>
               <div className="register-field">

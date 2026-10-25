@@ -43,10 +43,6 @@ function Connexion() {
 
           <div className="login-visual__overlay" aria-hidden="true" />
 
-          <Link to="/" className="login-brand" aria-label="FILWORK, accueil">
-            <img src="/filwork-logo.svg" alt="" />
-          </Link>
-
           <div className="login-visual__top-label">
             <span className="login-visual__top-line" />
             <span>UN UNIVERS DE POSSIBILITÉS</span>
@@ -110,14 +106,6 @@ function Connexion() {
         {/* PANNEAU DU FORMULAIRE */}
         <section className="login-form-panel">
           <div className="login-form-panel__top">
-            <Link
-              to="/"
-              className="login-mobile-brand"
-              aria-label="FILWORK, accueil"
-            >
-              <img src="/filwork-logo.svg" alt="" />
-            </Link>
-
             <div className="login-form-panel__register">
               <span>Pas encore membre ?</span>
 

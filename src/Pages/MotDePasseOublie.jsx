@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { FiArrowLeft, FiMail } from "react-icons/fi";
-import "./FrontendPages.css";
 
 export default function MotDePasseOublie() {
   const [submitted, setSubmitted] = useState(false);

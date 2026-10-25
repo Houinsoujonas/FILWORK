@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { FiPlus, FiMinus } from "react-icons/fi";
-import "./FAQ.css";
 
 const questions = [
   {

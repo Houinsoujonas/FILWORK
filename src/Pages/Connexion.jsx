@@ -12,7 +12,6 @@ import {
 } from "react-icons/fi";
 
 import connectImage from "../assets/connect.jpg";
-import "./Connexion.css";
 
 function Connexion() {
   const [accountType, setAccountType] = useState("creator");

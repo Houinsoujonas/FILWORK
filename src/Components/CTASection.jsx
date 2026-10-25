@@ -5,8 +5,6 @@ import Button from "./Button";
 
 import video from "../assets/video.mp4";
 
-import "./CTASection.css";
-
 function CTASection() {
   const shouldReduceMotion = useReducedMotion();
 

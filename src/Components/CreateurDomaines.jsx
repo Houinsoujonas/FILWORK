@@ -10,8 +10,6 @@ import {
   FiMic,
 } from "react-icons/fi";
 
-import "./CreateurDomaines.css";
-
 gsap.registerPlugin(ScrollTrigger);
 
 const profiles = [

@@ -1,7 +1,6 @@
 import { Link, useParams } from "react-router-dom";
 import { FiArrowLeft, FiUser } from "react-icons/fi";
 import EmptyState from "../Components/EmptyState";
-import "./FrontendPages.css";
 
 export default function CreateurProfil() {
   const { creatorId } = useParams();

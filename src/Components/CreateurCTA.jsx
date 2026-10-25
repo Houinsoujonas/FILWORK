@@ -3,7 +3,6 @@ import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 import Button from "./Button";
-import "./CreateurCTA.css";
 
 gsap.registerPlugin(ScrollTrigger);
 

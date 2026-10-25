@@ -2,8 +2,6 @@ import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { FiArrowUpRight, FiBriefcase, FiUsers, FiPlusCircle } from "react-icons/fi";
 import EmptyState from "../Components/EmptyState";
-import "./DashboardPages.css";
-import "./CampaignForm.css";
 
 const actions = [["Créer une campagne", "Décrivez un besoin et les livrables attendus.", "/espace/entreprise/campagnes/nouvelle", FiPlusCircle], ["Découvrir les créateurs", "Parcourez les profils publiés.", "/annuaire-createurs", FiUsers], ["Suivre mes collaborations", "Retrouvez le suivi de vos projets.", "/espace/entreprise/collaborations", FiBriefcase]];
 export default function DashboardEntreprise() {

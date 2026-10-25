@@ -1,9 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="234" height="56" viewBox="0 0 234 56" fill="none">
-  <g stroke-linecap="round" stroke-linejoin="round">
-    <path d="M5 17 28 4l23 13v26L28 54 5 41V17Z" stroke="#D6A354" stroke-width="2"/>
-    <path d="M16 20h16M16 20v19M16 29h11M25 29l4 10 5-7 5 7 4-10" stroke="#F5F3EE" stroke-width="2.3"/>
-    <circle cx="32" cy="20" r="2" fill="#D6A354"/>
-  </g>
-  <text x="65" y="41" font-family="Arial, Helvetica, sans-serif" font-size="31" font-weight="800" letter-spacing="-1.7" fill="#F5F3EE">FIL</text>
-  <text x="116" y="41" font-family="Arial, Helvetica, sans-serif" font-size="31" font-weight="800" letter-spacing="-1.7" fill="#D6A354">WORK.</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="254" height="56" viewBox="0 0 254 56" fill="none" role="img" aria-labelledby="logo-title">
+  <title id="logo-title">FILWORK</title>
+  <rect x="1" y="1" width="54" height="54" rx="15" fill="#141512"/>
+  <path d="M10 17 28 7l18 10v21L28 48 10 38V17Z" stroke="#D5F36A" stroke-width="1.8" stroke-linejoin="round"/>
+  <path d="M18 20h17M18 20v16M18 28h11M27 28l4 8 5-6 5 6 3-8" stroke="#D5F36A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="66" y="41" font-family="Arial, Helvetica, sans-serif" font-size="31" font-weight="700" letter-spacing="-1.7" fill="#141512">FIL</text>
+  <text x="117" y="41" font-family="Arial, Helvetica, sans-serif" font-size="31" font-weight="700" letter-spacing="-1.7" fill="#D5F36A">WORK</text>
+  <circle cx="224" cy="36" r="4" fill="#D5F36A"/>
 </svg>

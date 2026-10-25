@@ -8,8 +8,6 @@ import {
   FiEyeOff,
 } from "react-icons/fi";
 
-import "./Inscription.css";
-
 function Inscription() {
   const [accountType, setAccountType] = useState("creator");
   const [showPassword, setShowPassword] = useState(false);

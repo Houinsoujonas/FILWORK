@@ -9,7 +9,6 @@ import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 import entr from "../assets/entr.jpg";
-import "./BusinessSection.css";
 
 gsap.registerPlugin(ScrollTrigger);
 

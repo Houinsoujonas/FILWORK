@@ -11,9 +11,9 @@ import {
 import creator from "../assets/creator.jpg";
 import creat2 from "../assets/creat2.jpg";
 import creat3 from "../assets/creat3.jpg";
+import creat4 from "../assets/creat4.jpg";
 
 import Button from "./Button";
-import "./CreatorSection.css";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -47,7 +47,7 @@ const creatorImages = [
   },
   {
     id: 4,
-    src: creator,
+    src: creat4,
     alt: "Créateur développant son activité professionnelle",
     title: "Développez votre réseau",
     description:

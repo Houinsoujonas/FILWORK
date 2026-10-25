@@ -1,7 +1,6 @@
 import { useLocation } from "react-router-dom";
 import { FiShield } from "react-icons/fi";
 import EmptyState from "../Components/EmptyState";
-import "./DashboardPages.css";
 
 const titles = { "/administration/comptes": "Comptes", "/administration/campagnes": "Campagnes", "/administration/signalements": "Signalements" };
 export default function DashboardAdmin() {

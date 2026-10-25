@@ -23,7 +23,8 @@ const NotFound = lazy(() => import("./Pages/NotFound"));
 
 function SiteLayout({ children }) {
   const { pathname } = useLocation();
-  const isDashboard = pathname.startsWith("/espace/") || pathname.startsWith("/administration");
+  const isDashboard =
+    pathname.startsWith("/espace/") || pathname.startsWith("/administration");
 
   return (
     <>
@@ -46,8 +47,13 @@ class RouteErrorBoundary extends Component {
       return (
         <main className="route-error" role="alert">
           <h1>Cette page est momentanément indisponible</h1>
-          <p>Un problème est survenu pendant son affichage. Rechargez la page pour réessayer.</p>
-          <button type="button" onClick={() => window.location.reload()}>Recharger la page</button>
+          <p>
+            Un problème est survenu pendant son affichage. Rechargez la page
+            pour réessayer.
+          </p>
+          <button type="button" onClick={() => window.location.reload()}>
+            Recharger la page
+          </button>
         </main>
       );
     }
@@ -59,27 +65,63 @@ function App() {
   return (
     <SiteLayout>
       <RouteErrorBoundary>
-      <Suspense fallback={<main className="route-loading" role="status">Chargement de la page…</main>}>
-      <Routes>
-        <Route path="/" element={<main><Accueil /></main>} />
-        <Route path="/a-propos" element={<APropos />} />
-        <Route path="/campagnes" element={<Campagnes />} />
-        <Route path="/campagnes/:campaignId" element={<CampagneDetail />} />
-        <Route path="/createurs" element={<Createurs />} />
-        <Route path="/annuaire-createurs" element={<AnnuaireCreateurs />} />
-        <Route path="/annuaire-createurs/:creatorId" element={<CreateurProfil />} />
-        <Route path="/connexion" element={<Connexion />} />
-        <Route path="/inscription" element={<Inscription />} />
-        <Route path="/mot-de-passe-oublie" element={<MotDePasseOublie />} />
-        <Route path="/contact" element={<Contact />} />
-        <Route path="/conditions" element={<InformationsLegales type="conditions" />} />
-        <Route path="/confidentialite" element={<InformationsLegales type="confidentialite" />} />
-        <Route path="/espace/createur/*" element={<DashboardLayout role="creator"><DashboardCreateur /></DashboardLayout>} />
-        <Route path="/espace/entreprise/*" element={<DashboardLayout role="business"><DashboardEntreprise /></DashboardLayout>} />
-        <Route path="/administration/*" element={<DashboardLayout role="admin"><DashboardAdmin /></DashboardLayout>} />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-      </Suspense>
+        <Suspense
+          fallback={
+            <main className="route-loading" role="status">
+              Chargement de la page…
+            </main>
+          }
+        >
+          <Routes>
+            <Route path="/" element={<main><Accueil /></main>} />
+            <Route path="/a-propos" element={<APropos />} />
+            <Route path="/campagnes" element={<Campagnes />} />
+            <Route path="/campagnes/:campaignId" element={<CampagneDetail />} />
+            <Route path="/createurs" element={<Createurs />} />
+            <Route path="/annuaire-createurs" element={<AnnuaireCreateurs />} />
+            <Route
+              path="/annuaire-createurs/:creatorId"
+              element={<CreateurProfil />}
+            />
+            <Route path="/connexion" element={<Connexion />} />
+            <Route path="/inscription" element={<Inscription />} />
+            <Route path="/mot-de-passe-oublie" element={<MotDePasseOublie />} />
+            <Route path="/contact" element={<Contact />} />
+            <Route
+              path="/conditions"
+              element={<InformationsLegales type="conditions" />}
+            />
+            <Route
+              path="/confidentialite"
+              element={<InformationsLegales type="confidentialite" />}
+            />
+            <Route
+              path="/espace/createur/*"
+              element={
+                <DashboardLayout role="creator">
+                  <DashboardCreateur />
+                </DashboardLayout>
+              }
+            />
+            <Route
+              path="/espace/entreprise/*"
+              element={
+                <DashboardLayout role="business">
+                  <DashboardEntreprise />
+                </DashboardLayout>
+              }
+            />
+            <Route
+              path="/administration/*"
+              element={
+                <DashboardLayout role="admin">
+                  <DashboardAdmin />
+                </DashboardLayout>
+              }
+            />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </Suspense>
       </RouteErrorBoundary>
     </SiteLayout>
   );

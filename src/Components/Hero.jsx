@@ -1,170 +1,83 @@
-import { useState } from "react";
+import { lazy, Suspense } from "react";
 import { motion, useReducedMotion } from "framer-motion";
+import { FiArrowRight, FiCheck } from "react-icons/fi";
 
 import Button from "./Button";
-import "./Hero.css";
 
-import creat4Image from "../assets/creat4.jpg";
+const HeroScene = lazy(() => import("./HeroScene"));
 
 function Hero() {
-  const [imageLoaded, setImageLoaded] = useState(false);
-  const shouldReduceMotion = useReducedMotion();
-
-  const containerVariants = {
-    hidden: {},
-    visible: {
-      transition: {
-        staggerChildren: shouldReduceMotion ? 0 : 0.16,
-        delayChildren: shouldReduceMotion ? 0 : 0.2,
-      },
-    },
-  };
-
-  const itemVariants = {
-    hidden: {
-      opacity: 0,
-      x: shouldReduceMotion ? 0 : -35,
-    },
-    visible: {
-      opacity: 1,
-      x: 0,
-      transition: {
-        duration: shouldReduceMotion ? 0 : 0.75,
-        ease: [0.22, 1, 0.36, 1],
-      },
-    },
-  };
-
-  const imageVariants = {
-    hidden: {
-      opacity: shouldReduceMotion ? 1 : 0,
-      scale: shouldReduceMotion ? 1 : 1.08,
-    },
-    visible: {
-      opacity: 1,
-      scale: 1,
-      transition: {
-        duration: shouldReduceMotion ? 0 : 1.4,
-        ease: [0.22, 1, 0.36, 1],
-      },
-    },
-  };
+  const shouldReduceMotion = useReducedMotion() ?? false;
+  const entrance = shouldReduceMotion
+    ? { opacity: 1, y: 0 }
+    : { opacity: 0, y: 18 };
 
   return (
-    <section className="hero">
-      {/* Image principale */}
-      <motion.div
-        className={`hero__background ${imageLoaded ? "is-loaded" : ""}`}
-        variants={imageVariants}
-        initial="hidden"
-        animate="visible"
-      >
-        <img
-          src={creat4Image}
-          alt="Créativité et collaboration professionnelle"
-          className="hero__image"
-          onLoad={() => setImageLoaded(true)}
-        />
-      </motion.div>
-
-      {/* Superpositions */}
-      <div className="hero__overlay" />
-      <div className="hero__vignette" />
-
-      {/* Contenu animé */}
+    <section className="hero" aria-labelledby="hero-title">
       <div className="hero__container">
         <motion.div
           className="hero__content"
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
+          initial={entrance}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: shouldReduceMotion ? 0 : 0.65 }}
         >
-          {/* Surtitre */}
-          <motion.div
-            className="hero__eyebrow"
-            variants={itemVariants}
-          >
-            <span className="hero__eyebrow-line" />
+          <span className="hero__eyebrow">
+            <span className="hero__eyebrow-dot" aria-hidden="true" />
+            L’ESPACE DE COLLABORATION CRÉATIVE
+          </span>
 
-            <span>LA CRÉATIVITÉ RENCONTRE L'OPPORTUNITÉ</span>
-
-            <span className="hero__eyebrow-line" />
-          </motion.div>
-
-          {/* Titre */}
-          <motion.h1
-            className="hero__title"
-            variants={itemVariants}
-          >
-            Vos idées méritent
+          <h1 className="hero__title" id="hero-title">
+            Les talents et les marques
             <br />
-            <span>de devenir grandes.</span>
-          </motion.h1>
+            <span>créent ensemble.</span>
+          </h1>
 
-          {/* Description */}
-          <motion.p
-            className="hero__description"
-            variants={itemVariants}
-          >
-            Filwork connecte les créateurs de contenu et les entreprises pour
-            transformer les idées en collaborations qui comptent.
-          </motion.p>
+          <p className="hero__description">
+            Découvrez des créateurs, explorez des campagnes et faites avancer
+            vos projets dans un même espace.
+          </p>
 
-          {/* Boutons */}
-          <motion.div
-            className="hero__actions"
-            variants={itemVariants}
-          >
+          <div className="hero__cta-panel">
+            <div className="hero__cta-copy">
+              <span>Votre prochaine collaboration commence ici</span>
+              <small>Créateurs, entreprises et campagnes réunis.</small>
+            </div>
             <Button
               variant="primary"
               size="large"
-              to="/campagnes"
+              to="/annuaire-createurs"
+              icon={<FiArrowRight />}
+              iconPosition="right"
             >
-              Explorer les campagnes
+              Explorer l’annuaire
             </Button>
+          </div>
 
-            <Button
-              variant="outline"
-              size="large"
-              to="/inscription"
-            >
-              Rejoindre Filwork
-            </Button>
-          </motion.div>
-
-          {/* Signature */}
-          <motion.div
-            className="hero__signature"
-            variants={itemVariants}
-          >
-            <span className="hero__signature-line" />
-
-            <span>IMAGINER. CONNECTER. RÉALISER.</span>
-
-            <span className="hero__signature-line" />
-          </motion.div>
+          <ul className="hero__proof-list" aria-label="FILWORK en bref">
+            <li>
+              <FiCheck aria-hidden="true" /> Profils créatifs
+            </li>
+            <li>
+              <FiCheck aria-hidden="true" /> Campagnes ciblées
+            </li>
+            <li>
+              <FiCheck aria-hidden="true" /> Projets suivis
+            </li>
+          </ul>
+        </motion.div>
+        <motion.div
+          className="hero__visual"
+          aria-hidden="true"
+          initial={entrance}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: shouldReduceMotion ? 0 : 0.8, delay: shouldReduceMotion ? 0 : 0.12 }}
+        >
+          <Suspense fallback={<div className="hero-scene hero-scene--fallback" />}>
+            <HeroScene />
+          </Suspense>
+          <span className="hero__visual-caption">Les idées prennent forme</span>
         </motion.div>
       </div>
-
-      {/* Indication de défilement */}
-      <motion.div
-        className="hero__scroll"
-        initial={{
-          opacity: 0,
-          y: shouldReduceMotion ? 0 : 12,
-        }}
-        animate={{
-          opacity: 1,
-          y: 0,
-        }}
-        transition={{
-          duration: shouldReduceMotion ? 0 : 0.7,
-          delay: shouldReduceMotion ? 0 : 1.2,
-        }}
-      >
-        <span className="hero__scroll-line" />
-        <span>DÉFILER POUR DÉCOUVRIR</span>
-      </motion.div>
     </section>
   );
 }

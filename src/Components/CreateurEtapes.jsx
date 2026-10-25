@@ -2,8 +2,6 @@ import { useRef, useLayoutEffect } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
-import "./CreateurEtapes.css";
-
 gsap.registerPlugin(ScrollTrigger);
 
 const steps = [

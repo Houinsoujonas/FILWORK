@@ -10,8 +10,6 @@ import hero2a from "../assets/hero2a.jpg";
 import hero3 from "../assets/hero3.jpg";
 import hero4 from "../assets/hero4.jpg";
 
-import "./HowItWorks.css";
-
 const steps = [
   {
     number: "01",
@@ -163,20 +161,9 @@ function HowItWorks() {
                     {step.number}
                   </span>
 
-                  <motion.span
-                    className="how-it-works__image-icon"
-                    whileHover={
-                      shouldReduceMotion
-                        ? undefined
-                        : {
-                            scale: 1.08,
-                            rotate: -5,
-                          }
-                    }
-                    transition={{ duration: 0.25 }}
-                  >
+                  <span className="how-it-works__image-icon">
                     <Icon aria-hidden="true" />
-                  </motion.span>
+                  </span>
                 </div>
 
                 <div className="how-it-works__card-content">
@@ -199,21 +186,9 @@ function HowItWorks() {
                     ÉTAPE {step.number}
                   </span>
 
-                  <motion.span
-                    className="how-it-works__arrow"
-                    aria-hidden="true"
-                    whileHover={
-                      shouldReduceMotion
-                        ? undefined
-                        : {
-                            x: 3,
-                            y: -3,
-                          }
-                    }
-                    transition={{ duration: 0.2 }}
-                  >
+                  <span className="how-it-works__arrow" aria-hidden="true">
                     <FiArrowUpRight />
-                  </motion.span>
+                  </span>
                 </div>
               </motion.article>
             );

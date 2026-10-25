@@ -2,8 +2,6 @@ import { useCallback, useEffect, useRef } from "react";
 import { useReducedMotion } from "framer-motion";
 import gsap from "gsap";
 
-import "./CircularCarousel.css";
-
 function CircularCarousel({
   items = [],
   speed = 0.035,

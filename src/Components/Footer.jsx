@@ -7,8 +7,6 @@ import { FaWhatsapp, FaFacebookF } from "react-icons/fa";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
-import "./Footer.css";
-
 gsap.registerPlugin(ScrollTrigger);
 
 function Footer() {

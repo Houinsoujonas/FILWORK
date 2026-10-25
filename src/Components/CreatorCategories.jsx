@@ -9,8 +9,6 @@ import cat4 from "../assets/cat4.JPG";
 import cat5 from "../assets/cat5.JPG";
 import cat6 from "../assets/cat6.JPG";
 
-import "./CreatorCategories.css";
-
 const categories = [
   {
     id: 1,

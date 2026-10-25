@@ -1,7 +1,6 @@
 import { NavLink, Link } from "react-router-dom";
 import { FiGrid, FiUsers, FiBriefcase, FiUser, FiLogOut, FiMenu, FiX } from "react-icons/fi";
 import { useState } from "react";
-import "./DashboardLayout.css";
 
 const navigation = {
   creator: { name: "Espace créateur", home: "/espace/createur", links: [["Vue d’ensemble", "/espace/createur", FiGrid], ["Mon profil", "/espace/createur/profil", FiUser], ["Campagnes", "/espace/createur/campagnes", FiBriefcase], ["Collaborations", "/espace/createur/collaborations", FiUsers]] },

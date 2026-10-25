@@ -4,8 +4,6 @@ import { FiBriefcase } from "react-icons/fi";
 import Button from "./Button";
 import campImage from "../assets/camp.jpg";
 
-import "./FeaturedCampaigns.css";
-
 function FeaturedCampaigns() {
   const shouldReduceMotion = useReducedMotion() ?? false;
 
@@ -199,20 +197,9 @@ function FeaturedCampaigns() {
               whileInView="visible"
               viewport={{ once: true }}
             >
-              <motion.span
-                className="featured-campaigns__empty-icon"
-                whileHover={
-                  shouldReduceMotion
-                    ? undefined
-                    : {
-                        scale: 1.08,
-                        rotate: -4,
-                      }
-                }
-                transition={{ duration: 0.25 }}
-              >
+              <span className="featured-campaigns__empty-icon">
                 <FiBriefcase aria-hidden="true" />
-              </motion.span>
+              </span>
 
               <motion.span
                 className="featured-campaigns__empty-label"

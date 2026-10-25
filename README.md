@@ -1,16 +1,33 @@
-# React + Vite
+# FILWORK
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+FILWORK met en relation les créateurs et les entreprises autour de campagnes et de collaborations. L’application comprend un site public, un annuaire, des pages de campagne, l’authentification et des espaces dédiés aux rôles.
 
-Currently, two official plugins are available:
+## Démarrage
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Installez les dépendances et lancez le serveur Vite :
 
-## React Compiler
+```sh
+npm install
+npm run dev
+```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Ouvrez l’adresse locale affichée par Vite.
 
-## Expanding the ESLint configuration
+## Commandes
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+- `npm run dev` lance le serveur de développement.
+- `npm run build` génère la version de production dans `dist/`.
+- `npm run preview` sert la version de production localement.
+- `npm run lint` vérifie le code avec ESLint.
+
+## Organisation
+
+- `src/Pages/` regroupe les pages et les vues.
+- `src/Components/` regroupe les composants réutilisables.
+- `src/assets/` contient les images, vidéos et autres médias importés par l’application.
+- `public/` contient les ressources servies directement, dont le logo et le favicon.
+- `src/App.jsx` définit les routes ; `src/main.jsx` démarre React.
+- `src/index.css` est le point d’entrée unique des styles : il importe les feuilles des pages et composants, puis définit les règles globales et les ajustements communs.
+- `src/App.css` reste volontairement vide afin d’éviter une seconde couche de styles globaux.
+
+Les choix de couleurs, de typographie, d’interaction et de médias sont décrits dans [`docs/IDENTITE_VISUELLE.md`](docs/IDENTITE_VISUELLE.md).

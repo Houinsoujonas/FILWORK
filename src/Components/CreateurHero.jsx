@@ -1,7 +1,8 @@
-import { useRef, useLayoutEffect } from "react";
+﻿import { useRef, useLayoutEffect } from "react";
 import { gsap } from "gsap";
 
 import Button from "./Button";
+import creatorVisual from "../assets/creator.jpg";
 
 import "./CreateurHero.css";
 
@@ -55,6 +56,10 @@ function CreateurHero() {
             </Button>
           </div>
         </div>
+        <figure className="createur-hero__visual">
+          <img src={creatorVisual} alt="Une créatrice prépare du contenu pour une marque" fetchPriority="high" />
+          <figcaption><span aria-hidden="true" />Un espace pour faire grandir votre activité</figcaption>
+        </figure>
       </div>
     </section>
   );

@@ -1,7 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { FiArrowUpRight, FiBriefcase, FiUser, FiUsers } from "react-icons/fi";
 import EmptyState from "../Components/EmptyState";
-import "./DashboardPages.css";
 
 const actions = [["Compléter mon profil", "Présentez votre activité et vos compétences.", "/espace/createur/profil", FiUser], ["Parcourir les campagnes", "Consultez les opportunités publiées.", "/campagnes", FiBriefcase], ["Suivre mes collaborations", "Retrouvez les informations de vos projets.", "/espace/createur/collaborations", FiUsers]];
 export default function DashboardCreateur() {

@@ -1944,6 +1944,63 @@ body { font-family: var(--font-body); }
   .hero__cta-panel .btn { padding-inline: 12px; font-size: 13px; }
 }
 
+/* Garder le texte dans sa zone et ancrer le 3D dans le coin droit. */
+@media (min-width: 901px) {
+  .hero__container {
+    display: block;
+    min-height: 500px;
+    padding-block: 18px;
+  }
+  .hero__content {
+    position: relative;
+    z-index: 2;
+    width: min(62%, 720px);
+    max-width: 720px;
+  }
+  .hero__title {
+    max-width: 720px;
+    font-size: clamp(2.75rem, 4.4vw, 4.15rem);
+    line-height: 1.06;
+    letter-spacing: -.065em;
+  }
+  .hero__cta-panel { width: min(100%, 600px); }
+  .hero__visual {
+    position: absolute;
+    top: 50%;
+    right: 0;
+    width: min(36%, 440px);
+    height: clamp(300px, 32vw, 410px);
+    translate: 0 -50%;
+    border: 0;
+    background: transparent;
+  }
+}
+@media (max-width: 900px) {
+  .hero__container {
+    display: grid;
+    grid-template-columns: minmax(0,1fr);
+    gap: 8px;
+    min-height: 0;
+  }
+  .hero__content { width: 100%; max-width: 720px; }
+  .hero__title { max-width: 100%; }
+  .hero__visual {
+    position: relative;
+    top: auto;
+    right: auto;
+    width: min(100%, 390px);
+    height: clamp(250px, 48vw, 340px);
+    justify-self: end;
+    margin: -4px 0 0;
+    translate: none;
+    border: 0;
+    background: transparent;
+  }
+}
+@media (max-width: 680px) {
+  .hero__visual { justify-self: center; margin-top: 0; }
+}
+
 /* Ajustement fidÃ¨le Ã  la rÃ©fÃ©rence Nectarr : accueil Ã©ditorial, ponctuation lÃ©gÃ¨re et surfaces douces. */
 .hero {
   min-height: min(690px, calc(100svh - 120px));

@@ -23,7 +23,9 @@ function Connexion() {
     event.preventDefault();
 
     // L'authentification sera connectée au backend ultérieurement.
-    setSubmitMessage("La connexion sera activée dès que le service de compte sera relié à FILWORK.");
+    setSubmitMessage(
+      "La connexion sera activée dès que le service de compte sera relié à FILWORK.",
+    );
   };
 
   return (
@@ -103,23 +105,23 @@ function Connexion() {
               © {new Date().getFullYear()} FILWORK
             </span>
           </div>
-
-          
         </section>
 
         {/* PANNEAU DU FORMULAIRE */}
         <section className="login-form-panel">
           <div className="login-form-panel__top">
-            <Link to="/" className="login-mobile-brand" aria-label="FILWORK, accueil">
+            <Link
+              to="/"
+              className="login-mobile-brand"
+              aria-label="FILWORK, accueil"
+            >
               <img src="/filwork-logo.svg" alt="" />
             </Link>
 
             <div className="login-form-panel__register">
               <span>Pas encore membre ?</span>
 
-              <Link to="/inscription">
-                S'inscrire
-              </Link>
+              <Link to="/inscription">S'inscrire</Link>
             </div>
           </div>
 
@@ -143,7 +145,11 @@ function Connexion() {
             </div>
 
             <form className="login-form" onSubmit={handleSubmit}>
-              {submitMessage && <p className="form-notice" role="status">{submitMessage}</p>}
+              {submitMessage && (
+                <p className="form-notice" role="status">
+                  {submitMessage}
+                </p>
+              )}
               <fieldset className="login-account">
                 <legend>Vous êtes sur FILWORK en tant que...</legend>
 
@@ -274,7 +280,6 @@ function Connexion() {
 
               <button type="submit" className="login-submit">
                 <span>Se connecter</span>
-
               </button>
 
               <div className="login-security">

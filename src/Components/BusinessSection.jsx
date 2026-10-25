@@ -1,10 +1,5 @@
 import { useLayoutEffect, useRef } from "react";
-import {
-  FiUsers,
-  FiTarget,
-  FiTrendingUp,
-  FiCheckCircle,
-} from "react-icons/fi";
+import { FiUsers, FiTarget, FiTrendingUp, FiCheckCircle } from "react-icons/fi";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
@@ -226,10 +221,7 @@ function BusinessSection() {
           </div>
         </div>
         <div className="business-bottom-cta" ref={buttonRef}>
-          <a
-            href="/inscription"
-            className="business-cta"
-          >
+          <a href="/inscription" className="business-cta">
             <span>Rejoindre Filwork</span>
           </a>
         </div>

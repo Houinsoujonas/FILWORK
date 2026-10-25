@@ -51,14 +51,19 @@ function CreateurHero() {
           </p>
 
           <div className="createur-hero__actions">
-            <Button to="/inscription">
-              Créer mon profil
-            </Button>
+            <Button to="/inscription">Créer mon profil</Button>
           </div>
         </div>
         <figure className="createur-hero__visual">
-          <img src={creatorVisual} alt="Une créatrice prépare du contenu pour une marque" fetchPriority="high" />
-          <figcaption><span aria-hidden="true" />Un espace pour faire grandir votre activité</figcaption>
+          <img
+            src={creatorVisual}
+            alt="Une créatrice prépare du contenu pour une marque"
+            fetchPriority="high"
+          />
+          <figcaption>
+            <span aria-hidden="true" />
+            Un espace pour faire grandir votre activité
+          </figcaption>
         </figure>
       </div>
     </section>

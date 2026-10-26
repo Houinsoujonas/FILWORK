@@ -11,11 +11,8 @@ if (fs.existsSync(envPath)) {
 
 const bcrypt = require("bcryptjs");
 const prisma = require("../src/config/prisma");
-
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const prisma = require("../src/config/prisma");
 
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /**
  * Créer le premier compte administrateur de FILWORK.

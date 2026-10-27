@@ -1071,14 +1071,6 @@ body {
   background: var(--color-primary);
 }
 
-.cta-section__video {
-  display: none;
-}
-
-.cta-section__overlay {
-  background: transparent;
-}
-
 .cta-section :is(h2, h3, p, .section-label) {
   color: #20211c;
 }
@@ -1583,10 +1575,6 @@ body { background: var(--color-bg); color: var(--color-text); }
   transform: translateY(-1px);
 }
 :is(.btn--ghost, .back-link, .dashboard-link, .register-back, .register-login a, .login-form-panel__register a):hover { color: #35452d; }
-.cta-section__video { display: block; opacity: .48; filter: brightness(.88) saturate(.68); }
-.cta-section__overlay {
-  background: linear-gradient(90deg, rgba(255,246,217,.97) 0%, rgba(255,246,217,.91) 48%, rgba(255,246,217,.6) 100%), linear-gradient(0deg, rgba(255,246,217,.42), transparent 55%);
-}
 .cta-section__title, .cta-section__description, .cta-section__audience, .cta-section__audiences { color: #171814; }
 .cta-section__audience-divider { background: rgba(23,24,20,.18); }
 .cta-section .btn--outline { border-color: #c9c6bb; background: rgba(255,255,255,.82); color: #171814; }
@@ -1597,7 +1585,6 @@ body { background: var(--color-bg); color: var(--color-text); }
 .campaign-form :is(input, textarea):focus-visible { border-color: #849c52; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
-  .cta-section__video { display: none; }
 }
 
 /* FILWORK: couche commune appliquée après les styles historiques des composants. */
@@ -2396,14 +2383,6 @@ body {
   box-shadow: 0 24px 54px rgba(61, 46, 117, 0.18);
 }
 
-.cta-section__video {
-  display: none;
-}
-
-.cta-section__overlay {
-  background: transparent;
-}
-
 .cta-section__title,
 .cta-section__description,
 .cta-section__audience,
@@ -2688,11 +2667,6 @@ body {
 }
 
 /* RÃ¨gles finales aprÃ¨s les feuilles historiques importÃ©es. */
-.cta-section__video { display: block; }
-.cta-section__overlay {
-  background: linear-gradient(90deg, rgba(255,246,217,.97) 0%, rgba(255,246,217,.91) 48%, rgba(255,246,217,.6) 100%), linear-gradient(0deg, rgba(255,246,217,.42), transparent 55%);
-}
-.cta-section__video { opacity: .48; filter: brightness(.88) saturate(.68); }
 .createur-domaines, .createur-etapes {
   --creator-bg: #f6f5f0;
   --creator-surface: #fff;
@@ -2732,7 +2706,6 @@ body {
 .createur-cta__box h2 { color: #171814; }
 .createur-cta__box p { color: #62645d; }
 @media (prefers-reduced-motion: reduce) {
-  .cta-section__video { display: none; }
 }
 
 /* Couche de finition FILWORK : règles après les anciennes feuilles importées. */

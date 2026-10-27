@@ -328,8 +328,86 @@
 /* ACCESSIBILITÉ */
 
 @media (prefers-reduced-motion: reduce) {
+  .cta-section__video {
+    display: none;
+  }
+
   .cta-section__actions > * ,
   .cta-section__audience-icon {
     transition: none;
+  }
+}
+
+/* Palette d’origine : voile crème, texte foncé et accent vert de la marque. */
+.cta-section__video {
+  display: block;
+  opacity: 0.82;
+  filter: brightness(0.9) contrast(1.12) saturate(0.92);
+}
+
+.cta-section__overlay {
+  background:
+    linear-gradient(90deg, rgba(255, 246, 217, 0.84) 0%, rgba(255, 246, 217, 0.66) 48%, rgba(255, 246, 217, 0.34) 100%),
+    linear-gradient(0deg, rgba(255, 246, 217, 0.28), transparent 55%);
+}
+
+@media (max-width: 560px) {
+  .cta-section__video { opacity: 0.74; }
+
+  .cta-section__overlay {
+    background:
+      linear-gradient(90deg, rgba(255, 246, 217, 0.86), rgba(255, 246, 217, 0.72)),
+      linear-gradient(0deg, rgba(255, 246, 217, 0.32), transparent 58%);
+  }
+}
+
+.cta-section .cta-section__content h2,
+.cta-section .cta-section__content > p {
+  color: #171814;
+}
+
+.cta-section .cta-section__content h2 span {
+  color: var(--section-accent, #52664d);
+}
+
+.cta-section .cta-section__content > p {
+  color: #62645d;
+}
+
+/* Mise en avant de l’action : contenu centré, surtitre conservé à gauche. */
+.cta-section .cta-section__content {
+  max-width: 900px;
+  margin-inline: auto;
+  text-align: center;
+}
+
+.cta-section .cta-section__eyebrow {
+  display: flex;
+  width: fit-content;
+  margin: 0 auto 28px 0;
+}
+
+.cta-section .cta-section__content h2 {
+  max-width: 850px;
+  margin-inline: auto;
+}
+
+.cta-section .cta-section__content > p {
+  max-width: 650px;
+  margin: 25px auto 0;
+}
+
+.cta-section .cta-section__audiences {
+  justify-content: center;
+}
+
+@media (max-width: 560px) {
+  .cta-section .cta-section__content {
+    text-align: center;
+  }
+
+  .cta-section .cta-section__eyebrow {
+    margin-bottom: 24px;
+    text-align: left;
   }
 }

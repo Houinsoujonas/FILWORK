@@ -1,5 +1,6 @@
 const crypto = require("node:crypto");
 const prisma = require("../config/prisma");
+const { sendPrismaError } = require("../utils/prismaErrors");
 
 async function logout(req, res) {
   const token = req.authToken;
@@ -42,6 +43,10 @@ async function logout(req, res) {
       message: "Déconnexion réussie.",
     });
   } catch (error) {
+    if (sendPrismaError(res, error)) {
+      return;
+    }
+
     console.error(
       "Erreur lors de la déconnexion :",
       error.message,

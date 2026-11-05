@@ -1,11 +1,10 @@
 const prisma = require("../config/prisma");
+const { sendPrismaError } = require("../utils/prismaErrors");
 
 /**
  * Récupérer les notifications de l'utilisateur connecté.
  */
-/**
- * Récupérer les notifications de l'utilisateur connecté.
- */
+
 async function getMyNotifications(req, res) {
   try {
     const userId = req.user.id;
@@ -21,6 +20,7 @@ async function getMyNotifications(req, res) {
         take: 50,
         select: {
           id: true,
+          collaborationId: true,
           type: true,
           title: true,
           message: true,
@@ -94,6 +94,10 @@ async function getMyNotifications(req, res) {
       notifications,
     });
   } catch (error) {
+    if (sendPrismaError(res, error)) {
+      return;
+    }
+
     console.error(
       "Erreur lors de la récupération des notifications :",
       error
@@ -105,6 +109,7 @@ async function getMyNotifications(req, res) {
     });
   }
 }
+
 /**
  * Marquer une notification comme lue.
  */
@@ -156,6 +161,10 @@ async function markNotificationAsRead(req, res) {
       message: "Notification marquée comme lue.",
     });
   } catch (error) {
+    if (sendPrismaError(res, error)) {
+      return;
+    }
+
     console.error(
       "Erreur lors du marquage de la notification :",
       error,
@@ -190,6 +199,10 @@ async function markAllNotificationsAsRead(req, res) {
       updatedCount: result.count,
     });
   } catch (error) {
+    if (sendPrismaError(res, error)) {
+      return;
+    }
+
     console.error(
       "Erreur lors du marquage des notifications :",
       error,

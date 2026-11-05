@@ -4,6 +4,8 @@ const {
   authenticateToken,
 } = require("../middlewares/authMiddleware");
 
+const { requireRole } = require("../middlewares/roleMiddleware");
+
 const {
   createDeliverable,
   getCollaborationDeliverables,
@@ -16,22 +18,32 @@ const router = express.Router();
 // Toutes les routes nécessitent une authentification.
 router.use(authenticateToken);
 
-// Créer un livrable pour une collaboration.
+// Créer un livrable pour une collaboration (entreprise uniquement).
 router.post(
   "/collaborations/:collaborationId",
+  requireRole("COMPANY"),
   createDeliverable,
 );
 
 // Consulter les livrables d'une collaboration.
+// Les deux participants sont autorisés : le contrôleur vérifie la propriété.
 router.get(
   "/collaborations/:collaborationId",
   getCollaborationDeliverables,
 );
 
 // Soumettre un livrable en tant que créateur.
-router.patch("/:id/submit", submitDeliverable);
+router.patch(
+  "/:id/submit",
+  requireRole("CREATOR"),
+  submitDeliverable,
+);
 
 // Examiner un livrable en tant qu'entreprise.
-router.patch("/:id/review", reviewDeliverable);
+router.patch(
+  "/:id/review",
+  requireRole("COMPANY"),
+  reviewDeliverable,
+);
 
 module.exports = router;

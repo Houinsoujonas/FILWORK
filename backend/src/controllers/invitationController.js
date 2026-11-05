@@ -1,4 +1,10 @@
 const prisma = require("../config/prisma");
+const { sendPrismaError } = require("../utils/prismaErrors");
+const { lockCampaign } = require("../services/collaborationLock");
+const { findUnknownFields } = require("../utils/validation");
+const {
+  CREATOR_DISCOVERY_CONDITIONS,
+} = require("../services/profileVisibility");
 
 const ACTIVE_INVITATION_STATUSES = ["PENDING", "ACCEPTED"];
 
@@ -110,12 +116,24 @@ async function createInvitation(req, res) {
     }
 
     const body = req.body || {};
+
+    const unknownFields = findUnknownFields(body, [
+      "creatorProfileId",
+      "message",
+      "proposedAmount",
+      "currency",
+    ]);
+
+    if (unknownFields.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Champs non autorisés : ${unknownFields.join(", ")}.`,
+      });
+    }
+
     const { creatorProfileId } = body;
 
-    if (
-      typeof creatorProfileId !== "string" ||
-      !creatorProfileId.trim()
-    ) {
+    if (typeof creatorProfileId !== "string" || !creatorProfileId.trim()) {
       return res.status(400).json({
         success: false,
         message: "Le profil du créateur est obligatoire.",
@@ -190,9 +208,10 @@ async function createInvitation(req, res) {
       });
     }
 
-    const creator = await prisma.creatorProfile.findUnique({
+    const creator = await prisma.creatorProfile.findFirst({
       where: {
         id: creatorProfileId.trim(),
+        AND: CREATOR_DISCOVERY_CONDITIONS,
       },
       select: {
         id: true,
@@ -252,7 +271,56 @@ async function createInvitation(req, res) {
       });
     }
 
-    const invitation = await prisma.$transaction(async (tx) => {
+    const outcome = await prisma.$transaction(async (tx) => {
+      const lockedCampaign = await lockCampaign(tx, campaign.id);
+
+      if (!lockedCampaign) {
+        return { type: "campaign-missing" };
+      }
+
+      if (lockedCampaign.status !== "PUBLISHED") {
+        return {
+          type: "campaign-not-published",
+          currentStatus: lockedCampaign.status,
+        };
+      }
+
+      // Revérifier sous verrou : une candidature a pu être déposée
+      // concurremment après la vérification initiale.
+      const activeApplication = await tx.application.findFirst({
+        where: {
+          campaignId: campaign.id,
+          creatorProfileId: creator.id,
+          status: {
+            in: ["PENDING", "ACCEPTED"],
+          },
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      if (activeApplication) {
+        return { type: "application" };
+      }
+
+      const activeInvitation = await tx.invitation.findFirst({
+        where: {
+          campaignId: campaign.id,
+          creatorProfileId: creator.id,
+          status: {
+            in: ACTIVE_INVITATION_STATUSES,
+          },
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      if (activeInvitation) {
+        return { type: "invitation" };
+      }
+
       const createdInvitation = await tx.invitation.create({
         data: {
           campaignId: campaign.id,
@@ -289,13 +357,45 @@ async function createInvitation(req, res) {
         },
       });
 
-      return createdInvitation;
+      return { type: "ok", invitation: createdInvitation };
     });
+
+    if (outcome.type === "campaign-missing") {
+      return res.status(404).json({
+        success: false,
+        message: "Campagne introuvable ou accès non autorisé.",
+      });
+    }
+
+    if (outcome.type === "campaign-not-published") {
+      return res.status(409).json({
+        success: false,
+        message:
+          "Seules les campagnes publiées peuvent recevoir des invitations.",
+        currentStatus: outcome.currentStatus,
+      });
+    }
+
+    if (outcome.type === "application") {
+      return res.status(409).json({
+        success: false,
+        message:
+          "Ce créateur possède déjà une candidature en attente ou acceptée pour cette campagne.",
+      });
+    }
+
+    if (outcome.type === "invitation") {
+      return res.status(409).json({
+        success: false,
+        message:
+          "Une invitation en attente ou acceptée existe déjà pour ce créateur et cette campagne.",
+      });
+    }
 
     return res.status(201).json({
       success: true,
       message: "Invitation envoyée avec succès.",
-      invitation,
+      invitation: outcome.invitation,
     });
   } catch (error) {
     // La contrainte en base protège aussi contre les requêtes simultanées.
@@ -307,10 +407,7 @@ async function createInvitation(req, res) {
       });
     }
 
-    console.error(
-      "Erreur lors de la création de l'invitation :",
-      error,
-    );
+    console.error("Erreur lors de la création de l'invitation :", error);
 
     return res.status(500).json({
       success: false,
@@ -327,7 +424,8 @@ async function getReceivedInvitations(req, res) {
     if (req.user.role !== "CREATOR") {
       return res.status(403).json({
         success: false,
-        message: "Seuls les créateurs peuvent consulter leurs invitations reçues.",
+        message:
+          "Seuls les créateurs peuvent consulter leurs invitations reçues.",
       });
     }
 
@@ -376,6 +474,10 @@ async function getReceivedInvitations(req, res) {
       invitations,
     });
   } catch (error) {
+    if (sendPrismaError(res, error)) {
+      return;
+    }
+
     console.error(
       "Erreur lors de la récupération des invitations reçues :",
       error,
@@ -447,6 +549,10 @@ async function getSentInvitations(req, res) {
       invitations,
     });
   } catch (error) {
+    if (sendPrismaError(res, error)) {
+      return;
+    }
+
     console.error(
       "Erreur lors de la récupération des invitations envoyées :",
       error,
@@ -475,6 +581,15 @@ async function respondToInvitation(req, res) {
     }
 
     const body = req.body || {};
+
+    const unknownFields = findUnknownFields(body, ["status"]);
+
+    if (unknownFields.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Champs non autorisés : ${unknownFields.join(", ")}.`,
+      });
+    }
 
     if (
       typeof body.status !== "string" ||
@@ -512,6 +627,7 @@ async function respondToInvitation(req, res) {
           select: {
             id: true,
             title: true,
+            status: true,
             companyProfile: {
               select: {
                 id: true,
@@ -540,7 +656,98 @@ async function respondToInvitation(req, res) {
 
     const accepted = body.status === "ACCEPTED";
 
-    const result = await prisma.$transaction(async (tx) => {
+    // Une invitation acceptée doit comporter un montant convenu strictement
+    // positif. Les invitations historiques sans montant, ou avec un montant
+    // nul, ne peuvent donc pas être acceptées.
+    const proposedAmount = invitation.proposedAmount;
+    const hasValidProposedAmount =
+      proposedAmount !== null &&
+      proposedAmount !== undefined &&
+      Number.isFinite(Number(proposedAmount)) &&
+      Number(proposedAmount) > 0;
+
+    if (accepted && !hasValidProposedAmount) {
+      return res.status(409).json({
+        success: false,
+        message:
+          "Cette invitation ne comporte pas de montant convenu valide et ne peut pas être acceptée.",
+      });
+    }
+
+    // Si le créateur accepte l'invitation, vérifier qu'une
+    // candidature active n'existe pas déjà pour cette campagne.
+    if (accepted) {
+      const existingApplication = await prisma.application.findFirst({
+        where: {
+          campaignId: invitation.campaignId,
+          creatorProfileId: invitation.creatorProfileId,
+          status: {
+            in: ["PENDING", "ACCEPTED"],
+          },
+        },
+        select: {
+          id: true,
+          status: true,
+        },
+      });
+
+      if (existingApplication) {
+        return res.status(409).json({
+          success: false,
+          message:
+            "Une candidature existe déjà pour cette campagne. Retirez-la ou attendez son traitement avant d'accepter l'invitation.",
+        });
+      }
+    }
+
+    const outcome = await prisma.$transaction(async (tx) => {
+      const lockedCampaign = await lockCampaign(tx, invitation.campaignId);
+
+      if (!lockedCampaign) {
+        return { type: "campaign-missing" };
+      }
+
+      if (accepted && lockedCampaign.status !== "PUBLISHED") {
+        return {
+          type: "campaign-not-published",
+          currentStatus: lockedCampaign.status,
+        };
+      }
+
+      if (accepted) {
+        // Revérifier sous verrou l'absence de candidature concurrente.
+        const activeApplication = await tx.application.findFirst({
+          where: {
+            campaignId: invitation.campaignId,
+            creatorProfileId: invitation.creatorProfileId,
+            status: {
+              in: ["PENDING", "ACCEPTED"],
+            },
+          },
+          select: {
+            id: true,
+          },
+        });
+
+        if (activeApplication) {
+          return { type: "application" };
+        }
+
+        // Vérifier l'absence de collaboration avant toute écriture.
+        const existingCollaboration = await tx.collaboration.findUnique({
+          where: {
+            invitationId: invitation.id,
+          },
+          select: {
+            id: true,
+          },
+        });
+
+        if (existingCollaboration) {
+          return { type: "duplicate" };
+        }
+      }
+
       const updateResult = await tx.invitation.updateMany({
         where: {
           id: invitation.id,
@@ -554,7 +761,7 @@ async function respondToInvitation(req, res) {
       });
 
       if (updateResult.count === 0) {
-        return null;
+        return { type: "already" };
       }
 
       let collaboration = null;
@@ -563,7 +770,7 @@ async function respondToInvitation(req, res) {
         collaboration = await tx.collaboration.create({
           data: {
             invitationId: invitation.id,
-            agreedAmount: invitation.proposedAmount,
+            agreedAmount: proposedAmount,
             currency: invitation.currency,
             status: "ACTIVE",
           },
@@ -581,12 +788,8 @@ async function respondToInvitation(req, res) {
         data: {
           userId: invitation.campaign.companyProfile.userId,
           invitationId: invitation.id,
-          type: accepted
-            ? "INVITATION_ACCEPTED"
-            : "INVITATION_REJECTED",
-          title: accepted
-            ? "Invitation acceptée"
-            : "Invitation refusée",
+          type: accepted ? "INVITATION_ACCEPTED" : "INVITATION_REJECTED",
+          title: accepted ? "Invitation acceptée" : "Invitation refusée",
           message: accepted
             ? `${creatorProfile.displayName} a accepté votre invitation pour la campagne « ${invitation.campaign.title} ». Une collaboration a été créée.`
             : `${creatorProfile.displayName} a refusé votre invitation pour la campagne « ${invitation.campaign.title} ».`,
@@ -623,12 +826,44 @@ async function respondToInvitation(req, res) {
       });
 
       return {
+        type: "ok",
         invitation: updatedInvitation,
         collaboration,
       };
     });
 
-    if (!result) {
+    if (outcome.type === "campaign-missing") {
+      return res.status(404).json({
+        success: false,
+        message: "Invitation introuvable ou accès non autorisé.",
+      });
+    }
+
+    if (outcome.type === "campaign-not-published") {
+      return res.status(409).json({
+        success: false,
+        message:
+          "Seule une campagne publiée peut faire l'objet d'une acceptation.",
+        currentStatus: outcome.currentStatus,
+      });
+    }
+
+    if (outcome.type === "application") {
+      return res.status(409).json({
+        success: false,
+        message:
+          "Une candidature existe déjà pour cette campagne. Retirez-la ou attendez son traitement avant d'accepter l'invitation.",
+      });
+    }
+
+    if (outcome.type === "duplicate") {
+      return res.status(409).json({
+        success: false,
+        message: "Une collaboration existe déjà pour cette invitation.",
+      });
+    }
+
+    if (outcome.type === "already") {
       return res.status(409).json({
         success: false,
         message: "Cette invitation a déjà été traitée.",
@@ -640,8 +875,8 @@ async function respondToInvitation(req, res) {
       message: accepted
         ? "Invitation acceptée. Collaboration créée et entreprise notifiée."
         : "Invitation refusée. Entreprise notifiée.",
-      invitation: result.invitation,
-      collaboration: result.collaboration,
+      invitation: outcome.invitation,
+      collaboration: outcome.collaboration,
     });
   } catch (error) {
     if (error.code === "P2002") {
@@ -652,10 +887,7 @@ async function respondToInvitation(req, res) {
       });
     }
 
-    console.error(
-      "Erreur lors du traitement de l'invitation :",
-      error,
-    );
+    console.error("Erreur lors du traitement de l'invitation :", error);
 
     return res.status(500).json({
       success: false,
@@ -726,7 +958,16 @@ async function withdrawInvitation(req, res) {
       });
     }
 
-    const result = await prisma.$transaction(async (tx) => {
+    // Le verrou de campagne sérialise le retrait avec l'acceptation et la
+    // clôture de la campagne : une clôture ne peut pas s'intercaler entre
+    // la vérification du statut et la mise à jour de l'invitation.
+    const outcome = await prisma.$transaction(async (tx) => {
+      const lockedCampaign = await lockCampaign(tx, invitation.campaignId);
+
+      if (!lockedCampaign) {
+        return { type: "campaign-missing" };
+      }
+
       const updateResult = await tx.invitation.updateMany({
         where: {
           id: invitation.id,
@@ -739,7 +980,7 @@ async function withdrawInvitation(req, res) {
       });
 
       if (updateResult.count === 0) {
-        return false;
+        return { type: "already" };
       }
 
       await tx.notification.create({
@@ -754,14 +995,20 @@ async function withdrawInvitation(req, res) {
         },
       });
 
-      return true;
+      return { type: "ok" };
     });
 
-    if (!result) {
+    if (outcome.type === "campaign-missing") {
+      return res.status(404).json({
+        success: false,
+        message: "Campagne introuvable.",
+      });
+    }
+
+    if (outcome.type === "already") {
       return res.status(409).json({
         success: false,
-        message:
-          "Cette invitation a déjà reçu une réponse ou a été retirée.",
+        message: "Cette invitation a déjà reçu une réponse ou a été retirée.",
       });
     }
 
@@ -770,10 +1017,11 @@ async function withdrawInvitation(req, res) {
       message: "Invitation retirée. Le créateur a été notifié.",
     });
   } catch (error) {
-    console.error(
-      "Erreur lors du retrait de l'invitation :",
-      error,
-    );
+    if (sendPrismaError(res, error)) {
+      return;
+    }
+
+    console.error("Erreur lors du retrait de l'invitation :", error);
 
     return res.status(500).json({
       success: false,

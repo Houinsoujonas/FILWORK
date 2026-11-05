@@ -146,16 +146,16 @@ async function sendPasswordResetEmail({ to, resetUrl }) {
 
 const info = await mailer.sendMail(mailOptions);
 
-if (process.env.NODE_ENV !== "production") {
-  const previewUrl = nodemailer.getTestMessageUrl(info);
+  if (process.env.NODE_ENV !== "production") {
+    const previewUrl = nodemailer.getTestMessageUrl(info);
 
-  if (previewUrl) {
-    console.log(
-      "[FILWORK] Aperçu de l'e-mail de test :",
-      previewUrl,
-    );
+    if (previewUrl) {
+      console.log(
+        "[FILWORK] Aperçu de l'e-mail de test :",
+        previewUrl,
+      );
+    }
   }
-}
 }
 
 module.exports = {

@@ -1,6 +1,7 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const prisma = require("../config/prisma");
+const { sendPrismaError } = require("../utils/prismaErrors");
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -177,6 +178,10 @@ async function login(req, res) {
       token,
     });
   } catch (error) {
+    if (sendPrismaError(res, error)) {
+      return;
+    }
+
     console.error("Erreur lors de la connexion :", error.message);
 
     return res.status(500).json({

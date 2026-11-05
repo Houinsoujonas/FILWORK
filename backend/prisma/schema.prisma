@@ -41,6 +41,13 @@ enum NotificationType {
   INVITATION_ACCEPTED
   INVITATION_REJECTED
   INVITATION_WITHDRAWN
+
+  DELIVERABLE_SUBMITTED
+  DELIVERABLE_APPROVED
+  DELIVERABLE_REVISION_REQUESTED
+  PAYMENT_STATUS_UPDATED
+  COLLABORATION_COMPLETED
+  COLLABORATION_CANCELLED
 }
 
 enum CollaborationStatus {
@@ -97,6 +104,7 @@ model User {
   companyProfile      CompanyProfile?
   notifications       Notification[]
   passwordResetTokens PasswordResetToken[]
+  reviewResponses     ReviewResponse[]
   tokenVersion Int @default(0)
 }
 
@@ -127,6 +135,7 @@ model CreatorProfile {
 
   creatorSocials CreatorSocial[]
   portfolioItems PortfolioItem[]
+  reviews        Review[]
 }
 
 model CompanyProfile {
@@ -144,6 +153,7 @@ model CompanyProfile {
 
   user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   campaigns    Campaign[]
+  reviews      Review[]
   contactEmail String?
   contactPhone String?
   country      String?
@@ -231,10 +241,11 @@ currency       String   @default("XOF")
 }
 
 model Notification {
-  id            String  @id @default(cuid())
-  userId        String
-  applicationId String?
-  invitationId String?
+  id              String  @id @default(cuid())
+  userId          String
+  applicationId   String?
+  invitationId    String?
+  collaborationId String?
 
   type    NotificationType
   title   String
@@ -245,14 +256,15 @@ model Notification {
 
   createdAt DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  application Application? @relation(fields: [applicationId], references: [id], onDelete: SetNull)
-  invitation Invitation? @relation(fields: [invitationId], references: [id], onDelete: SetNull)
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  application   Application?  @relation(fields: [applicationId], references: [id], onDelete: SetNull)
+  invitation    Invitation?   @relation(fields: [invitationId], references: [id], onDelete: SetNull)
+  collaboration Collaboration? @relation(fields: [collaborationId], references: [id], onDelete: SetNull)
 
   @@index([userId, isRead, createdAt])
   @@index([applicationId])
   @@index([invitationId])
+  @@index([collaborationId])
 }
 
 model Collaboration {
@@ -270,14 +282,19 @@ model Collaboration {
 
   terms String? @db.Text
 
+  cancellationReason String?   @db.Text
+  cancelledByRole    UserRole?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  application Application? @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  application Application? @relation(fields: [applicationId], references: [id], onDelete: Restrict)
   invitation  Invitation?  @relation(fields: [invitationId], references: [id], onDelete: Restrict)
 
-  deliverables Deliverable[]
-  payments     Payment[]
+  deliverables  Deliverable[]
+  payments      Payment[]
+  notifications Notification[]
+  review        Review?
 
   @@index([status, createdAt])
 }
@@ -385,4 +402,41 @@ model PortfolioItem {
   creatorProfile CreatorProfile @relation(fields: [creatorProfileId], references: [id], onDelete: Cascade)
 
   @@index([creatorProfileId, createdAt])
+}
+
+model Review {
+  id               String @id @default(cuid())
+  collaborationId  String @unique
+  companyProfileId String
+  creatorProfileId String
+
+  rating  Int
+  comment String @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  collaboration  Collaboration  @relation(fields: [collaborationId], references: [id], onDelete: Restrict)
+  companyProfile CompanyProfile @relation(fields: [companyProfileId], references: [id], onDelete: Restrict)
+  creatorProfile CreatorProfile @relation(fields: [creatorProfileId], references: [id], onDelete: Restrict)
+  response       ReviewResponse?
+
+  @@index([companyProfileId, createdAt])
+  @@index([creatorProfileId, createdAt])
+}
+
+model ReviewResponse {
+  id       String @id @default(cuid())
+  reviewId String @unique
+  authorId String
+
+  content String @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  review Review @relation(fields: [reviewId], references: [id], onDelete: Restrict)
+  author User   @relation(fields: [authorId], references: [id], onDelete: Restrict)
+
+  @@index([authorId])
 }

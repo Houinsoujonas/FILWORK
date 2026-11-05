@@ -2,13 +2,14 @@ const crypto = require("node:crypto");
 const bcrypt = require("bcryptjs");
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const path = require("node:path");
+const { loadTestEnv } = require("../scripts/testDatabaseGuard");
 
-// Charger les variables du fichier .env pour le nettoyage des tests.
-require("node:process").loadEnvFile(path.resolve(__dirname, "../.env"));
+// Charger et valider l'environnement de test (jamais la production).
+loadTestEnv();
 
 // Prisma sera utilisé pour supprimer les données de test à la fin.
 const prisma = require("../src/config/prisma");
+const { cleanupCampaignCascade } = require("./helpers/cleanup");
 
 const API_BASE_URL = (
   process.env.API_BASE_URL || "http://localhost:5000"
@@ -74,6 +75,36 @@ test("GET /api/campaigns - la liste publique est accessible", async () => {
 
   assert.equal(response.status, 200);
   assert.equal(data.success, true);
+});
+
+test(
+  "GET /api/campaigns/:id - expose publiquement une campagne publiee",
+  { skip: !process.env.TEST_CAMPAIGN_ID },
+  async () => {
+    const response = await fetch(
+      `${API_BASE_URL}/api/campaigns/${process.env.TEST_CAMPAIGN_ID}`,
+    );
+
+    const data = await response.json();
+
+    assert.equal(response.status, 200);
+    assert.equal(data.success, true);
+    assert.equal(data.campaign.id, process.env.TEST_CAMPAIGN_ID);
+    assert.equal(data.campaign.status, "PUBLISHED");
+    assert.ok(data.campaign.companyProfile);
+    assert.ok(data.campaign.companyProfile.companyName);
+  },
+);
+
+test("GET /api/campaigns/:id - renvoie 404 pour une campagne inconnue", async () => {
+  const response = await fetch(
+    `${API_BASE_URL}/api/campaigns/campagne-inexistante`,
+  );
+
+  const data = await response.json();
+
+  assert.equal(response.status, 404);
+  assert.equal(data.success, false);
 });
 
 test("POST /api/auth/register - refuse une adresse e-mail invalide", async () => {
@@ -447,6 +478,7 @@ test(
           },
           body: JSON.stringify({
             status: "ACCEPTED",
+            amount: 15000,
           }),
         },
       );
@@ -472,6 +504,8 @@ test(
       assert.ok(collaboration.id);
 
       assert.equal(collaboration.status, "ACTIVE");
+      assert.equal(Number(collaboration.agreedAmount), 15000);
+      assert.equal(collaboration.currency, "XOF");
 
       // 6. Vérifier la notification reçue par le créateur.
       const notificationResponse = await fetch(
@@ -781,6 +815,35 @@ test(
       assert.equal(pendingPaymentData.success, true);
       assert.equal(pendingPaymentData.payment.status, "PENDING");
 
+      // Vérifier que le créateur est notifié lorsque le paiement passe à PENDING.
+      const creatorPendingNotificationsResponse = await fetch(
+        `${API_BASE_URL}/api/notifications`,
+        {
+          headers: {
+            Authorization: `Bearer ${creatorToken}`,
+          },
+        },
+      );
+
+      const creatorPendingNotificationsData =
+        await creatorPendingNotificationsResponse.json();
+
+      assert.equal(
+        creatorPendingNotificationsResponse.status,
+        200,
+        "Le créateur doit pouvoir consulter ses notifications après le changement de statut.",
+      );
+
+      assert.ok(
+        creatorPendingNotificationsData.notifications.some(
+          (notification) =>
+            notification.type === "PAYMENT_STATUS_UPDATED" &&
+            notification.collaborationId === collaboration.id &&
+            notification.message.includes("en attente"),
+        ),
+        "Le créateur doit recevoir une notification lorsque le paiement passe à PENDING.",
+      );
+
       // 17. L'entreprise marque le paiement comme payé.
       const paidPaymentResponse = await fetch(
         `${API_BASE_URL}/api/payments/${paymentId}/status`,
@@ -808,6 +871,54 @@ test(
 
       assert.equal(paidPaymentData.success, true);
       assert.equal(paidPaymentData.payment.status, "PAID");
+
+      // Vérifier que le créateur reçoit les notifications de paiement.
+      const paymentNotificationsResponse = await fetch(
+        `${API_BASE_URL}/api/notifications`,
+        {
+          headers: {
+            Authorization: `Bearer ${creatorToken}`,
+          },
+        },
+      );
+
+      const paymentNotificationsData =
+        await paymentNotificationsResponse.json();
+
+      assert.equal(
+        paymentNotificationsResponse.status,
+        200,
+        "Le créateur doit pouvoir consulter ses notifications de paiement.",
+      );
+
+      assert.equal(paymentNotificationsData.success, true);
+
+      const collaborationPaymentNotifications =
+        paymentNotificationsData.notifications.filter(
+          (notification) =>
+            notification.type === "PAYMENT_STATUS_UPDATED" &&
+            notification.collaborationId === collaboration.id,
+        );
+
+      assert.equal(
+        collaborationPaymentNotifications.length,
+        2,
+        "Le créateur doit recevoir une notification pour chacun des deux changements de statut du paiement.",
+      );
+
+      assert.ok(
+        collaborationPaymentNotifications.some((notification) =>
+          notification.message.includes("en attente"),
+        ),
+        "Une notification doit signaler le passage du paiement à PENDING.",
+      );
+
+      assert.ok(
+        collaborationPaymentNotifications.some((notification) =>
+          notification.message.includes("comme payé"),
+        ),
+        "Une notification doit signaler que le paiement a été marqué comme payé.",
+      );
 
       assert.ok(
         paidPaymentData.payment.paidAt,
@@ -853,6 +964,30 @@ test(
     } finally {
       // Nettoyer uniquement la campagne temporaire et ses données liées.
       if (campaignId) {
+        const collaborations = await prisma.collaboration.findMany({
+          where: {
+            OR: [
+              {
+                application: {
+                  is: {
+                    campaignId,
+                  },
+                },
+              },
+              {
+                invitation: {
+                  is: {
+                    campaignId,
+                  },
+                },
+              },
+            ],
+          },
+          select: {
+            id: true,
+          },
+        });
+
         const applications = await prisma.application.findMany({
           where: {
             campaignId,
@@ -862,15 +997,80 @@ test(
           },
         });
 
+        const collaborationIds = collaborations.map(
+          (collaboration) => collaboration.id,
+        );
+
         const applicationIds = applications.map(
           (application) => application.id,
         );
 
+        const notificationFilters = [];
+
+        if (collaborationIds.length > 0) {
+          notificationFilters.push({
+            collaborationId: {
+              in: collaborationIds,
+            },
+          });
+        }
+
         if (applicationIds.length > 0) {
+          notificationFilters.push({
+            applicationId: {
+              in: applicationIds,
+            },
+          });
+        }
+
+        if (notificationFilters.length > 0) {
           await prisma.notification.deleteMany({
             where: {
-              applicationId: {
-                in: applicationIds,
+              OR: notificationFilters,
+            },
+          });
+        }
+
+        if (collaborationIds.length > 0) {
+          // Les réponses puis les avis doivent être supprimés avant les
+          // collaborations : leurs clés étrangères utilisent ON DELETE RESTRICT.
+          const reviews = await prisma.review.findMany({
+            where: {
+              collaborationId: {
+                in: collaborationIds,
+              },
+            },
+            select: {
+              id: true,
+            },
+          });
+
+          const reviewIds = reviews.map((review) => review.id);
+
+          if (reviewIds.length > 0) {
+            await prisma.reviewResponse.deleteMany({
+              where: {
+                reviewId: {
+                  in: reviewIds,
+                },
+              },
+            });
+
+            await prisma.review.deleteMany({
+              where: {
+                id: {
+                  in: reviewIds,
+                },
+              },
+            });
+          }
+
+          // La collaboration doit être supprimée explicitement : la relation
+          // Collaboration.application utilise désormais ON DELETE RESTRICT.
+          await prisma.collaboration.deleteMany({
+            where: {
+              id: {
+                in: collaborationIds,
               },
             },
           });
@@ -892,7 +1092,7 @@ test.after(async () => {
 });
 
 // =====================================================
-// TESTS AUTOMATISÉS — MARKETPLACE ET RÉPERTOIRE
+// TESTS AUTOMATISÉS   MARKETPLACE ET RÉPERTOIRE
 // =====================================================
 
 // 19. Vérifier la pagination de la marketplace.
@@ -1166,8 +1366,71 @@ test(
   },
 );
 
+test(
+  "GET /api/creators/:id - expose le detail d'un createur aux entreprises",
+  { skip: !creatorDirectoryTestsEnabled },
+  async () => {
+    const token = await getTestToken(
+      process.env.TEST_COMPANY_EMAIL,
+      process.env.TEST_COMPANY_PASSWORD,
+    );
+
+    const listResponse = await fetch(`${API_BASE_URL}/api/creators`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    const listData = await listResponse.json();
+
+    assert.equal(listResponse.status, 200);
+    assert.ok(listData.creators.length > 0);
+
+    const creatorId = listData.creators[0].id;
+
+    const response = await fetch(
+      `${API_BASE_URL}/api/creators/${creatorId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    );
+
+    const data = await response.json();
+
+    assert.equal(response.status, 200);
+    assert.equal(data.success, true);
+    assert.equal(data.creator.id, creatorId);
+    assert.ok(Array.isArray(data.creator.creatorSocials));
+    assert.ok(Array.isArray(data.creator.portfolioItems));
+  },
+);
+
+test(
+  "GET /api/creators/:id - refuse les createurs",
+  { skip: !creatorDirectoryTestsEnabled },
+  async () => {
+    const token = await getTestToken(
+      process.env.TEST_CREATOR_EMAIL,
+      process.env.TEST_CREATOR_PASSWORD,
+    );
+
+    const response = await fetch(
+      `${API_BASE_URL}/api/creators/profil-inexistant`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    );
+
+    assert.equal(response.status, 403);
+  },
+);
+
 // =====================================================
-// TESTS AUTOMATISÉS — SUPPRESSION SÉCURISÉE DES CAMPAGNES
+// TESTS AUTOMATISÉS   SUPPRESSION SÉCURISÉE DES CAMPAGNES
 // =====================================================
 
 const campaignDeletionTestsEnabled = Boolean(
@@ -1414,7 +1677,7 @@ test(
 );
 
 // =====================================================
-// TESTS AUTOMATISÉS — SPRINT 5 : INVITATIONS
+// TESTS AUTOMATISÉS   SPRINT 5 : INVITATIONS
 // =====================================================
 
 const invitationWorkflowTestsEnabled = Boolean(
@@ -2066,6 +2329,30 @@ test(
 
       assert.equal(submitDeliverableData.deliverable.status, "SUBMITTED");
 
+      // Vérifier que l'entreprise est notifiée de la soumission.
+      const companySubmissionNotificationsResponse = await fetch(
+        `${API_BASE_URL}/api/notifications`,
+        {
+          headers: {
+            Authorization: `Bearer ${companyToken}`,
+          },
+        },
+      );
+
+      const companySubmissionNotificationsData =
+        await companySubmissionNotificationsResponse.json();
+
+      assert.equal(companySubmissionNotificationsResponse.status, 200);
+
+      assert.ok(
+        companySubmissionNotificationsData.notifications.some(
+          (notification) =>
+            notification.type === "DELIVERABLE_SUBMITTED" &&
+            notification.collaborationId === collaboration.id,
+        ),
+        "L'entreprise doit recevoir une notification pour la soumission du livrable.",
+      );
+
       // E. L'entreprise demande une correction.
       const revisionResponse = await fetch(
         `${API_BASE_URL}/api/deliverables/${deliverableId}/review`,
@@ -2093,6 +2380,30 @@ test(
       );
 
       assert.equal(revisionData.deliverable.status, "REVISION_REQUESTED");
+
+      // Vérifier que le créateur est notifié de la demande de correction.
+      const creatorRevisionNotificationsResponse = await fetch(
+        `${API_BASE_URL}/api/notifications`,
+        {
+          headers: {
+            Authorization: `Bearer ${creatorToken}`,
+          },
+        },
+      );
+
+      const creatorRevisionNotificationsData =
+        await creatorRevisionNotificationsResponse.json();
+
+      assert.equal(creatorRevisionNotificationsResponse.status, 200);
+
+      assert.ok(
+        creatorRevisionNotificationsData.notifications.some(
+          (notification) =>
+            notification.type === "DELIVERABLE_REVISION_REQUESTED" &&
+            notification.collaborationId === collaboration.id,
+        ),
+        "Le créateur doit être informé de la demande de correction.",
+      );
 
       // F. Le créateur soumet une nouvelle version.
       const resubmitResponse = await fetch(
@@ -2153,8 +2464,32 @@ test(
         "Le livrable doit être approuvé.",
       );
 
+      // Vérifier que le créateur est notifié de l'approbation.
+      const creatorApprovalNotificationsResponse = await fetch(
+        `${API_BASE_URL}/api/notifications`,
+        {
+          headers: {
+            Authorization: `Bearer ${creatorToken}`,
+          },
+        },
+      );
+
+      const creatorApprovalNotificationsData =
+        await creatorApprovalNotificationsResponse.json();
+
+      assert.equal(creatorApprovalNotificationsResponse.status, 200);
+
+      assert.ok(
+        creatorApprovalNotificationsData.notifications.some(
+          (notification) =>
+            notification.type === "DELIVERABLE_APPROVED" &&
+            notification.collaborationId === collaboration.id,
+        ),
+        "Le créateur doit recevoir une notification pour l'approbation du livrable.",
+      );
+
       // =====================================================
-      // SPRINT 6 — TESTS DES PAIEMENTS
+      // SPRINT 6   TESTS DES PAIEMENTS
       // =====================================================
 
       // 20. Un créateur ne peut pas créer un paiement.
@@ -2290,6 +2625,32 @@ test(
 
       assert.equal(pendingPaymentData.payment.status, "PENDING");
 
+      // Vérifier que le créateur reçoit une notification lorsque
+      // le paiement passe à PENDING.
+      const pendingNotificationsResponse = await fetch(
+        `${API_BASE_URL}/api/notifications`,
+        {
+          headers: {
+            Authorization: `Bearer ${creatorToken}`,
+          },
+        },
+      );
+
+      const pendingNotificationsData =
+        await pendingNotificationsResponse.json();
+
+      assert.equal(pendingNotificationsResponse.status, 200);
+
+      assert.ok(
+        pendingNotificationsData.notifications.some(
+          (notification) =>
+            notification.type === "PAYMENT_STATUS_UPDATED" &&
+            notification.collaborationId === collaboration.id &&
+            notification.message.includes("en attente"),
+        ),
+        "Le créateur doit être informé du passage du paiement à PENDING.",
+      );
+
       // 25. L'entreprise marque ensuite le paiement comme payé.
       const paidPaymentResponse = await fetch(
         `${API_BASE_URL}/api/payments/${paymentId}/status`,
@@ -2321,6 +2682,46 @@ test(
       assert.ok(
         paidPaymentData.payment.paidAt,
         "Un paiement marqué PAID doit avoir une date de paiement.",
+      );
+
+      // 25 bis. Vérifier les notifications des changements de statut du paiement.
+      const paymentNotificationsResponse = await fetch(
+        `${API_BASE_URL}/api/notifications`,
+        {
+          headers: {
+            Authorization: `Bearer ${creatorToken}`,
+          },
+        },
+      );
+
+      const paymentNotificationsData =
+        await paymentNotificationsResponse.json();
+
+      assert.equal(
+        paymentNotificationsResponse.status,
+        200,
+        "Le créateur doit pouvoir consulter ses notifications.",
+      );
+
+      const collaborationPaymentNotifications =
+        paymentNotificationsData.notifications.filter(
+          (notification) =>
+            notification.type === "PAYMENT_STATUS_UPDATED" &&
+            notification.collaborationId === collaboration.id,
+        );
+
+      assert.ok(
+        collaborationPaymentNotifications.some((notification) =>
+          notification.message.includes("en attente"),
+        ),
+        "Le créateur doit être notifié lorsque le paiement passe à PENDING.",
+      );
+
+      assert.ok(
+        collaborationPaymentNotifications.some((notification) =>
+          notification.message.includes("marqué comme payé"),
+        ),
+        "Le créateur doit être notifié lorsque le paiement passe à PAID.",
       );
 
       // 26. Un paiement déjà payé ne doit plus pouvoir changer de statut.
@@ -2364,7 +2765,6 @@ test(
         25000,
         "Le total payé doit correspondre au paiement marqué PAID.",
       );
-      console.log("Sprint 5 : le parcours des invitations a été vérifié.");
     } finally {
       // Nettoyer uniquement la campagne créée par ce test.
       if (campaignId) {
@@ -2451,7 +2851,7 @@ test(
 );
 
 // =====================================================
-// TESTS AUTOMATISÉS — ADMINISTRATION
+// TESTS AUTOMATISÉS   ADMINISTRATION
 // =====================================================
 
 // Une requête sans jeton doit être refusée.
@@ -2580,7 +2980,7 @@ test(
 );
 
 // =====================================================
-// TESTS AUTOMATISÉS — LISTE DES UTILISATEURS ADMIN
+// TESTS AUTOMATISÉS   LISTE DES UTILISATEURS ADMIN
 // =====================================================
 
 // 1. Une requête sans jeton doit être refusée.
@@ -2702,7 +3102,7 @@ test(
 );
 
 // =====================================================
-// TESTS AUTOMATISÉS — CAMPAGNES ADMINISTRATIVES
+// TESTS AUTOMATISÉS   CAMPAGNES ADMINISTRATIVES
 // =====================================================
 
 // 1. Une requête sans authentification doit être refusée.
@@ -2875,7 +3275,7 @@ test(
 );
 
 // =====================================================
-// TESTS AUTOMATISÉS — COLLABORATIONS ADMINISTRATIVES
+// TESTS AUTOMATISÉS   COLLABORATIONS ADMINISTRATIVES
 // =====================================================
 
 // 1. Une requête sans jeton doit être refusée.
@@ -3070,7 +3470,7 @@ test(
 );
 
 // =====================================================
-// TESTS AUTOMATISÉS — LIVRABLES ADMINISTRATIFS
+// TESTS AUTOMATISÉS   LIVRABLES ADMINISTRATIFS
 // =====================================================
 
 // 1. Une requête sans jeton doit être refusée.
@@ -3243,53 +3643,44 @@ test(
 );
 
 // =====================================================
-// TESTS AUTOMATISÉS — PAIEMENTS ADMINISTRATIFS
+// TESTS AUTOMATISÉS   PAIEMENTS ADMINISTRATIFS
 // =====================================================
 
 // 1. Une requête sans jeton doit être refusée.
-test(
-  "GET /api/admin/payments - refuse une requête sans jeton",
-  async () => {
-    const response = await fetch(
-      `${API_BASE_URL}/api/admin/payments`
-    );
+test("GET /api/admin/payments - refuse une requête sans jeton", async () => {
+  const response = await fetch(`${API_BASE_URL}/api/admin/payments`);
 
-    const data = await response.json();
+  const data = await response.json();
 
-    assert.equal(response.status, 401);
-    assert.equal(data.success, false);
-  }
-);
+  assert.equal(response.status, 401);
+  assert.equal(data.success, false);
+});
 
 // 2. Une entreprise ne peut pas consulter tous les paiements.
 test(
   "GET /api/admin/payments - refuse une entreprise",
   {
     skip: !(
-      process.env.TEST_COMPANY_EMAIL &&
-      process.env.TEST_COMPANY_PASSWORD
+      process.env.TEST_COMPANY_EMAIL && process.env.TEST_COMPANY_PASSWORD
     ),
   },
   async () => {
     const token = await getTestToken(
       process.env.TEST_COMPANY_EMAIL,
-      process.env.TEST_COMPANY_PASSWORD
+      process.env.TEST_COMPANY_PASSWORD,
     );
 
-    const response = await fetch(
-      `${API_BASE_URL}/api/admin/payments`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
+    const response = await fetch(`${API_BASE_URL}/api/admin/payments`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
 
     const data = await response.json();
 
     assert.equal(response.status, 403);
     assert.equal(data.success, false);
-  }
+  },
 );
 
 // 3. Un créateur ne peut pas consulter tous les paiements.
@@ -3297,45 +3688,38 @@ test(
   "GET /api/admin/payments - refuse un créateur",
   {
     skip: !(
-      process.env.TEST_CREATOR_EMAIL &&
-      process.env.TEST_CREATOR_PASSWORD
+      process.env.TEST_CREATOR_EMAIL && process.env.TEST_CREATOR_PASSWORD
     ),
   },
   async () => {
     const token = await getTestToken(
       process.env.TEST_CREATOR_EMAIL,
-      process.env.TEST_CREATOR_PASSWORD
+      process.env.TEST_CREATOR_PASSWORD,
     );
 
-    const response = await fetch(
-      `${API_BASE_URL}/api/admin/payments`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
+    const response = await fetch(`${API_BASE_URL}/api/admin/payments`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
 
     const data = await response.json();
 
     assert.equal(response.status, 403);
     assert.equal(data.success, false);
-  }
+  },
 );
 
 // 4. Un administrateur peut consulter et filtrer les paiements.
 test(
   "GET /api/admin/payments - retourne les paiements à un ADMIN",
   {
-    skip: !(
-      process.env.TEST_ADMIN_EMAIL &&
-      process.env.TEST_ADMIN_PASSWORD
-    ),
+    skip: !(process.env.TEST_ADMIN_EMAIL && process.env.TEST_ADMIN_PASSWORD),
   },
   async () => {
     const token = await getTestToken(
       process.env.TEST_ADMIN_EMAIL,
-      process.env.TEST_ADMIN_PASSWORD
+      process.env.TEST_ADMIN_PASSWORD,
     );
 
     // Consulter les paiements avec pagination.
@@ -3345,7 +3729,7 @@ test(
         headers: {
           Authorization: `Bearer ${token}`,
         },
-      }
+      },
     );
 
     const data = await response.json();
@@ -3353,9 +3737,7 @@ test(
     assert.equal(
       response.status,
       200,
-      `La requête a échoué : ${
-        data.message || response.status
-      }`
+      `La requête a échoué : ${data.message || response.status}`,
     );
 
     assert.equal(data.success, true);
@@ -3368,12 +3750,12 @@ test(
 
     assert.ok(
       Number.isInteger(data.pagination.total),
-      "Le nombre total de paiements doit être un entier."
+      "Le nombre total de paiements doit être un entier.",
     );
 
     assert.ok(
       data.payments.length <= 5,
-      "La limite de résultats doit être respectée."
+      "La limite de résultats doit être respectée.",
     );
 
     // Chaque collaboration doit provenir d'une candidature
@@ -3381,21 +3763,18 @@ test(
     for (const payment of data.payments) {
       assert.ok(payment.collaboration);
 
-      const hasApplication =
-        payment.collaboration.applicationId !== null;
+      const hasApplication = payment.collaboration.applicationId !== null;
 
-      const hasInvitation =
-        payment.collaboration.invitationId !== null;
+      const hasInvitation = payment.collaboration.invitationId !== null;
 
       assert.notEqual(
         hasApplication,
         hasInvitation,
-        "La collaboration doit avoir exactement une origine."
+        "La collaboration doit avoir exactement une origine.",
       );
 
       const origin =
-        payment.collaboration.application ||
-        payment.collaboration.invitation;
+        payment.collaboration.application || payment.collaboration.invitation;
 
       assert.ok(origin);
       assert.ok(origin.creatorProfile);
@@ -3405,7 +3784,7 @@ test(
       assert.equal(
         Object.hasOwn(payment, "passwordHash"),
         false,
-        "Le paiement ne doit pas exposer de mot de passe haché."
+        "Le paiement ne doit pas exposer de mot de passe haché.",
       );
     }
 
@@ -3416,7 +3795,7 @@ test(
         headers: {
           Authorization: `Bearer ${token}`,
         },
-      }
+      },
     );
 
     const paidData = await paidResponse.json();
@@ -3436,7 +3815,7 @@ test(
         headers: {
           Authorization: `Bearer ${token}`,
         },
-      }
+      },
     );
 
     const invitationData = await invitationResponse.json();
@@ -3449,22 +3828,19 @@ test(
       assert.ok(payment.collaboration.invitation);
       assert.equal(payment.collaboration.applicationId, null);
     }
-  }
+  },
 );
 
 // 5. Un statut de paiement invalide doit être refusé.
 test(
   "GET /api/admin/payments - refuse un statut invalide",
   {
-    skip: !(
-      process.env.TEST_ADMIN_EMAIL &&
-      process.env.TEST_ADMIN_PASSWORD
-    ),
+    skip: !(process.env.TEST_ADMIN_EMAIL && process.env.TEST_ADMIN_PASSWORD),
   },
   async () => {
     const token = await getTestToken(
       process.env.TEST_ADMIN_EMAIL,
-      process.env.TEST_ADMIN_PASSWORD
+      process.env.TEST_ADMIN_PASSWORD,
     );
 
     const response = await fetch(
@@ -3473,254 +3849,2817 @@ test(
         headers: {
           Authorization: `Bearer ${token}`,
         },
-      }
+      },
     );
 
     const data = await response.json();
 
     assert.equal(response.status, 400);
     assert.equal(data.success, false);
-  }
+  },
 );
 
+test("POST /api/auth/reset-password - invalide les anciennes sessions", async () => {
+  let userId;
+
+  try {
+    // 1. Créer un utilisateur temporaire.
+    const email = `test-session-${crypto.randomUUID()}@filwork.local`;
+    const initialPassword = "InitialPassword123!";
+    const newPassword = "NewPassword456!";
+
+    const user = await prisma.user.create({
+      data: {
+        email,
+        passwordHash: await bcrypt.hash(initialPassword, 12),
+        role: "CREATOR",
+      },
+      select: {
+        id: true,
+        tokenVersion: true,
+      },
+    });
+
+    userId = user.id;
+
+    // 2. Obtenir un JWT avant la réinitialisation.
+    const oldToken = await getTestToken(email, initialPassword);
+
+    // 3. Créer un jeton temporaire de réinitialisation.
+    const resetToken = crypto.randomBytes(32).toString("hex");
+
+    const tokenHash = crypto
+      .createHash("sha256")
+      .update(resetToken)
+      .digest("hex");
+
+    await prisma.passwordResetToken.create({
+      data: {
+        userId: user.id,
+        tokenHash,
+        expiresAt: new Date(Date.now() + 15 * 60 * 1000),
+      },
+    });
+
+    // 4. Réinitialiser le mot de passe via l'API.
+    const resetResponse = await fetch(
+      `${API_BASE_URL}/api/auth/reset-password`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          token: resetToken,
+          password: newPassword,
+        }),
+      },
+    );
+
+    const resetData = await resetResponse.json();
+
+    assert.equal(
+      resetResponse.status,
+      200,
+      `La réinitialisation a échoué : ${resetData.message}`,
+    );
+
+    assert.equal(resetData.success, true);
+
+    // Vérifier que le même jeton ne peut pas être réutilisé.
+    const reusedTokenResponse = await fetch(
+      `${API_BASE_URL}/api/auth/reset-password`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          token: resetToken,
+          password: "AnotherPassword789!",
+        }),
+      },
+    );
+
+    assert.equal(
+      reusedTokenResponse.status,
+      400,
+      "Un jeton de réinitialisation déjà utilisé doit être refusé.",
+    );
+
+    // 5. Vérifier que l'ancien JWT est désormais refusé.
+    const oldSessionResponse = await fetch(`${API_BASE_URL}/api/auth/me`, {
+      headers: {
+        Authorization: `Bearer ${oldToken}`,
+      },
+    });
+
+    assert.equal(
+      oldSessionResponse.status,
+      401,
+      "L'ancien JWT devrait être refusé après la réinitialisation.",
+    );
+
+    // 6. Vérifier que la version de session a augmenté.
+    const updatedUser = await prisma.user.findUnique({
+      where: {
+        id: user.id,
+      },
+      select: {
+        tokenVersion: true,
+      },
+    });
+
+    assert.equal(updatedUser.tokenVersion, 1);
+
+    // 7. Se reconnecter avec le nouveau mot de passe.
+    const newToken = await getTestToken(email, newPassword);
+
+    const newSessionResponse = await fetch(`${API_BASE_URL}/api/auth/me`, {
+      headers: {
+        Authorization: `Bearer ${newToken}`,
+      },
+    });
+
+    assert.equal(
+      newSessionResponse.status,
+      200,
+      "Le nouveau JWT devrait être accepté.",
+    );
+  } finally {
+    // Supprimer uniquement le compte temporaire créé par ce test.
+    if (userId) {
+      await prisma.user.deleteMany({
+        where: {
+          id: userId,
+        },
+      });
+    }
+  }
+});
+
+test("POST /api/auth/logout - révoque le JWT après la déconnexion", async () => {
+  let userId = null;
+  let tokenHash = null;
+
+  try {
+    // 1. Créer un utilisateur temporaire pour ce test.
+    const email = `test-logout-${crypto.randomUUID()}@filwork.local`;
+    const password = "LogoutTestPassword123!";
+
+    const user = await prisma.user.create({
+      data: {
+        email,
+        passwordHash: await bcrypt.hash(password, 12),
+        role: "CREATOR",
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    userId = user.id;
+
+    // 2. Se connecter pour obtenir un JWT.
+    const token = await getTestToken(email, password);
+
+    // Préparer le nettoyage du jeton révoqué après le test.
+    tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+
+    // 3. Se déconnecter.
+    const logoutResponse = await fetch(`${API_BASE_URL}/api/auth/logout`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    const logoutData = await logoutResponse.json();
+
+    assert.equal(
+      logoutResponse.status,
+      200,
+      `La déconnexion a échoué : ${logoutData.message}`,
+    );
+
+    assert.equal(logoutData.success, true);
+
+    // 4. Réutiliser l'ancien JWT pour vérifier qu'il est refusé.
+    const sessionResponse = await fetch(`${API_BASE_URL}/api/auth/me`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    const sessionData = await sessionResponse.json();
+
+    assert.equal(
+      sessionResponse.status,
+      401,
+      "Le JWT doit être refusé après la déconnexion.",
+    );
+
+    assert.equal(sessionData.success, false);
+  } finally {
+    // Nettoyer uniquement les données temporaires de ce test.
+    if (tokenHash) {
+      await prisma.revokedToken.deleteMany({
+        where: {
+          tokenHash,
+        },
+      });
+    }
+
+    if (userId) {
+      await prisma.user.deleteMany({
+        where: {
+          id: userId,
+        },
+      });
+    }
+  }
+});
+
+// =====================================================
+// TESTS AUTOMATISÉS   CYCLE DE VIE DES COLLABORATIONS
+// =====================================================
+
+const lifecycleTestsEnabled = workflowTestEnabled;
+
+const otherCompanyLifecycleTestsEnabled = Boolean(
+  workflowTestEnabled &&
+  process.env.TEST_OTHER_COMPANY_EMAIL &&
+  process.env.TEST_OTHER_COMPANY_PASSWORD,
+);
+
+async function getNotificationsForTest(token) {
+  const response = await fetch(`${API_BASE_URL}/api/notifications`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const data = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(data.success, true);
+  assert.ok(Array.isArray(data.notifications));
+
+  return data.notifications;
+}
+
+/**
+ * Filtre les notifications d'un participant pour une collaboration
+ * et un type donnés.
+ */
+async function getLifecycleNotificationsForTest(
+  token,
+  collaborationId,
+  type,
+) {
+  const notifications = await getNotificationsForTest(token);
+
+  return notifications.filter(
+    (notification) =>
+      notification.type === type &&
+      notification.collaborationId === collaborationId,
+  );
+}
+
+async function cleanupLifecycleCampaign(campaignId) {
+  return cleanupCampaignCascade(prisma, campaignId);
+}
+
+async function createActiveCollaborationForLifecycleTest(
+  companyToken,
+  creatorToken,
+) {
+  const campaignTitle = `Cycle de vie ${crypto.randomUUID()}`;
+
+  const createCampaignResponse = await fetch(`${API_BASE_URL}/api/campaigns`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${companyToken}`,
+    },
+    body: JSON.stringify({
+      title: campaignTitle,
+      description:
+        "Campagne temporaire créée pour tester le cycle de vie des collaborations FILWORK.",
+    }),
+  });
+
+  const createdCampaignData = await createCampaignResponse.json();
+
+  assert.ok(
+    [200, 201].includes(createCampaignResponse.status),
+    `La création de campagne a échoué : ${
+      createdCampaignData.message || createCampaignResponse.status
+    }`,
+  );
+
+  const createdCampaign =
+    createdCampaignData.campaign ||
+    createdCampaignData.data?.campaign ||
+    createdCampaignData.data ||
+    createdCampaignData;
+
+  const campaignId = createdCampaign.id;
+
+  assert.ok(
+    campaignId,
+    "La réponse de création ne contient pas l'identifiant de la campagne.",
+  );
+
+  try {
+    const publishResponse = await fetch(
+      `${API_BASE_URL}/api/campaigns/${campaignId}/publish`,
+      {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${companyToken}`,
+        },
+      },
+    );
+
+    const publishData = await publishResponse.json();
+
+    assert.ok(
+      [200, 201].includes(publishResponse.status),
+      `La publication a échoué : ${
+        publishData.message || publishResponse.status
+      }`,
+    );
+
+    const applicationResponse = await fetch(
+      `${API_BASE_URL}/api/applications/${campaignId}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${creatorToken}`,
+        },
+        body: JSON.stringify({
+          message:
+            "Candidature temporaire créée pour tester le cycle de vie des collaborations.",
+        }),
+      },
+    );
+
+    const applicationData = await applicationResponse.json();
+
+    assert.equal(
+      applicationResponse.status,
+      201,
+      `La candidature a échoué : ${
+        applicationData.message || applicationResponse.status
+      }`,
+    );
+
+    const applicationId = applicationData.application?.id;
+
+    assert.ok(
+      applicationId,
+      "La réponse ne contient pas l'identifiant de la candidature.",
+    );
+
+    const acceptResponse = await fetch(
+      `${API_BASE_URL}/api/applications/${applicationId}/status`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${companyToken}`,
+        },
+        body: JSON.stringify({
+          status: "ACCEPTED",
+          amount: 15000,
+        }),
+      },
+    );
+
+    const acceptedData = await acceptResponse.json();
+
+    assert.equal(
+      acceptResponse.status,
+      200,
+      `L'acceptation a échoué : ${
+        acceptedData.message || acceptResponse.status
+      }`,
+    );
+
+    const collaboration = acceptedData.application?.collaboration;
+
+    assert.ok(
+      collaboration?.id,
+      "La collaboration n'a pas été créée par l'acceptation.",
+    );
+
+    return {
+      campaignId,
+      campaignTitle,
+      collaboration,
+    };
+  } catch (error) {
+    await cleanupLifecycleCampaign(campaignId);
+    throw error;
+  }
+}
+
+async function createPaymentForLifecycleTest(
+  companyToken,
+  collaborationId,
+  amount = 1000,
+) {
+  const response = await fetch(
+    `${API_BASE_URL}/api/payments/collaborations/${collaborationId}`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${companyToken}`,
+      },
+      body: JSON.stringify({
+        amount,
+        currency: "XOF",
+      }),
+    },
+  );
+
+  const data = await response.json();
+
+  return { response, data };
+}
+
+async function createDeliverableForLifecycleTest(
+  companyToken,
+  collaborationId,
+  title = "Livrable de test",
+) {
+  const response = await fetch(
+    `${API_BASE_URL}/api/deliverables/collaborations/${collaborationId}`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${companyToken}`,
+      },
+      body: JSON.stringify({
+        title,
+      }),
+    },
+  );
+
+  const data = await response.json();
+
+  return { response, data };
+}
+
+// Les deux routes de cycle de vie doivent rester protégées.
+test("PATCH /api/collaborations/:id/complete - refuse une requête sans jeton", async () => {
+  const response = await fetch(
+    `${API_BASE_URL}/api/collaborations/test-collaboration-id/complete`,
+    {
+      method: "PATCH",
+    },
+  );
+
+  assert.equal(response.status, 401);
+});
+
+test("PATCH /api/collaborations/:id/cancel - refuse une requête sans jeton", async () => {
+  const response = await fetch(
+    `${API_BASE_URL}/api/collaborations/test-collaboration-id/cancel`,
+    {
+      method: "PATCH",
+    },
+  );
+
+  assert.equal(response.status, 401);
+});
+
 test(
-  "POST /api/auth/reset-password - invalide les anciennes sessions",
+  "Cycle de vie - l'entreprise clôture une collaboration et les paiements existants restent gérables",
+  { skip: !lifecycleTestsEnabled },
   async () => {
-    let userId;
+    let campaignId = null;
 
     try {
-      // 1. Créer un utilisateur temporaire.
-      const email = `test-session-${crypto.randomUUID()}@filwork.local`;
-      const initialPassword = "InitialPassword123!";
-      const newPassword = "NewPassword456!";
+      const creatorToken = await getTestToken(
+        process.env.TEST_CREATOR_EMAIL,
+        process.env.TEST_CREATOR_PASSWORD,
+      );
 
-      const user = await prisma.user.create({
-        data: {
-          email,
-          passwordHash: await bcrypt.hash(initialPassword, 12),
-          role: "CREATOR",
-        },
-        select: {
-          id: true,
-          tokenVersion: true,
-        },
-      });
+      const companyToken = await getTestToken(
+        process.env.TEST_COMPANY_EMAIL,
+        process.env.TEST_COMPANY_PASSWORD,
+      );
 
-      userId = user.id;
+      const created = await createActiveCollaborationForLifecycleTest(
+        companyToken,
+        creatorToken,
+      );
 
-      // 2. Obtenir un JWT avant la réinitialisation.
-      const oldToken = await getTestToken(email, initialPassword);
+      campaignId = created.campaignId;
 
-      // 3. Créer un jeton temporaire de réinitialisation.
-      const resetToken = crypto.randomBytes(32).toString("hex");
+      const { collaboration, campaignTitle } = created;
 
-      const tokenHash = crypto
-        .createHash("sha256")
-        .update(resetToken)
-        .digest("hex");
+      // Un paiement existe avant la clôture.
+      const createdPayment = await createPaymentForLifecycleTest(
+        companyToken,
+        collaboration.id,
+      );
 
-      await prisma.passwordResetToken.create({
-        data: {
-          userId: user.id,
-          tokenHash,
-          expiresAt: new Date(Date.now() + 15 * 60 * 1000),
-        },
-      });
+      assert.equal(
+        createdPayment.response.status,
+        201,
+        `La création du paiement a échoué : ${
+          createdPayment.data.message || createdPayment.response.status
+        }`,
+      );
 
-      // 4. Réinitialiser le mot de passe via l'API.
-      const resetResponse = await fetch(
-        `${API_BASE_URL}/api/auth/reset-password`,
+      const paymentId = createdPayment.data.payment.id;
+
+      assert.ok(paymentId);
+
+      // Un livrable soumis avant la clôture ne doit plus pouvoir être
+      // examiné une fois la collaboration clôturée.
+      const deliverableBeforeClosure = await createDeliverableForLifecycleTest(
+        companyToken,
+        collaboration.id,
+        "Livrable avant clôture",
+      );
+
+      assert.equal(deliverableBeforeClosure.response.status, 201);
+
+      const deliverableBeforeClosureId =
+        deliverableBeforeClosure.data.deliverable.id;
+
+      const submitBeforeClosureResponse = await fetch(
+        `${API_BASE_URL}/api/deliverables/${deliverableBeforeClosureId}/submit`,
         {
-          method: "POST",
+          method: "PATCH",
           headers: {
             "Content-Type": "application/json",
+            Authorization: `Bearer ${creatorToken}`,
           },
           body: JSON.stringify({
-            token: resetToken,
-            password: newPassword,
+            assetUrl: "https://example.com/livrable-avant-cloture",
           }),
         },
       );
 
-      const resetData = await resetResponse.json();
+      assert.equal(submitBeforeClosureResponse.status, 200);
 
-      assert.equal(
-        resetResponse.status,
-        200,
-        `La réinitialisation a échoué : ${resetData.message}`,
-      );
-
-      assert.equal(resetData.success, true);
-
-      // Vérifier que le même jeton ne peut pas être réutilisé.
-const reusedTokenResponse = await fetch(
-  `${API_BASE_URL}/api/auth/reset-password`,
-  {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      token: resetToken,
-      password: "AnotherPassword789!",
-    }),
-  },
-);
-
-assert.equal(
-  reusedTokenResponse.status,
-  400,
-  "Un jeton de réinitialisation déjà utilisé doit être refusé.",
-);
-
-      // 5. Vérifier que l'ancien JWT est désormais refusé.
-      const oldSessionResponse = await fetch(
-        `${API_BASE_URL}/api/auth/me`,
+      // Le créateur ne peut pas clôturer.
+      const creatorCompleteResponse = await fetch(
+        `${API_BASE_URL}/api/collaborations/${collaboration.id}/complete`,
         {
+          method: "PATCH",
           headers: {
-            Authorization: `Bearer ${oldToken}`,
+            Authorization: `Bearer ${creatorToken}`,
           },
         },
       );
 
-      assert.equal(
-        oldSessionResponse.status,
-        401,
-        "L'ancien JWT devrait être refusé après la réinitialisation.",
-      );
+      assert.equal(creatorCompleteResponse.status, 403);
 
-      // 6. Vérifier que la version de session a augmenté.
-      const updatedUser = await prisma.user.findUnique({
-        where: {
-          id: user.id,
-        },
-        select: {
-          tokenVersion: true,
-        },
-      });
-
-      assert.equal(updatedUser.tokenVersion, 1);
-
-      // 7. Se reconnecter avec le nouveau mot de passe.
-      const newToken = await getTestToken(email, newPassword);
-
-      const newSessionResponse = await fetch(
-        `${API_BASE_URL}/api/auth/me`,
+      // L'entreprise clôture.
+      const completeResponse = await fetch(
+        `${API_BASE_URL}/api/collaborations/${collaboration.id}/complete`,
         {
+          method: "PATCH",
           headers: {
-            Authorization: `Bearer ${newToken}`,
+            Authorization: `Bearer ${companyToken}`,
           },
         },
       );
 
+      const completeData = await completeResponse.json();
+
       assert.equal(
-        newSessionResponse.status,
+        completeResponse.status,
         200,
-        "Le nouveau JWT devrait être accepté.",
+        `La clôture a échoué : ${
+          completeData.message || completeResponse.status
+        }`,
+      );
+
+      assert.equal(completeData.success, true);
+      assert.equal(completeData.collaboration.status, "COMPLETED");
+      assert.ok(
+        completeData.collaboration.endDate,
+        "La date de clôture doit être renseignée.",
+      );
+      assert.equal(completeData.collaboration.cancelledByRole, null);
+
+      // Une seconde clôture est idempotente.
+      const secondCompleteResponse = await fetch(
+        `${API_BASE_URL}/api/collaborations/${collaboration.id}/complete`,
+        {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${companyToken}`,
+          },
+        },
+      );
+
+      assert.equal(secondCompleteResponse.status, 200);
+
+      // L'annulation est impossible après clôture.
+      const cancelAfterCompleteResponse = await fetch(
+        `${API_BASE_URL}/api/collaborations/${collaboration.id}/cancel`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${creatorToken}`,
+          },
+          body: JSON.stringify({ reason: "Tentative tardive" }),
+        },
+      );
+
+      assert.equal(cancelAfterCompleteResponse.status, 409);
+
+      // Aucune nouvelle création n'est possible sur une collaboration close.
+      const newDeliverable = await createDeliverableForLifecycleTest(
+        companyToken,
+        collaboration.id,
+        "Livrable trop tardif",
+      );
+
+      assert.equal(newDeliverable.response.status, 409);
+
+      const newPayment = await createPaymentForLifecycleTest(
+        companyToken,
+        collaboration.id,
+        500,
+      );
+
+      assert.equal(newPayment.response.status, 409);
+
+      // Un livrable déjà soumis ne peut plus être examiné après la clôture.
+      const reviewAfterCompleteResponse = await fetch(
+        `${API_BASE_URL}/api/deliverables/${deliverableBeforeClosureId}/review`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${companyToken}`,
+          },
+          body: JSON.stringify({
+            status: "APPROVED",
+          }),
+        },
+      );
+
+      assert.equal(
+        reviewAfterCompleteResponse.status,
+        409,
+        "Un livrable ne doit plus être examinable après la clôture.",
+      );
+
+      // Le paiement existant reste gérable après la clôture.
+      const updatePaymentResponse = await fetch(
+        `${API_BASE_URL}/api/payments/${paymentId}/status`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${companyToken}`,
+          },
+          body: JSON.stringify({
+            status: "PENDING",
+          }),
+        },
+      );
+
+      assert.equal(
+        updatePaymentResponse.status,
+        200,
+        "Un paiement existant doit rester gérable après la clôture.",
+      );
+
+      // Les deux participants sont notifiés, y compris l'entreprise
+      // qui a déclenché la clôture.
+      const creatorNotifications = await getNotificationsForTest(creatorToken);
+      const companyNotifications = await getNotificationsForTest(companyToken);
+
+      const creatorCompletionNotifications = creatorNotifications.filter(
+        (notification) =>
+          notification.type === "COLLABORATION_COMPLETED" &&
+          notification.collaborationId === collaboration.id,
+      );
+
+      const companyCompletionNotifications = companyNotifications.filter(
+        (notification) =>
+          notification.type === "COLLABORATION_COMPLETED" &&
+          notification.collaborationId === collaboration.id,
+      );
+
+      assert.equal(
+        creatorCompletionNotifications.length,
+        1,
+        "Le créateur doit recevoir une notification de clôture.",
+      );
+
+      assert.equal(
+        companyCompletionNotifications.length,
+        1,
+        "L'entreprise qui clôture doit aussi recevoir une notification.",
+      );
+
+      assert.equal(
+        creatorCompletionNotifications[0].title,
+        "Collaboration clôturée",
+      );
+
+      assert.equal(
+        companyCompletionNotifications[0].title,
+        "Collaboration clôturée",
+      );
+
+      assert.ok(
+        creatorCompletionNotifications[0].message.includes(campaignTitle),
+        "La notification du créateur doit mentionner la campagne.",
+      );
+
+      assert.ok(
+        creatorCompletionNotifications[0].message.includes("a clôturé"),
+        "La notification du créateur doit indiquer la clôture.",
+      );
+
+      assert.ok(
+        companyCompletionNotifications[0].message.includes("Vous avez clôturé"),
+        "La notification de l'entreprise doit lui confirmer son action.",
+      );
+
+      assert.ok(
+        companyCompletionNotifications[0].message.includes(campaignTitle),
+        "La notification de l'entreprise doit mentionner la campagne.",
       );
     } finally {
-      // Supprimer uniquement le compte temporaire créé par ce test.
-      if (userId) {
-        await prisma.user.deleteMany({
-          where: {
-            id: userId,
-          },
-        });
-      }
+      await cleanupLifecycleCampaign(campaignId);
     }
   },
 );
 
 test(
-  "POST /api/auth/logout - révoque le JWT après la déconnexion",
+  "Cycle de vie - l'entreprise doit fournir un motif pour annuler",
+  { skip: !lifecycleTestsEnabled },
   async () => {
-    let userId = null;
-    let tokenHash = null;
+    let campaignId = null;
 
     try {
-      // 1. Créer un utilisateur temporaire pour ce test.
-      const email = `test-logout-${crypto.randomUUID()}@filwork.local`;
-      const password = "LogoutTestPassword123!";
+      const creatorToken = await getTestToken(
+        process.env.TEST_CREATOR_EMAIL,
+        process.env.TEST_CREATOR_PASSWORD,
+      );
 
-      const user = await prisma.user.create({
-        data: {
-          email,
-          passwordHash: await bcrypt.hash(password, 12),
-          role: "CREATOR",
+      const companyToken = await getTestToken(
+        process.env.TEST_COMPANY_EMAIL,
+        process.env.TEST_COMPANY_PASSWORD,
+      );
+
+      const created = await createActiveCollaborationForLifecycleTest(
+        companyToken,
+        creatorToken,
+      );
+
+      campaignId = created.campaignId;
+
+      const { collaboration, campaignTitle } = created;
+
+      const cancellationReason = "Budget suspendu par l'entreprise.";
+
+      const createdPayment = await createPaymentForLifecycleTest(
+        companyToken,
+        collaboration.id,
+      );
+
+      assert.equal(createdPayment.response.status, 201);
+
+      const paymentId = createdPayment.data.payment.id;
+
+      // Un livrable non soumis avant l'annulation ne doit plus pouvoir
+      // être soumis une fois la collaboration annulée.
+      const deliverableBeforeCancel = await createDeliverableForLifecycleTest(
+        companyToken,
+        collaboration.id,
+        "Livrable avant annulation",
+      );
+
+      assert.equal(deliverableBeforeCancel.response.status, 201);
+
+      const deliverableBeforeCancelId =
+        deliverableBeforeCancel.data.deliverable.id;
+
+      // Sans motif : refus.
+      const withoutReasonResponse = await fetch(
+        `${API_BASE_URL}/api/collaborations/${collaboration.id}/cancel`,
+        {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${companyToken}`,
+          },
+        },
+      );
+
+      assert.equal(withoutReasonResponse.status, 400);
+
+      // Motif vide : refus.
+      const blankReasonResponse = await fetch(
+        `${API_BASE_URL}/api/collaborations/${collaboration.id}/cancel`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${companyToken}`,
+          },
+          body: JSON.stringify({
+            reason: "   ",
+          }),
+        },
+      );
+
+      assert.equal(blankReasonResponse.status, 400);
+
+      // Motif valide : annulation.
+      const cancelResponse = await fetch(
+        `${API_BASE_URL}/api/collaborations/${collaboration.id}/cancel`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${companyToken}`,
+          },
+          body: JSON.stringify({
+            reason: cancellationReason,
+          }),
+        },
+      );
+
+      const cancelData = await cancelResponse.json();
+
+      assert.equal(
+        cancelResponse.status,
+        200,
+        `L'annulation a échoué : ${
+          cancelData.message || cancelResponse.status
+        }`,
+      );
+
+      assert.equal(cancelData.success, true);
+      assert.equal(cancelData.collaboration.status, "CANCELLED");
+      assert.equal(
+        cancelData.collaboration.cancellationReason,
+        cancellationReason,
+      );
+      assert.equal(cancelData.collaboration.cancelledByRole, "COMPANY");
+      assert.ok(
+        cancelData.collaboration.endDate,
+        "La date de fin doit être renseignée à l'annulation.",
+      );
+
+      // Le paiement existant reste gérable après l'annulation.
+      const updatePaymentResponse = await fetch(
+        `${API_BASE_URL}/api/payments/${paymentId}/status`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${companyToken}`,
+          },
+          body: JSON.stringify({
+            status: "PENDING",
+          }),
+        },
+      );
+
+      assert.equal(
+        updatePaymentResponse.status,
+        200,
+        "Un paiement existant doit rester gérable après l'annulation.",
+      );
+
+      // Une seconde annulation est idempotente, même sans motif.
+      const secondCancelResponse = await fetch(
+        `${API_BASE_URL}/api/collaborations/${collaboration.id}/cancel`,
+        {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${companyToken}`,
+          },
+        },
+      );
+
+      assert.equal(secondCancelResponse.status, 200);
+
+      // La clôture est impossible après annulation.
+      const completeAfterCancelResponse = await fetch(
+        `${API_BASE_URL}/api/collaborations/${collaboration.id}/complete`,
+        {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${companyToken}`,
+          },
+        },
+      );
+
+      assert.equal(completeAfterCancelResponse.status, 409);
+
+      // Aucune nouvelle création n'est possible.
+      const newDeliverable = await createDeliverableForLifecycleTest(
+        companyToken,
+        collaboration.id,
+        "Livrable trop tardif",
+      );
+
+      assert.equal(newDeliverable.response.status, 409);
+
+      const newPayment = await createPaymentForLifecycleTest(
+        companyToken,
+        collaboration.id,
+        500,
+      );
+
+      assert.equal(newPayment.response.status, 409);
+
+      // Un livrable existant ne peut plus être soumis après l'annulation.
+      const submitAfterCancelResponse = await fetch(
+        `${API_BASE_URL}/api/deliverables/${deliverableBeforeCancelId}/submit`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${creatorToken}`,
+          },
+          body: JSON.stringify({
+            assetUrl: "https://example.com/livrable-apres-annulation",
+          }),
+        },
+      );
+
+      assert.equal(
+        submitAfterCancelResponse.status,
+        409,
+        "Un livrable ne doit plus être soumissible après l'annulation.",
+      );
+
+      // Les deux participants sont notifiés avec le motif, y compris
+      // l'entreprise auteure de l'annulation.
+      const creatorNotifications = await getNotificationsForTest(creatorToken);
+      const companyNotifications = await getNotificationsForTest(companyToken);
+
+      const creatorCancellationNotifications = creatorNotifications.filter(
+        (notification) =>
+          notification.type === "COLLABORATION_CANCELLED" &&
+          notification.collaborationId === collaboration.id,
+      );
+
+      const companyCancellationNotifications = companyNotifications.filter(
+        (notification) =>
+          notification.type === "COLLABORATION_CANCELLED" &&
+          notification.collaborationId === collaboration.id,
+      );
+
+      assert.equal(
+        creatorCancellationNotifications.length,
+        1,
+        "Le créateur doit recevoir une notification d'annulation.",
+      );
+
+      assert.equal(
+        companyCancellationNotifications.length,
+        1,
+        "L'entreprise auteure de l'annulation doit aussi être notifiée.",
+      );
+
+      assert.equal(
+        creatorCancellationNotifications[0].title,
+        "Collaboration annulée",
+      );
+
+      assert.equal(
+        companyCancellationNotifications[0].title,
+        "Collaboration annulée",
+      );
+
+      assert.ok(
+        creatorCancellationNotifications[0].message.includes(cancellationReason),
+        "La notification du créateur doit contenir le motif d'annulation.",
+      );
+
+      assert.ok(
+        creatorCancellationNotifications[0].message.includes(campaignTitle),
+        "La notification du créateur doit mentionner la campagne.",
+      );
+
+      assert.ok(
+        companyCancellationNotifications[0].message.includes("Vous avez annulé"),
+        "La notification de l'entreprise doit lui confirmer son action.",
+      );
+
+      assert.ok(
+        companyCancellationNotifications[0].message.includes(cancellationReason),
+        "La notification de l'entreprise doit contenir le motif d'annulation.",
+      );
+    } finally {
+      await cleanupLifecycleCampaign(campaignId);
+    }
+  },
+);
+
+test(
+  "Cycle de vie - le créateur peut annuler une collaboration sans engagement",
+  { skip: !lifecycleTestsEnabled },
+  async () => {
+    let campaignId = null;
+
+    try {
+      const creatorToken = await getTestToken(
+        process.env.TEST_CREATOR_EMAIL,
+        process.env.TEST_CREATOR_PASSWORD,
+      );
+
+      const companyToken = await getTestToken(
+        process.env.TEST_COMPANY_EMAIL,
+        process.env.TEST_COMPANY_PASSWORD,
+      );
+
+      const created = await createActiveCollaborationForLifecycleTest(
+        companyToken,
+        creatorToken,
+      );
+
+      campaignId = created.campaignId;
+
+      const { collaboration, campaignTitle } = created;
+
+      // Un livrable PENDING et un paiement PLANNED ne constituent pas
+      // un engagement du créateur.
+      const deliverable = await createDeliverableForLifecycleTest(
+        companyToken,
+        collaboration.id,
+        "Livrable non soumis",
+      );
+
+      assert.equal(deliverable.response.status, 201);
+
+      const payment = await createPaymentForLifecycleTest(
+        companyToken,
+        collaboration.id,
+      );
+
+      assert.equal(payment.response.status, 201);
+
+      const cancelResponse = await fetch(
+        `${API_BASE_URL}/api/collaborations/${collaboration.id}/cancel`,
+        {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${creatorToken}`,
+          },
+        },
+      );
+
+      const cancelData = await cancelResponse.json();
+
+      assert.equal(
+        cancelResponse.status,
+        200,
+        `L'annulation par le créateur a échoué : ${
+          cancelData.message || cancelResponse.status
+        }`,
+      );
+
+      assert.equal(cancelData.collaboration.status, "CANCELLED");
+      assert.equal(cancelData.collaboration.cancelledByRole, "CREATOR");
+      assert.equal(cancelData.collaboration.cancellationReason, null);
+
+      // Les deux participants sont notifiés, y compris le créateur
+      // auteur de l'annulation.
+      const creatorNotifications = await getNotificationsForTest(creatorToken);
+      const companyNotifications = await getNotificationsForTest(companyToken);
+
+      const creatorCancellationNotifications = creatorNotifications.filter(
+        (notification) =>
+          notification.type === "COLLABORATION_CANCELLED" &&
+          notification.collaborationId === collaboration.id,
+      );
+
+      const companyCancellationNotifications = companyNotifications.filter(
+        (notification) =>
+          notification.type === "COLLABORATION_CANCELLED" &&
+          notification.collaborationId === collaboration.id,
+      );
+
+      assert.equal(
+        companyCancellationNotifications.length,
+        1,
+        "L'entreprise doit recevoir une notification d'annulation.",
+      );
+
+      assert.equal(
+        creatorCancellationNotifications.length,
+        1,
+        "Le créateur auteur de l'annulation doit aussi être notifié.",
+      );
+
+      assert.ok(
+        companyCancellationNotifications[0].message.includes(campaignTitle),
+        "La notification de l'entreprise doit mentionner la campagne.",
+      );
+
+      assert.ok(
+        creatorCancellationNotifications[0].message.includes("Vous avez annulé"),
+        "La notification du créateur doit lui confirmer son action.",
+      );
+
+      assert.ok(
+        !creatorCancellationNotifications[0].message.includes("Motif"),
+        "Aucun motif ne doit apparaître lorsque le créateur n'en fournit pas.",
+      );
+    } finally {
+      await cleanupLifecycleCampaign(campaignId);
+    }
+  },
+);
+
+test(
+  "Cycle de vie - le créateur est bloqué par un livrable déjà soumis",
+  { skip: !lifecycleTestsEnabled },
+  async () => {
+    let campaignId = null;
+
+    try {
+      const creatorToken = await getTestToken(
+        process.env.TEST_CREATOR_EMAIL,
+        process.env.TEST_CREATOR_PASSWORD,
+      );
+
+      const companyToken = await getTestToken(
+        process.env.TEST_COMPANY_EMAIL,
+        process.env.TEST_COMPANY_PASSWORD,
+      );
+
+      const created = await createActiveCollaborationForLifecycleTest(
+        companyToken,
+        creatorToken,
+      );
+
+      campaignId = created.campaignId;
+
+      const { collaboration } = created;
+
+      const deliverable = await createDeliverableForLifecycleTest(
+        companyToken,
+        collaboration.id,
+        "Livrable soumis",
+      );
+
+      assert.equal(deliverable.response.status, 201);
+
+      const deliverableId = deliverable.data.deliverable.id;
+
+      const submitResponse = await fetch(
+        `${API_BASE_URL}/api/deliverables/${deliverableId}/submit`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${creatorToken}`,
+          },
+          body: JSON.stringify({
+            assetUrl: "https://example.com/livrable-test",
+          }),
+        },
+      );
+
+      assert.equal(
+        submitResponse.status,
+        200,
+        "La soumission du livrable a échoué.",
+      );
+
+      const cancelResponse = await fetch(
+        `${API_BASE_URL}/api/collaborations/${collaboration.id}/cancel`,
+        {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${creatorToken}`,
+          },
+        },
+      );
+
+      const cancelData = await cancelResponse.json();
+
+      assert.equal(
+        cancelResponse.status,
+        409,
+        "Le créateur ne doit pas pouvoir annuler après avoir soumis un livrable.",
+      );
+
+      assert.ok(cancelData.engagement);
+      assert.ok(cancelData.engagement.blockingDeliverables >= 1);
+
+      // La collaboration reste active.
+      const collaborationResponse = await fetch(
+        `${API_BASE_URL}/api/collaborations/${collaboration.id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${creatorToken}`,
+          },
+        },
+      );
+
+      const collaborationData = await collaborationResponse.json();
+
+      assert.equal(collaborationResponse.status, 200);
+      assert.equal(collaborationData.collaboration.status, "ACTIVE");
+
+      // Une annulation refusée ne doit créer aucune notification
+      // d'annulation, pour aucun des deux participants.
+      const creatorCancellations = await getLifecycleNotificationsForTest(
+        creatorToken,
+        collaboration.id,
+        "COLLABORATION_CANCELLED",
+      );
+
+      const companyCancellations = await getLifecycleNotificationsForTest(
+        companyToken,
+        collaboration.id,
+        "COLLABORATION_CANCELLED",
+      );
+
+      assert.equal(creatorCancellations.length, 0);
+      assert.equal(companyCancellations.length, 0);
+    } finally {
+      await cleanupLifecycleCampaign(campaignId);
+    }
+  },
+);
+
+test(
+  "Cycle de vie - le créateur est bloqué par un paiement en attente",
+  { skip: !lifecycleTestsEnabled },
+  async () => {
+    let campaignId = null;
+
+    try {
+      const creatorToken = await getTestToken(
+        process.env.TEST_CREATOR_EMAIL,
+        process.env.TEST_CREATOR_PASSWORD,
+      );
+
+      const companyToken = await getTestToken(
+        process.env.TEST_COMPANY_EMAIL,
+        process.env.TEST_COMPANY_PASSWORD,
+      );
+
+      const created = await createActiveCollaborationForLifecycleTest(
+        companyToken,
+        creatorToken,
+      );
+
+      campaignId = created.campaignId;
+
+      const { collaboration } = created;
+
+      const payment = await createPaymentForLifecycleTest(
+        companyToken,
+        collaboration.id,
+      );
+
+      assert.equal(payment.response.status, 201);
+
+      const paymentId = payment.data.payment.id;
+
+      const pendingResponse = await fetch(
+        `${API_BASE_URL}/api/payments/${paymentId}/status`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${companyToken}`,
+          },
+          body: JSON.stringify({
+            status: "PENDING",
+          }),
+        },
+      );
+
+      assert.equal(pendingResponse.status, 200);
+
+      const cancelResponse = await fetch(
+        `${API_BASE_URL}/api/collaborations/${collaboration.id}/cancel`,
+        {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${creatorToken}`,
+          },
+        },
+      );
+
+      const cancelData = await cancelResponse.json();
+
+      assert.equal(
+        cancelResponse.status,
+        409,
+        "Le créateur ne doit pas pouvoir annuler lorsqu'un paiement est engagé.",
+      );
+
+      assert.ok(cancelData.engagement);
+      assert.ok(cancelData.engagement.blockingPayments >= 1);
+
+      const collaborationResponse = await fetch(
+        `${API_BASE_URL}/api/collaborations/${collaboration.id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${creatorToken}`,
+          },
+        },
+      );
+
+      const collaborationData = await collaborationResponse.json();
+
+      assert.equal(collaborationResponse.status, 200);
+      assert.equal(collaborationData.collaboration.status, "ACTIVE");
+
+      // Une annulation refusée ne doit créer aucune notification
+      // d'annulation, pour aucun des deux participants.
+      const creatorCancellations = await getLifecycleNotificationsForTest(
+        creatorToken,
+        collaboration.id,
+        "COLLABORATION_CANCELLED",
+      );
+
+      const companyCancellations = await getLifecycleNotificationsForTest(
+        companyToken,
+        collaboration.id,
+        "COLLABORATION_CANCELLED",
+      );
+
+      assert.equal(creatorCancellations.length, 0);
+      assert.equal(companyCancellations.length, 0);
+    } finally {
+      await cleanupLifecycleCampaign(campaignId);
+    }
+  },
+);
+
+test(
+  "Cycle de vie - une autre entreprise ne peut pas clôturer la collaboration",
+  { skip: !otherCompanyLifecycleTestsEnabled },
+  async () => {
+    let campaignId = null;
+
+    try {
+      const creatorToken = await getTestToken(
+        process.env.TEST_CREATOR_EMAIL,
+        process.env.TEST_CREATOR_PASSWORD,
+      );
+
+      const companyToken = await getTestToken(
+        process.env.TEST_COMPANY_EMAIL,
+        process.env.TEST_COMPANY_PASSWORD,
+      );
+
+      const otherCompanyToken = await getTestToken(
+        process.env.TEST_OTHER_COMPANY_EMAIL,
+        process.env.TEST_OTHER_COMPANY_PASSWORD,
+      );
+
+      const created = await createActiveCollaborationForLifecycleTest(
+        companyToken,
+        creatorToken,
+      );
+
+      campaignId = created.campaignId;
+
+      const { collaboration } = created;
+
+      const otherCompleteResponse = await fetch(
+        `${API_BASE_URL}/api/collaborations/${collaboration.id}/complete`,
+        {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${otherCompanyToken}`,
+          },
+        },
+      );
+
+      assert.equal(
+        otherCompleteResponse.status,
+        404,
+        "Une entreprise extérieure ne doit pas pouvoir clôturer la collaboration.",
+      );
+
+      const otherCancelResponse = await fetch(
+        `${API_BASE_URL}/api/collaborations/${collaboration.id}/cancel`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${otherCompanyToken}`,
+          },
+          body: JSON.stringify({
+            reason: "Tentative extérieure",
+          }),
+        },
+      );
+
+      assert.equal(
+        otherCancelResponse.status,
+        404,
+        "Une entreprise extérieure ne doit pas pouvoir annuler la collaboration.",
+      );
+
+      // La collaboration est toujours active.
+      const collaborationResponse = await fetch(
+        `${API_BASE_URL}/api/collaborations/${collaboration.id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${companyToken}`,
+          },
+        },
+      );
+
+      const collaborationData = await collaborationResponse.json();
+
+      assert.equal(collaborationResponse.status, 200);
+      assert.equal(collaborationData.collaboration.status, "ACTIVE");
+
+      // Les tentatives extérieures ne doivent créer aucune notification
+      // de clôture ou d'annulation pour les participants.
+      const creatorCancellations = await getLifecycleNotificationsForTest(
+        creatorToken,
+        collaboration.id,
+        "COLLABORATION_CANCELLED",
+      );
+
+      const companyCancellations = await getLifecycleNotificationsForTest(
+        companyToken,
+        collaboration.id,
+        "COLLABORATION_CANCELLED",
+      );
+
+      const creatorCompletions = await getLifecycleNotificationsForTest(
+        creatorToken,
+        collaboration.id,
+        "COLLABORATION_COMPLETED",
+      );
+
+      const companyCompletions = await getLifecycleNotificationsForTest(
+        companyToken,
+        collaboration.id,
+        "COLLABORATION_COMPLETED",
+      );
+
+      assert.equal(creatorCancellations.length, 0);
+      assert.equal(companyCancellations.length, 0);
+      assert.equal(creatorCompletions.length, 0);
+      assert.equal(companyCompletions.length, 0);
+    } finally {
+      await cleanupLifecycleCampaign(campaignId);
+    }
+  },
+);
+
+test(
+  "Cycle de vie - soumission et annulation concurrentes restent cohérentes",
+  { skip: !lifecycleTestsEnabled },
+  async () => {
+    let campaignId = null;
+
+    try {
+      const creatorToken = await getTestToken(
+        process.env.TEST_CREATOR_EMAIL,
+        process.env.TEST_CREATOR_PASSWORD,
+      );
+
+      const companyToken = await getTestToken(
+        process.env.TEST_COMPANY_EMAIL,
+        process.env.TEST_COMPANY_PASSWORD,
+      );
+
+      const created = await createActiveCollaborationForLifecycleTest(
+        companyToken,
+        creatorToken,
+      );
+
+      campaignId = created.campaignId;
+
+      const { collaboration } = created;
+
+      const deliverable = await createDeliverableForLifecycleTest(
+        companyToken,
+        collaboration.id,
+        "Livrable concurrent",
+      );
+
+      assert.equal(deliverable.response.status, 201);
+
+      const deliverableId = deliverable.data.deliverable.id;
+
+      // Les deux écritures sont lancées en parallèle. Le verrou de la
+      // collaboration doit les sérialiser : soit la soumission passe avant
+      // l'annulation (qui est alors refusée), soit l'annulation passe avant
+      // la soumission (qui est alors refusée).
+      const [submitResponse, cancelResponse] = await Promise.all([
+        fetch(`${API_BASE_URL}/api/deliverables/${deliverableId}/submit`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${creatorToken}`,
+          },
+          body: JSON.stringify({
+            assetUrl: "https://example.com/livrable-concurrent",
+          }),
+        }),
+        fetch(`${API_BASE_URL}/api/collaborations/${collaboration.id}/cancel`, {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${creatorToken}`,
+          },
+        }),
+      ]);
+
+      assert.ok(
+        [200, 409].includes(submitResponse.status),
+        `Statut inattendu pour la soumission : ${submitResponse.status}`,
+      );
+
+      assert.ok(
+        [200, 409].includes(cancelResponse.status),
+        `Statut inattendu pour l'annulation : ${cancelResponse.status}`,
+      );
+
+      assert.ok(
+        submitResponse.status === 200 || cancelResponse.status === 200,
+        "Au moins une des deux actions concurrentes doit aboutir.",
+      );
+
+      const collaborationState = await prisma.collaboration.findUnique({
+        where: {
+          id: collaboration.id,
         },
         select: {
-          id: true,
+          status: true,
         },
       });
 
-      userId = user.id;
+      const deliverableState = await prisma.deliverable.findUnique({
+        where: {
+          id: deliverableId,
+        },
+        select: {
+          status: true,
+        },
+      });
 
-      // 2. Se connecter pour obtenir un JWT.
-      const token = await getTestToken(email, password);
+      assert.ok(collaborationState);
+      assert.ok(deliverableState);
 
-      // Préparer le nettoyage du jeton révoqué après le test.
-      tokenHash = crypto
-        .createHash("sha256")
-        .update(token)
-        .digest("hex");
+      if (collaborationState.status === "CANCELLED") {
+        assert.notEqual(
+          deliverableState.status,
+          "SUBMITTED",
+          "Un livrable ne doit jamais être soumis sur une collaboration annulée.",
+        );
+        assert.equal(submitResponse.status, 409);
 
-      // 3. Se déconnecter.
-      const logoutResponse = await fetch(
-        `${API_BASE_URL}/api/auth/logout`,
+        // L'annulation a abouti : les deux participants doivent avoir
+        // reçu exactement une notification d'annulation, y compris le
+        // créateur auteur de l'action.
+        const creatorCancellations = await getLifecycleNotificationsForTest(
+          creatorToken,
+          collaboration.id,
+          "COLLABORATION_CANCELLED",
+        );
+
+        const companyCancellations = await getLifecycleNotificationsForTest(
+          companyToken,
+          collaboration.id,
+          "COLLABORATION_CANCELLED",
+        );
+
+        assert.equal(creatorCancellations.length, 1);
+        assert.equal(companyCancellations.length, 1);
+      }
+
+      if (submitResponse.status === 200) {
+        assert.equal(deliverableState.status, "SUBMITTED");
+        assert.equal(
+          collaborationState.status,
+          "ACTIVE",
+          "L'annulation doit avoir échoué si la soumission a abouti.",
+        );
+        assert.equal(cancelResponse.status, 409);
+      }
+    } finally {
+      await cleanupLifecycleCampaign(campaignId);
+    }
+  },
+);
+
+// =====================================================
+// TESTS AUTOMATISÉS   INTÉGRITÉ CAMPAGNE / CANDIDATURE / INVITATION
+// =====================================================
+
+const integrityTestsEnabled = workflowTestEnabled;
+
+async function getIntegrityCreatorProfileId() {
+  const user = await prisma.user.findFirst({
+    where: {
+      email: process.env.TEST_CREATOR_EMAIL,
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  assert.ok(user, "Le compte du créateur de test doit exister.");
+
+  const creatorProfile = await prisma.creatorProfile.findFirst({
+    where: {
+      userId: user.id,
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  assert.ok(creatorProfile, "Le profil du créateur de test doit exister.");
+
+  return creatorProfile.id;
+}
+
+async function createIntegrityCampaign(companyToken, label) {
+  const response = await fetch(`${API_BASE_URL}/api/campaigns`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${companyToken}`,
+    },
+    body: JSON.stringify({
+      title: `INTÉGRITÉ ${label} ${crypto.randomUUID()}`,
+      description:
+        "Campagne temporaire créée pour les tests d'intégrité FILWORK.",
+      currency: "XOF",
+    }),
+  });
+
+  const data = await response.json();
+
+  assert.ok(
+    [200, 201].includes(response.status),
+    `La création de campagne a échoué : ${
+      data.message || response.status
+    }`,
+  );
+
+  const campaign = data.campaign || data.data?.campaign || data.data || data;
+
+  assert.ok(campaign.id, "La campagne créée doit posséder un identifiant.");
+
+  const publishResponse = await fetch(
+    `${API_BASE_URL}/api/campaigns/${campaign.id}/publish`,
+    {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${companyToken}`,
+      },
+    },
+  );
+
+  const publishData = await publishResponse.json();
+
+  assert.equal(
+    publishResponse.status,
+    200,
+    `La publication a échoué : ${
+      publishData.message || publishResponse.status
+    }`,
+  );
+
+  return campaign;
+}
+
+async function createIntegrityApplication(creatorToken, campaignId) {
+  const response = await fetch(
+    `${API_BASE_URL}/api/applications/${campaignId}`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${creatorToken}`,
+      },
+      body: JSON.stringify({
+        message: "Candidature temporaire pour les tests d'intégrité.",
+      }),
+    },
+  );
+
+  const data = await response.json();
+
+  assert.equal(
+    response.status,
+    201,
+    `La candidature a échoué : ${data.message || response.status}`,
+  );
+
+  assert.ok(
+    data.application?.id,
+    "La candidature créée doit posséder un identifiant.",
+  );
+
+  return data.application;
+}
+
+async function createIntegrityInvitation(
+  companyToken,
+  campaignId,
+  creatorProfileId,
+  proposedAmount,
+) {
+  const body = {
+    creatorProfileId,
+    message: "Invitation temporaire pour les tests d'intégrité.",
+    currency: "XOF",
+  };
+
+  if (proposedAmount !== undefined) {
+    body.proposedAmount = proposedAmount;
+  }
+
+  const response = await fetch(
+    `${API_BASE_URL}/api/campaigns/${campaignId}/invitations`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${companyToken}`,
+      },
+      body: JSON.stringify(body),
+    },
+  );
+
+  const data = await response.json();
+
+  assert.equal(
+    response.status,
+    201,
+    `La création de l'invitation a échoué : ${
+      data.message || response.status
+    }`,
+  );
+
+  assert.ok(
+    data.invitation?.id,
+    "L'invitation créée doit posséder un identifiant.",
+  );
+
+  return data.invitation;
+}
+
+async function cleanupIntegrityCampaign(campaignId) {
+  return cleanupCampaignCascade(prisma, campaignId);
+}
+
+test(
+  "Intégrité - l'acceptation d'une candidature exige un montant strictement positif",
+  { skip: !integrityTestsEnabled },
+  async () => {
+    const companyToken = await getTestToken(
+      process.env.TEST_COMPANY_EMAIL,
+      process.env.TEST_COMPANY_PASSWORD,
+    );
+
+    const creatorToken = await getTestToken(
+      process.env.TEST_CREATOR_EMAIL,
+      process.env.TEST_CREATOR_PASSWORD,
+    );
+
+    let campaignId = null;
+
+    try {
+      const campaign = await createIntegrityCampaign(
+        companyToken,
+        "MONTANT",
+      );
+
+      campaignId = campaign.id;
+
+      const application = await createIntegrityApplication(
+        creatorToken,
+        campaignId,
+      );
+
+      async function accept(body) {
+        const response = await fetch(
+          `${API_BASE_URL}/api/applications/${application.id}/status`,
+          {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${companyToken}`,
+            },
+            body: JSON.stringify(body),
+          },
+        );
+
+        return {
+          response,
+          data: await response.json(),
+        };
+      }
+
+      const missingAmount = await accept({
+        status: "ACCEPTED",
+      });
+
+      assert.equal(missingAmount.response.status, 400);
+
+      const zeroAmount = await accept({
+        status: "ACCEPTED",
+        amount: 0,
+      });
+
+      assert.equal(zeroAmount.response.status, 400);
+
+      const negativeAmount = await accept({
+        status: "ACCEPTED",
+        amount: -500,
+      });
+
+      assert.equal(negativeAmount.response.status, 400);
+
+      const accepted = await accept({
+        status: "ACCEPTED",
+        amount: 25000,
+      });
+
+      assert.equal(
+        accepted.response.status,
+        200,
+        `L'acceptation a échoué : ${
+          accepted.data.message || accepted.response.status
+        }`,
+      );
+
+      assert.equal(accepted.data.application.status, "ACCEPTED");
+
+      const collaboration = await prisma.collaboration.findUnique({
+        where: {
+          applicationId: application.id,
+        },
+      });
+
+      assert.ok(collaboration, "La collaboration doit être créée.");
+      assert.equal(Number(collaboration.agreedAmount), 25000);
+      assert.equal(collaboration.currency, "XOF");
+      assert.equal(collaboration.status, "ACTIVE");
+    } finally {
+      await cleanupIntegrityCampaign(campaignId);
+    }
+  },
+);
+
+test(
+  "Intégrité - une candidature ne peut pas être acceptée sur une campagne suspendue",
+  { skip: !integrityTestsEnabled },
+  async () => {
+    const companyToken = await getTestToken(
+      process.env.TEST_COMPANY_EMAIL,
+      process.env.TEST_COMPANY_PASSWORD,
+    );
+
+    const creatorToken = await getTestToken(
+      process.env.TEST_CREATOR_EMAIL,
+      process.env.TEST_CREATOR_PASSWORD,
+    );
+
+    let campaignId = null;
+
+    try {
+      const campaign = await createIntegrityCampaign(
+        companyToken,
+        "ACCEPTATION-SUSPENDUE",
+      );
+
+      campaignId = campaign.id;
+
+      const application = await createIntegrityApplication(
+        creatorToken,
+        campaignId,
+      );
+
+      const pauseResponse = await fetch(
+        `${API_BASE_URL}/api/campaigns/${campaignId}/pause`,
+        {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${companyToken}`,
+          },
+        },
+      );
+
+      assert.equal(pauseResponse.status, 200);
+
+      const acceptResponse = await fetch(
+        `${API_BASE_URL}/api/applications/${application.id}/status`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${companyToken}`,
+          },
+          body: JSON.stringify({
+            status: "ACCEPTED",
+            amount: 10000,
+          }),
+        },
+      );
+
+      const acceptData = await acceptResponse.json();
+
+      assert.equal(acceptResponse.status, 409);
+      assert.equal(acceptData.currentStatus, "PAUSED");
+
+      const applicationState = await prisma.application.findUnique({
+        where: {
+          id: application.id,
+        },
+        select: {
+          status: true,
+        },
+      });
+
+      assert.equal(applicationState.status, "PENDING");
+
+      const collaboration = await prisma.collaboration.findUnique({
+        where: {
+          applicationId: application.id,
+        },
+      });
+
+      assert.equal(collaboration, null);
+    } finally {
+      await cleanupIntegrityCampaign(campaignId);
+    }
+  },
+);
+
+test(
+  "Intégrité - la clôture d'une campagne refuse les candidatures et retire les invitations en attente",
+  { skip: !integrityTestsEnabled },
+  async () => {
+    const companyToken = await getTestToken(
+      process.env.TEST_COMPANY_EMAIL,
+      process.env.TEST_COMPANY_PASSWORD,
+    );
+
+    const creatorToken = await getTestToken(
+      process.env.TEST_CREATOR_EMAIL,
+      process.env.TEST_CREATOR_PASSWORD,
+    );
+
+    let applicationCampaignId = null;
+    let invitationCampaignId = null;
+
+    try {
+      const creatorProfileId = await getIntegrityCreatorProfileId();
+
+      const applicationCampaign = await createIntegrityCampaign(
+        companyToken,
+        "CLOTURE-CANDIDATURE",
+      );
+
+      applicationCampaignId = applicationCampaign.id;
+
+      const application = await createIntegrityApplication(
+        creatorToken,
+        applicationCampaignId,
+      );
+
+      const invitationCampaign = await createIntegrityCampaign(
+        companyToken,
+        "CLOTURE-INVITATION",
+      );
+
+      invitationCampaignId = invitationCampaign.id;
+
+      const invitation = await createIntegrityInvitation(
+        companyToken,
+        invitationCampaignId,
+        creatorProfileId,
+        12000,
+      );
+
+      // Clôture de la campagne portant une candidature en attente.
+      const closeApplicationCampaignResponse = await fetch(
+        `${API_BASE_URL}/api/campaigns/${applicationCampaignId}/close`,
+        {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${companyToken}`,
+          },
+        },
+      );
+
+      const closeApplicationCampaignData =
+        await closeApplicationCampaignResponse.json();
+
+      assert.equal(closeApplicationCampaignResponse.status, 200);
+      assert.equal(closeApplicationCampaignData.rejectedApplications, 1);
+      assert.equal(closeApplicationCampaignData.withdrawnInvitations, 0);
+
+      const applicationState = await prisma.application.findUnique({
+        where: {
+          id: application.id,
+        },
+        select: {
+          status: true,
+        },
+      });
+
+      assert.equal(applicationState.status, "REJECTED");
+
+      const applicationNotifications = await prisma.notification.findMany({
+        where: {
+          applicationId: application.id,
+          type: "APPLICATION_REJECTED",
+        },
+      });
+
+      assert.equal(applicationNotifications.length, 1);
+
+      // Clôture de la campagne portant une invitation en attente.
+      const closeInvitationCampaignResponse = await fetch(
+        `${API_BASE_URL}/api/campaigns/${invitationCampaignId}/close`,
+        {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${companyToken}`,
+          },
+        },
+      );
+
+      const closeInvitationCampaignData =
+        await closeInvitationCampaignResponse.json();
+
+      assert.equal(closeInvitationCampaignResponse.status, 200);
+      assert.equal(closeInvitationCampaignData.rejectedApplications, 0);
+      assert.equal(closeInvitationCampaignData.withdrawnInvitations, 1);
+
+      const invitationState = await prisma.invitation.findUnique({
+        where: {
+          id: invitation.id,
+        },
+        select: {
+          status: true,
+        },
+      });
+
+      assert.equal(invitationState.status, "WITHDRAWN");
+
+      const invitationNotifications = await prisma.notification.findMany({
+        where: {
+          invitationId: invitation.id,
+          type: "INVITATION_WITHDRAWN",
+        },
+      });
+
+      assert.equal(invitationNotifications.length, 1);
+    } finally {
+      await cleanupIntegrityCampaign(applicationCampaignId);
+      await cleanupIntegrityCampaign(invitationCampaignId);
+    }
+  },
+);
+
+test(
+  "Intégrité - deux acceptations simultanées ne créent qu'une collaboration",
+  { skip: !integrityTestsEnabled },
+  async () => {
+    const companyToken = await getTestToken(
+      process.env.TEST_COMPANY_EMAIL,
+      process.env.TEST_COMPANY_PASSWORD,
+    );
+
+    const creatorToken = await getTestToken(
+      process.env.TEST_CREATOR_EMAIL,
+      process.env.TEST_CREATOR_PASSWORD,
+    );
+
+    let campaignId = null;
+
+    try {
+      const campaign = await createIntegrityCampaign(
+        companyToken,
+        "CONCURRENCE",
+      );
+
+      campaignId = campaign.id;
+
+      const application = await createIntegrityApplication(
+        creatorToken,
+        campaignId,
+      );
+
+      function accept() {
+        return fetch(
+          `${API_BASE_URL}/api/applications/${application.id}/status`,
+          {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${companyToken}`,
+            },
+            body: JSON.stringify({
+              status: "ACCEPTED",
+              amount: 18000,
+            }),
+          },
+        );
+      }
+
+      const responses = await Promise.all([accept(), accept()]);
+
+      const statuses = responses
+        .map((response) => response.status)
+        .sort((first, second) => first - second);
+
+      assert.deepEqual(statuses, [200, 409]);
+
+      const collaborations = await prisma.collaboration.findMany({
+        where: {
+          applicationId: application.id,
+        },
+      });
+
+      assert.equal(collaborations.length, 1);
+
+      const applicationState = await prisma.application.findUnique({
+        where: {
+          id: application.id,
+        },
+        select: {
+          status: true,
+        },
+      });
+
+      assert.equal(applicationState.status, "ACCEPTED");
+    } finally {
+      await cleanupIntegrityCampaign(campaignId);
+    }
+  },
+);
+
+test(
+  "CONCURRENCE - modification et clôture d'une campagne restent cohérentes",
+  { skip: !integrityTestsEnabled },
+  async () => {
+    const companyToken = await getTestToken(
+      process.env.TEST_COMPANY_EMAIL,
+      process.env.TEST_COMPANY_PASSWORD,
+    );
+
+    let campaignId = null;
+
+    try {
+      const campaign = await createIntegrityCampaign(
+        companyToken,
+        "CONCURRENCE-MAJ",
+      );
+
+      campaignId = campaign.id;
+
+      const updatedTitle = `Campagne modifiée ${crypto.randomUUID()}`;
+
+      function updateCampaign() {
+        return fetch(`${API_BASE_URL}/api/campaigns/${campaignId}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${companyToken}`,
+          },
+          body: JSON.stringify({
+            title: updatedTitle,
+            description:
+              "Description modifiée pendant la clôture concurrente.",
+            currency: "XOF",
+          }),
+        });
+      }
+
+      function closeCampaign() {
+        return fetch(
+          `${API_BASE_URL}/api/campaigns/${campaignId}/close`,
+          {
+            method: "PATCH",
+            headers: {
+              Authorization: `Bearer ${companyToken}`,
+            },
+          },
+        );
+      }
+
+      const [updateResponse, closeResponse] = await Promise.all([
+        updateCampaign(),
+        closeCampaign(),
+      ]);
+
+      assert.equal(closeResponse.status, 200);
+      assert.ok(
+        [200, 409].includes(updateResponse.status),
+        `La modification concurrente doit réussir ou être refusée, pas échouer avec ${updateResponse.status}.`,
+      );
+
+      const state = await prisma.campaign.findUnique({
+        where: {
+          id: campaignId,
+        },
+        select: {
+          status: true,
+          title: true,
+        },
+      });
+
+      assert.equal(state.status, "CLOSED");
+
+      if (updateResponse.status === 200) {
+        assert.equal(state.title, updatedTitle);
+      }
+
+      // Toute modification postérieure à la clôture doit être refusée.
+      const afterCloseResponse = await updateCampaign();
+
+      assert.equal(afterCloseResponse.status, 409);
+
+      const finalState = await prisma.campaign.findUnique({
+        where: {
+          id: campaignId,
+        },
+        select: {
+          status: true,
+          title: true,
+        },
+      });
+
+      assert.equal(finalState.status, "CLOSED");
+      assert.equal(finalState.title, state.title);
+    } finally {
+      await cleanupIntegrityCampaign(campaignId);
+    }
+  },
+);
+
+test(
+  "Intégrité - une invitation sans montant valide ne peut pas être acceptée",
+  { skip: !integrityTestsEnabled },
+  async () => {
+    const companyToken = await getTestToken(
+      process.env.TEST_COMPANY_EMAIL,
+      process.env.TEST_COMPANY_PASSWORD,
+    );
+
+    const creatorToken = await getTestToken(
+      process.env.TEST_CREATOR_EMAIL,
+      process.env.TEST_CREATOR_PASSWORD,
+    );
+
+    let campaignId = null;
+
+    try {
+      const campaign = await createIntegrityCampaign(
+        companyToken,
+        "MONTANT-INVITATION",
+      );
+
+      campaignId = campaign.id;
+
+      const creatorProfileId = await getIntegrityCreatorProfileId();
+
+      const invitation = await createIntegrityInvitation(
+        companyToken,
+        campaignId,
+        creatorProfileId,
+        0,
+      );
+
+      const acceptResponse = await fetch(
+        `${API_BASE_URL}/api/invitations/${invitation.id}/respond`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${creatorToken}`,
+          },
+          body: JSON.stringify({
+            status: "ACCEPTED",
+          }),
+        },
+      );
+
+      assert.equal(acceptResponse.status, 409);
+
+      const invitationState = await prisma.invitation.findUnique({
+        where: {
+          id: invitation.id,
+        },
+        select: {
+          status: true,
+        },
+      });
+
+      assert.equal(invitationState.status, "PENDING");
+
+      const collaboration = await prisma.collaboration.findUnique({
+        where: {
+          invitationId: invitation.id,
+        },
+      });
+
+      assert.equal(collaboration, null);
+    } finally {
+      await cleanupIntegrityCampaign(campaignId);
+    }
+  },
+);
+
+test(
+  "Intégrité - une invitation ne peut pas être acceptée sur une campagne suspendue",
+  { skip: !integrityTestsEnabled },
+  async () => {
+    const companyToken = await getTestToken(
+      process.env.TEST_COMPANY_EMAIL,
+      process.env.TEST_COMPANY_PASSWORD,
+    );
+
+    const creatorToken = await getTestToken(
+      process.env.TEST_CREATOR_EMAIL,
+      process.env.TEST_CREATOR_PASSWORD,
+    );
+
+    let campaignId = null;
+
+    try {
+      const campaign = await createIntegrityCampaign(
+        companyToken,
+        "INVITATION-SUSPENDUE",
+      );
+
+      campaignId = campaign.id;
+
+      const creatorProfileId = await getIntegrityCreatorProfileId();
+
+      const invitation = await createIntegrityInvitation(
+        companyToken,
+        campaignId,
+        creatorProfileId,
+        15000,
+      );
+
+      const pauseResponse = await fetch(
+        `${API_BASE_URL}/api/campaigns/${campaignId}/pause`,
+        {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${companyToken}`,
+          },
+        },
+      );
+
+      assert.equal(pauseResponse.status, 200);
+
+      const acceptResponse = await fetch(
+        `${API_BASE_URL}/api/invitations/${invitation.id}/respond`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${creatorToken}`,
+          },
+          body: JSON.stringify({
+            status: "ACCEPTED",
+          }),
+        },
+      );
+
+      const acceptData = await acceptResponse.json();
+
+      assert.equal(acceptResponse.status, 409);
+      assert.equal(acceptData.currentStatus, "PAUSED");
+
+      const invitationState = await prisma.invitation.findUnique({
+        where: {
+          id: invitation.id,
+        },
+        select: {
+          status: true,
+        },
+      });
+
+      assert.equal(invitationState.status, "PENDING");
+
+      const collaboration = await prisma.collaboration.findUnique({
+        where: {
+          invitationId: invitation.id,
+        },
+      });
+
+      assert.equal(collaboration, null);
+    } finally {
+      await cleanupIntegrityCampaign(campaignId);
+    }
+  },
+);
+
+// =====================================================
+// ISOLATION APPLICATIF / TEST (NON-REGRESSION)
+// =====================================================
+
+async function createIsolationUser({
+  role,
+  email,
+  displayName,
+  bio = null,
+  niche = null,
+  companyName = null,
+  description = null,
+}) {
+  return prisma.user.create({
+    data: {
+      email,
+      passwordHash: bcrypt.hashSync(crypto.randomUUID(), 4),
+      role,
+      creatorProfile:
+        role === "CREATOR"
+          ? {
+              create: {
+                displayName,
+                bio,
+                niche,
+              },
+            }
+          : undefined,
+      companyProfile:
+        role === "COMPANY"
+          ? {
+              create: {
+                companyName,
+                description,
+              },
+            }
+          : undefined,
+    },
+    select: {
+      id: true,
+      creatorProfile: { select: { id: true } },
+      companyProfile: { select: { id: true } },
+    },
+  });
+}
+
+async function removeIsolationUsers(userIds) {
+  if (userIds.length === 0) {
+    return;
+  }
+
+  await prisma.user.deleteMany({
+    where: {
+      id: {
+        in: userIds,
+      },
+    },
+  });
+}
+
+test("les requêtes Prisma et les données administratives ciblent la base de test", async () => {
+  const { testTarget } = loadTestEnv();
+
+  const rows = await prisma.$queryRaw`SELECT current_database() AS db`;
+  const connectedDatabase = String(rows[0].db).toLowerCase();
+
+  assert.equal(
+    connectedDatabase,
+    testTarget.database,
+    "Le client Prisma de l'API ne doit pas être connecté à une autre base.",
+  );
+
+  if (
+    !process.env.TEST_ADMIN_EMAIL ||
+    !process.env.TEST_ADMIN_PASSWORD
+  ) {
+    return;
+  }
+
+  const adminToken = await getTestToken(
+    process.env.TEST_ADMIN_EMAIL,
+    process.env.TEST_ADMIN_PASSWORD,
+  );
+
+  const response = await fetch(
+    `${API_BASE_URL}/api/admin/users?page=1&limit=100`,
+    {
+      headers: {
+        Authorization: `Bearer ${adminToken}`,
+      },
+    },
+  );
+
+  const data = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(data.success, true);
+
+  const expectedTotal = await prisma.user.count();
+
+  assert.equal(
+    data.pagination.total,
+    expectedTotal,
+    "Les statistiques ADMIN doivent refléter la base de l'instance, sans mélange.",
+  );
+});
+
+test(
+  "l'annuaire exclut les profils incomplets ou de démonstration",
+  { skip: !creatorDirectoryTestsEnabled },
+  async () => {
+    const companyToken = await getTestToken(
+      process.env.TEST_COMPANY_EMAIL,
+      process.env.TEST_COMPANY_PASSWORD,
+    );
+
+    const marker = crypto.randomUUID();
+    const userIds = [];
+    let demoCreatorId;
+    let incompleteCreatorId;
+    let visibleCreatorId;
+
+    try {
+      const demo = await createIsolationUser({
+        role: "CREATOR",
+        email: `demo.creator.${marker}@example.com`,
+        displayName: `Créateur Test ${marker}`,
+      });
+      userIds.push(demo.id);
+      demoCreatorId = demo.creatorProfile.id;
+
+      const incomplete = await createIsolationUser({
+        role: "CREATOR",
+        email: `incomplete.creator.${marker}@filwork.local`,
+        displayName: `Créateur Incomplet ${marker}`,
+        bio: "Bio renseignée.",
+        niche: null,
+      });
+      userIds.push(incomplete.id);
+      incompleteCreatorId = incomplete.creatorProfile.id;
+
+      const visible = await createIsolationUser({
+        role: "CREATOR",
+        email: `visible.creator.${marker}@filwork.local`,
+        displayName: `Créateur Visible ${marker}`,
+        bio: "Profil complet et légitime.",
+        niche: "Lifestyle",
+      });
+      userIds.push(visible.id);
+      visibleCreatorId = visible.creatorProfile.id;
+
+      const listResponse = await fetch(
+        `${API_BASE_URL}/api/creators?search=${encodeURIComponent(marker)}&limit=50`,
+        {
+          headers: {
+            Authorization: `Bearer ${companyToken}`,
+          },
+        },
+      );
+
+      const listData = await listResponse.json();
+
+      assert.equal(listResponse.status, 200);
+      assert.equal(listData.success, true);
+
+      const returnedIds = listData.creators.map((creator) => creator.id);
+
+      assert.equal(returnedIds.includes(visibleCreatorId), true);
+      assert.equal(returnedIds.includes(demoCreatorId), false);
+      assert.equal(returnedIds.includes(incompleteCreatorId), false);
+      assert.equal(listData.total, 1);
+
+      for (const creator of listData.creators) {
+        assert.equal(typeof creator.displayName, "string");
+        assert.ok(creator.displayName.trim().length > 0);
+        assert.ok(typeof creator.bio === "string" && creator.bio.trim());
+        assert.ok(typeof creator.niche === "string" && creator.niche.trim());
+      }
+
+      for (const hiddenId of [demoCreatorId, incompleteCreatorId]) {
+        const detailResponse = await fetch(
+          `${API_BASE_URL}/api/creators/${hiddenId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${companyToken}`,
+            },
+          },
+        );
+
+        assert.equal(detailResponse.status, 404);
+      }
+
+      const visibleDetail = await fetch(
+        `${API_BASE_URL}/api/creators/${visibleCreatorId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${companyToken}`,
+          },
+        },
+      );
+
+      assert.equal(visibleDetail.status, 200);
+    } finally {
+      await removeIsolationUsers(userIds);
+    }
+  },
+);
+
+test(
+  "les campagnes de démonstration restent invisibles publiquement",
+  async () => {
+    const marker = crypto.randomUUID();
+    const userIds = [];
+    let demoCampaignId;
+    let visibleCampaignId;
+
+    try {
+      const demoCompany = await createIsolationUser({
+        role: "COMPANY",
+        email: `demo.company.${marker}@example.com`,
+        companyName: `Entreprise Test ${marker}`,
+        description: null,
+      });
+      userIds.push(demoCompany.id);
+
+      const visibleCompany = await createIsolationUser({
+        role: "COMPANY",
+        email: `visible.company.${marker}@filwork.local`,
+        companyName: `Entreprise Visible ${marker}`,
+        description: "Entreprise complète et légitime.",
+      });
+      userIds.push(visibleCompany.id);
+
+      const demoCampaign = await prisma.campaign.create({
+        data: {
+          companyProfileId: demoCompany.companyProfile.id,
+          title: `Campagne Test ${marker}`,
+          description: "Campagne de démonstration incomplète.",
+          status: "PUBLISHED",
+          publishedAt: new Date(),
+        },
+        select: { id: true },
+      });
+      demoCampaignId = demoCampaign.id;
+
+      const visibleCampaign = await prisma.campaign.create({
+        data: {
+          companyProfileId: visibleCompany.companyProfile.id,
+          title: `Campagne Visible ${marker}`,
+          description: "Campagne publiée par une entreprise complète.",
+          status: "PUBLISHED",
+          publishedAt: new Date(),
+        },
+        select: { id: true },
+      });
+      visibleCampaignId = visibleCampaign.id;
+
+      const listResponse = await fetch(
+        `${API_BASE_URL}/api/campaigns?search=${encodeURIComponent(marker)}&limit=50`,
+      );
+
+      const listData = await listResponse.json();
+
+      assert.equal(listResponse.status, 200);
+      assert.equal(listData.success, true);
+
+      const returnedIds = listData.campaigns.map((campaign) => campaign.id);
+
+      assert.equal(returnedIds.includes(visibleCampaignId), true);
+      assert.equal(returnedIds.includes(demoCampaignId), false);
+      assert.equal(listData.total, 1);
+
+      const demoDetail = await fetch(
+        `${API_BASE_URL}/api/campaigns/${demoCampaignId}`,
+      );
+
+      assert.equal(demoDetail.status, 404);
+
+      const visibleDetail = await fetch(
+        `${API_BASE_URL}/api/campaigns/${visibleCampaignId}`,
+      );
+
+      assert.equal(visibleDetail.status, 200);
+    } finally {
+      await removeIsolationUsers(userIds);
+    }
+  },
+);
+
+test(
+  "une entreprise ne peut pas inviter un profil créateur non découvrable",
+  {
+    skip:
+      !creatorDirectoryTestsEnabled ||
+      !process.env.TEST_CAMPAIGN_ID,
+  },
+  async () => {
+    const companyToken = await getTestToken(
+      process.env.TEST_COMPANY_EMAIL,
+      process.env.TEST_COMPANY_PASSWORD,
+    );
+
+    const marker = crypto.randomUUID();
+    const userIds = [];
+    let hiddenCreatorId;
+
+    try {
+      const hidden = await createIsolationUser({
+        role: "CREATOR",
+        email: `hidden.creator.${marker}@example.com`,
+        displayName: `Créateur Masqué ${marker}`,
+        bio: null,
+        niche: null,
+      });
+      userIds.push(hidden.id);
+      hiddenCreatorId = hidden.creatorProfile.id;
+
+      const response = await fetch(
+        `${API_BASE_URL}/api/campaigns/${process.env.TEST_CAMPAIGN_ID}/invitations`,
         {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${companyToken}`,
           },
+          body: JSON.stringify({
+            creatorProfileId: hiddenCreatorId,
+            message: "Invitation de contrôle.",
+          }),
         },
       );
 
-      const logoutData = await logoutResponse.json();
+      const data = await response.json();
 
-      assert.equal(
-        logoutResponse.status,
-        200,
-        `La déconnexion a échoué : ${logoutData.message}`,
-      );
-
-      assert.equal(logoutData.success, true);
-
-      // 4. Réutiliser l'ancien JWT pour vérifier qu'il est refusé.
-      const sessionResponse = await fetch(
-        `${API_BASE_URL}/api/auth/me`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
-
-      const sessionData = await sessionResponse.json();
-
-      assert.equal(
-        sessionResponse.status,
-        401,
-        "Le JWT doit être refusé après la déconnexion.",
-      );
-
-      assert.equal(sessionData.success, false);
+      assert.equal(response.status, 404);
+      assert.equal(data.success, false);
+      assert.equal(data.message, "Profil créateur introuvable.");
     } finally {
-      // Nettoyer uniquement les données temporaires de ce test.
-      if (tokenHash) {
-        await prisma.revokedToken.deleteMany({
-          where: {
-            tokenHash,
-          },
-        });
-      }
-
-      if (userId) {
-        await prisma.user.deleteMany({
-          where: {
-            id: userId,
-          },
-        });
-      }
+      await removeIsolationUsers(userIds);
     }
+  },
+);
+
+test(
+  "chaque utilisateur ne reçoit que ses propres notifications",
+  { skip: !creatorDirectoryTestsEnabled },
+  async () => {
+    const creatorToken = await getTestToken(
+      process.env.TEST_CREATOR_EMAIL,
+      process.env.TEST_CREATOR_PASSWORD,
+    );
+
+    const creatorUser = await prisma.user.findUnique({
+      where: { email: process.env.TEST_CREATOR_EMAIL },
+      select: { id: true },
+    });
+
+    assert.ok(creatorUser);
+
+    const response = await fetch(`${API_BASE_URL}/api/notifications`, {
+      headers: {
+        Authorization: `Bearer ${creatorToken}`,
+      },
+    });
+
+    const data = await response.json();
+
+    assert.equal(response.status, 200);
+    assert.equal(data.success, true);
+    assert.ok(Array.isArray(data.notifications));
+
+    const returnedIds = data.notifications.map((notification) => notification.id);
+
+    const expected = await prisma.notification.findMany({
+      where: { userId: creatorUser.id },
+      select: { id: true },
+      orderBy: { createdAt: "desc" },
+      take: 50,
+    });
+
+    assert.deepEqual(
+      [...returnedIds].sort(),
+      expected.map((notification) => notification.id).sort(),
+    );
   },
 );

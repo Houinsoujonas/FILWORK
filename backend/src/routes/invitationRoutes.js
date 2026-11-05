@@ -4,6 +4,8 @@ const {
   authenticateToken,
 } = require("../middlewares/authMiddleware");
 
+const { requireRole } = require("../middlewares/roleMiddleware");
+
 const {
   createInvitation,
   getReceivedInvitations,
@@ -19,6 +21,7 @@ const router = express.Router();
 router.post(
   "/campaigns/:campaignId/invitations",
   authenticateToken,
+  requireRole("COMPANY"),
   createInvitation,
 );
 
@@ -27,6 +30,7 @@ router.post(
 router.get(
   "/invitations/received",
   authenticateToken,
+  requireRole("CREATOR"),
   getReceivedInvitations,
 );
 
@@ -35,6 +39,7 @@ router.get(
 router.get(
   "/invitations/sent",
   authenticateToken,
+  requireRole("COMPANY"),
   getSentInvitations,
 );
 
@@ -43,6 +48,7 @@ router.get(
 router.patch(
   "/invitations/:invitationId/respond",
   authenticateToken,
+  requireRole("CREATOR"),
   respondToInvitation,
 );
 
@@ -51,6 +57,7 @@ router.patch(
 router.patch(
   "/invitations/:invitationId/withdraw",
   authenticateToken,
+  requireRole("COMPANY"),
   withdrawInvitation,
 );
 

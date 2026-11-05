@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   FiArrowLeft,
   FiBriefcase,
@@ -8,43 +8,70 @@ import {
   FiEyeOff,
 } from "react-icons/fi";
 
+import { useAuth } from "../context/AuthContext";
+import { errorMessage } from "../lib/api";
+import { homeForRole } from "../lib/format";
+
 function Inscription() {
   const [accountType, setAccountType] = useState("creator");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [submitMessage, setSubmitMessage] = useState("");
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const { register } = useAuth();
+  const navigate = useNavigate();
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
+    setError("");
+    setSubmitMessage("");
 
-    
-const formData = new FormData(event.currentTarget);
-const password = formData.get("password");
-const confirmPassword = formData.get("confirmPassword");
+    const formData = new FormData(event.currentTarget);
+    const password = String(formData.get("password") || "");
+    const confirmPassword = String(formData.get("confirmPassword") || "");
 
-if (password !== confirmPassword) {
-  setSubmitMessage("Les mots de passe ne correspondent pas.");
-  return;
-}
+    if (password !== confirmPassword) {
+      setError("Les mots de passe ne correspondent pas.");
+      return;
+    }
 
-  const visibleFormData = Object.fromEntries(formData.entries());
-  delete visibleFormData.password;
-  delete visibleFormData.confirmPassword;
-  console.info("Type de compte :", accountType);
-  console.info("Données du formulaire (hors mots de passe) :", visibleFormData);
-  setSubmitMessage("La création de compte sera activée dès que le service sera relié à FILWORK.");
-;
+    const email = String(formData.get("email") || "").trim();
+    const role = accountType === "creator" ? "CREATOR" : "COMPANY";
+
+    const profile =
+      role === "CREATOR"
+        ? {
+            displayName: String(formData.get("fullName") || "").trim(),
+          }
+        : {
+            companyName: String(formData.get("businessName") || "").trim(),
+          };
+
+    if (!profile.displayName && !profile.companyName) {
+      setError("Renseignez le nom demandé pour créer votre profil.");
+      return;
+    }
+
+    setSubmitting(true);
+
+    try {
+      const { user } = await register({ email, password, role, profile });
+      navigate(homeForRole(user.role), { replace: true });
+    } catch (registerError) {
+      setError(errorMessage(registerError));
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
     <main className="register-page">
-      {" "}
       <div className="register-container">
-        {" "}
         <Link to="/" className="register-brand" aria-label="FILWORK, accueil">
           <img src="/filwork-logo.svg" alt="" />
         </Link>
-        
+
         <div className="register-heading">
           <span className="register-eyebrow">REJOIGNEZ FILWORK</span>
 
@@ -82,7 +109,15 @@ if (password !== confirmPassword) {
           </button>
         </div>
         <form className="register-form" onSubmit={handleSubmit}>
-          {submitMessage && <p className="form-notice" role="status">{submitMessage}</p>}
+          {(error || submitMessage) && (
+            <p
+              className={`form-notice${error ? " form-notice--error" : ""}`}
+              role={error ? "alert" : "status"}
+            >
+              {error || submitMessage}
+            </p>
+          )}
+
           {accountType === "creator" ? (
             <>
               <div className="register-field">
@@ -105,7 +140,6 @@ if (password !== confirmPassword) {
                   type="text"
                   placeholder="Ex. : maurel_creative"
                   autoComplete="username"
-                  required
                 />
               </div>
             </>
@@ -131,7 +165,6 @@ if (password !== confirmPassword) {
                   type="text"
                   placeholder="Nom et prénom du responsable"
                   autoComplete="name"
-                  required
                 />
               </div>
             </>
@@ -217,8 +250,13 @@ if (password !== confirmPassword) {
             </span>
           </label>
 
-          <button type="submit" className="register-submit">
-            Créer mon compte
+          <button
+            type="submit"
+            className="register-submit"
+            disabled={submitting}
+            aria-busy={submitting}
+          >
+            {submitting ? "Création du compte…" : "Créer mon compte"}
           </button>
         </form>
         <p className="register-login">

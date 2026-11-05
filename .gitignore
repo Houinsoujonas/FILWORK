@@ -24,3 +24,6 @@ dist-ssr
 *.sw?
 # Sauvegardes locales des anciens sprints
 FILWORK-Sprint5-backup-*/
+
+# Extraits de différences générés pendant l'audit
+*-diff.txt

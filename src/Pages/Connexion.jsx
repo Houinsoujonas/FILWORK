@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   FiEye,
   FiEyeOff,
@@ -12,25 +12,54 @@ import {
 } from "react-icons/fi";
 
 import connectImage from "../assets/connect.jpg";
+import { useAuth } from "../context/AuthContext";
+import { errorMessage } from "../lib/api";
+import { homeForRole } from "../lib/format";
 
 function Connexion() {
   const [accountType, setAccountType] = useState("creator");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [submitMessage, setSubmitMessage] = useState("");
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const { login } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
+    setError("");
+    setSubmitMessage("");
 
-    // L'authentification sera connectée au backend ultérieurement.
-    setSubmitMessage(
-      "La connexion sera activée dès que le service de compte sera relié à FILWORK.",
-    );
+    const formData = new FormData(event.currentTarget);
+    const email = String(formData.get("email") || "").trim();
+    const password = String(formData.get("password") || "");
+
+    if (!email || !password) {
+      setError("Renseignez votre adresse e-mail et votre mot de passe.");
+      return;
+    }
+
+    setSubmitting(true);
+
+    try {
+      const user = await login(email, password, rememberMe);
+      const from = location.state?.from;
+
+      navigate(
+        typeof from === "string" && from ? from : homeForRole(user.role),
+        { replace: true },
+      );
+    } catch (loginError) {
+      setError(errorMessage(loginError));
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
     <main className="login-page">
-      {" "}
       <div className="login-page__ambient" aria-hidden="true" />
       <div className="login-layout">
         {/* PANNEAU VISUEL */}
@@ -145,11 +174,15 @@ function Connexion() {
             </div>
 
             <form className="login-form" onSubmit={handleSubmit}>
-              {submitMessage && (
-                <p className="form-notice" role="status">
-                  {submitMessage}
+              {(error || submitMessage) && (
+                <p
+                  className={`form-notice${error ? " form-notice--error" : ""}`}
+                  role={error ? "alert" : "status"}
+                >
+                  {error || submitMessage}
                 </p>
               )}
+
               <fieldset className="login-account">
                 <legend>Vous êtes sur FILWORK en tant que...</legend>
 
@@ -278,8 +311,13 @@ function Connexion() {
                 <span>Se souvenir de moi</span>
               </label>
 
-              <button type="submit" className="login-submit">
-                <span>Se connecter</span>
+              <button
+                type="submit"
+                className="login-submit"
+                disabled={submitting}
+                aria-busy={submitting}
+              >
+                <span>{submitting ? "Connexion…" : "Se connecter"}</span>
               </button>
 
               <div className="login-security">
@@ -293,7 +331,7 @@ function Connexion() {
           </div>
 
           <div className="login-form-panel__footer">
-            <span>FILWORK — Connecter les talents.</span>
+            <span>FILWORK : connecter les talents.</span>
 
             <span className="login-footer__status">
               <span />

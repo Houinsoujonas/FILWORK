@@ -4,6 +4,8 @@ const {
   authenticateToken,
 } = require("../middlewares/authMiddleware");
 
+const { requireRole } = require("../middlewares/roleMiddleware");
+
 const {
   getMyProfile,
   saveMyProfile,
@@ -30,15 +32,35 @@ router.get("/me", getMyProfile);
 router.put("/me", saveMyProfile);
 
 // Réseaux sociaux du créateur.
-router.get("/me/socials", getMySocials);
-router.post("/me/socials", createMySocial);
-router.put("/me/socials/:socialId", updateMySocial);
-router.delete("/me/socials/:socialId", deleteMySocial);
+router.get("/me/socials", requireRole("CREATOR"), getMySocials);
+router.post("/me/socials", requireRole("CREATOR"), createMySocial);
+router.put(
+  "/me/socials/:socialId",
+  requireRole("CREATOR"),
+  updateMySocial,
+);
+router.delete(
+  "/me/socials/:socialId",
+  requireRole("CREATOR"),
+  deleteMySocial,
+);
 
 // Portfolio du créateur.
-router.get("/me/portfolio", getMyPortfolio);
-router.post("/me/portfolio", createMyPortfolioItem);
-router.put("/me/portfolio/:itemId", updateMyPortfolioItem);
-router.delete("/me/portfolio/:itemId", deleteMyPortfolioItem);
+router.get("/me/portfolio", requireRole("CREATOR"), getMyPortfolio);
+router.post(
+  "/me/portfolio",
+  requireRole("CREATOR"),
+  createMyPortfolioItem,
+);
+router.put(
+  "/me/portfolio/:itemId",
+  requireRole("CREATOR"),
+  updateMyPortfolioItem,
+);
+router.delete(
+  "/me/portfolio/:itemId",
+  requireRole("CREATOR"),
+  deleteMyPortfolioItem,
+);
 
 module.exports = router;

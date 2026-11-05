@@ -1,4 +1,5 @@
 const prisma = require("../config/prisma");
+const { sendPrismaError } = require("../utils/prismaErrors");
 
 const SOCIAL_PLATFORMS = [
   "INSTAGRAM",
@@ -251,6 +252,10 @@ async function getMySocials(req, res) {
       socials,
     });
   } catch (error) {
+    if (sendPrismaError(res, error)) {
+      return;
+    }
+
     console.error("Erreur de récupération des réseaux sociaux :", error.message);
 
     return res.status(500).json({
@@ -417,6 +422,10 @@ async function deleteMySocial(req, res) {
       message: "Réseau social supprimé avec succès.",
     });
   } catch (error) {
+    if (sendPrismaError(res, error)) {
+      return;
+    }
+
     console.error("Erreur de suppression du réseau social :", error.message);
 
     return res.status(500).json({
@@ -458,6 +467,10 @@ async function getMyPortfolio(req, res) {
       items,
     });
   } catch (error) {
+    if (sendPrismaError(res, error)) {
+      return;
+    }
+
     console.error("Erreur de récupération du portfolio :", error.message);
 
     return res.status(500).json({
@@ -507,6 +520,10 @@ async function createMyPortfolioItem(req, res) {
       item,
     });
   } catch (error) {
+    if (sendPrismaError(res, error)) {
+      return;
+    }
+
     console.error("Erreur de création du portfolio :", error.message);
 
     return res.status(500).json({
@@ -610,6 +627,10 @@ async function deleteMyPortfolioItem(req, res) {
       message: "Réalisation supprimée avec succès.",
     });
   } catch (error) {
+    if (sendPrismaError(res, error)) {
+      return;
+    }
+
     console.error("Erreur de suppression du portfolio :", error.message);
 
     return res.status(500).json({

@@ -38,7 +38,7 @@ function HeroScene() {
     const lime = new THREE.MeshStandardMaterial({ color: 0xd5f36a, roughness: 0.42 });
     const muted = new THREE.MeshStandardMaterial({ color: 0xe8e7df, roughness: 0.8 });
 
-    // A simple project brief: a paper card, heading, and three work samples.
+    // Maquette de projet : une carte, un titre et trois exemples de réalisations.
     const brief = new THREE.Mesh(new THREE.BoxGeometry(2.4, 1.72, 0.14), paper);
     brief.position.set(0, 0, 0.22);
     group.add(brief);
@@ -83,7 +83,7 @@ function HeroScene() {
     const leftPerson = makePerson(-1.85, ink, 0.94);
     const rightPerson = makePerson(1.85, lime, 0.94);
 
-    // A restrained connecting mark ties the people to the shared project.
+    // Un point de liaison relie les personnes au projet commun.
     const connector = new THREE.Mesh(new THREE.SphereGeometry(0.09, 20, 16), lime);
     connector.position.set(0, 1.15, 0.48);
     group.add(connector);

@@ -1,4 +1,8 @@
 const prisma = require("../config/prisma");
+const { sendPrismaError } = require("../utils/prismaErrors");
+const {
+  CREATOR_DISCOVERY_CONDITIONS,
+} = require("../services/profileVisibility");
 
 const SOCIAL_PLATFORMS = [
   "INSTAGRAM",
@@ -244,15 +248,9 @@ async function getCreatorDirectory(req, res) {
 
     // Chaque condition est ajoutée séparément afin de pouvoir
     // combiner plusieurs filtres sans écraser les précédents.
-    const conditions = [
-      {
-        user: {
-          is: {
-            role: "CREATOR",
-          },
-        },
-      },
-    ];
+    // Le premier bloc applique les critères métier de visibilité :
+    // profil créateur complet et compte hors domaine de documentation.
+    const conditions = [...CREATOR_DISCOVERY_CONDITIONS];
 
     if (search) {
       conditions.push({
@@ -429,6 +427,10 @@ async function getCreatorDirectory(req, res) {
       creators,
     });
   } catch (error) {
+    if (sendPrismaError(res, error)) {
+      return;
+    }
+
     console.error(
       "Erreur lors de la recherche des créateurs :",
       error,
@@ -442,6 +444,115 @@ async function getCreatorDirectory(req, res) {
   }
 }
 
+/**
+ * Consulter le profil détaillé d'un créateur.
+ *
+ * GET /api/creators/:id
+ *
+ * Même périmètre que l'annuaire : réservé aux entreprises
+ * authentifiées.
+ */
+async function getCreatorById(req, res) {
+  if (req.user.role !== "COMPANY") {
+    return res.status(403).json({
+      success: false,
+      message:
+        "Seules les entreprises peuvent consulter le répertoire des créateurs.",
+    });
+  }
+
+  try {
+    const creatorId =
+      typeof req.params.id === "string" ? req.params.id.trim() : "";
+
+    if (!creatorId) {
+      return res.status(404).json({
+        success: false,
+        message: "Profil créateur introuvable.",
+      });
+    }
+
+    const creator = await prisma.creatorProfile.findFirst({
+      where: {
+        id: creatorId,
+        AND: CREATOR_DISCOVERY_CONDITIONS,
+      },
+
+      select: {
+        id: true,
+        displayName: true,
+        bio: true,
+        niche: true,
+        location: true,
+        country: true,
+        city: true,
+        profileImageUrl: true,
+        mediaKitUrl: true,
+        startingRate: true,
+        rateCurrency: true,
+        availabilityStatus: true,
+        createdAt: true,
+        updatedAt: true,
+
+        creatorSocials: {
+          orderBy: {
+            createdAt: "desc",
+          },
+          select: {
+            id: true,
+            platform: true,
+            profileUrl: true,
+            followerCount: true,
+            createdAt: true,
+          },
+        },
+
+        portfolioItems: {
+          orderBy: {
+            createdAt: "desc",
+          },
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            type: true,
+            url: true,
+            campaignName: true,
+            createdAt: true,
+          },
+        },
+      },
+    });
+
+    if (!creator) {
+      return res.status(404).json({
+        success: false,
+        message: "Profil créateur introuvable.",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      creator,
+    });
+  } catch (error) {
+    if (sendPrismaError(res, error)) {
+      return;
+    }
+
+    console.error(
+      "Erreur lors de la récupération du créateur :",
+      error,
+    );
+
+    return res.status(500).json({
+      success: false,
+      message: "Impossible de récupérer le profil créateur.",
+    });
+  }
+}
+
 module.exports = {
   getCreatorDirectory,
+  getCreatorById,
 };

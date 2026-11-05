@@ -2,6 +2,7 @@ const crypto = require("node:crypto");
 const bcrypt = require("bcryptjs");
 
 const prisma = require("../config/prisma");
+const { sendPrismaError } = require("../utils/prismaErrors");
 const { sendPasswordResetEmail } = require("../services/emailService");
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -120,6 +121,10 @@ async function forgotPassword(req, res) {
         resetUrl,
       });
     } catch (error) {
+      if (sendPrismaError(res, error)) {
+        return;
+      }
+
       // Ne pas laisser un jeton utilisable si l'envoi
       // du message échoue.
       await prisma.passwordResetToken.updateMany({
@@ -140,6 +145,10 @@ async function forgotPassword(req, res) {
       message: GENERIC_RESET_MESSAGE,
     });
   } catch (error) {
+    if (sendPrismaError(res, error)) {
+      return;
+    }
+
     console.error(
       "Erreur lors de la demande de réinitialisation :",
       error.message,
@@ -289,6 +298,10 @@ async function resetPassword(req, res) {
       message: "Votre mot de passe a été modifié avec succès.",
     });
   } catch (error) {
+    if (sendPrismaError(res, error)) {
+      return;
+    }
+
     if (error.code === "RESET_TOKEN_INVALID_OR_USED") {
       return res.status(400).json({
         success: false,

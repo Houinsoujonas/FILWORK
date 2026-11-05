@@ -1,4 +1,50 @@
 const prisma = require("../config/prisma");
+const { sendPrismaError } = require("../utils/prismaErrors");
+const { lockCampaign } = require("../services/collaborationLock");
+const { findUnknownFields } = require("../utils/validation");
+
+/**
+ * Valider le montant convenu lors de l'acceptation d'une candidature.
+ * Le montant doit être strictement supérieur à zéro.
+ */
+function validateAgreedAmount(value) {
+  if (value === undefined || value === null || value === "") {
+    return {
+      valid: false,
+      message:
+        "Le montant convenu est obligatoire pour accepter une candidature.",
+    };
+  }
+
+  if (typeof value !== "number" && typeof value !== "string") {
+    return {
+      valid: false,
+      message: "Le montant convenu doit être un nombre strictement positif.",
+    };
+  }
+
+  const normalized = String(value).trim();
+
+  if (!/^\d{1,10}(?:\.\d{1,2})?$/.test(normalized)) {
+    return {
+      valid: false,
+      message:
+        "Le montant convenu doit être strictement positif, avec au maximum deux décimales.",
+    };
+  }
+
+  if (Number(normalized) <= 0) {
+    return {
+      valid: false,
+      message: "Le montant convenu doit être strictement supérieur à zéro.",
+    };
+  }
+
+  return {
+    valid: true,
+    value: normalized,
+  };
+}
 
 /**
  * Permet à un créateur de candidater à une campagne publiée.
@@ -103,40 +149,125 @@ async function submitApplication(req, res) {
       });
     }
 
-    // Créer la candidature.
-    // Le schéma Prisma empêche un créateur de candidater deux fois
-    // à la même campagne grâce à sa contrainte unique.
-    const application = await prisma.application.create({
-      data: {
+    // Empêcher une candidature lorsqu'une invitation active
+    // existe déjà pour ce créateur et cette campagne.
+    const existingInvitation = await prisma.invitation.findFirst({
+      where: {
         campaignId: campaign.id,
         creatorProfileId: creatorProfile.id,
-        message,
+        status: {
+          in: ["PENDING", "ACCEPTED"],
+        },
       },
-      include: {
-        campaign: {
-          select: {
-            id: true,
-            title: true,
-            companyProfile: {
-              select: {
-                companyName: true,
+      select: {
+        id: true,
+        status: true,
+      },
+    });
+
+    if (existingInvitation) {
+      return res.status(409).json({
+        success: false,
+        message:
+          "Une invitation active existe déjà pour cette campagne. Répondez à cette invitation avant de candidater.",
+      });
+    }
+
+    // Créer la candidature dans une transaction qui verrouille la campagne.
+    // Le verrou garantit qu'une clôture ne peut pas s'intercaler entre la
+    // vérification du statut PUBLISHED et la création de la candidature.
+    // Le schéma Prisma empêche par ailleurs un créateur de candidater deux
+    // fois à la même campagne grâce à sa contrainte unique.
+    const outcome = await prisma.$transaction(async (tx) => {
+      const lockedCampaign = await lockCampaign(tx, campaign.id);
+
+      if (!lockedCampaign) {
+        return { type: "campaign-missing" };
+      }
+
+      if (lockedCampaign.status !== "PUBLISHED") {
+        return {
+          type: "campaign-not-published",
+          currentStatus: lockedCampaign.status,
+        };
+      }
+
+      // Revérifier sous verrou : une invitation a pu être créée
+      // concurremment après la vérification initiale.
+      const activeInvitation = await tx.invitation.findFirst({
+        where: {
+          campaignId: campaign.id,
+          creatorProfileId: creatorProfile.id,
+          status: {
+            in: ["PENDING", "ACCEPTED"],
+          },
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      if (activeInvitation) {
+        return { type: "invitation" };
+      }
+
+      const createdApplication = await tx.application.create({
+        data: {
+          campaignId: campaign.id,
+          creatorProfileId: creatorProfile.id,
+          message,
+        },
+        include: {
+          campaign: {
+            select: {
+              id: true,
+              title: true,
+              companyProfile: {
+                select: {
+                  companyName: true,
+                },
               },
             },
           },
-        },
-        creatorProfile: {
-          select: {
-            id: true,
-            displayName: true,
+          creatorProfile: {
+            select: {
+              id: true,
+              displayName: true,
+            },
           },
         },
-      },
+      });
+
+      return { type: "ok", application: createdApplication };
     });
+
+    if (outcome.type === "campaign-missing") {
+      return res.status(404).json({
+        success: false,
+        message: "Campagne introuvable.",
+      });
+    }
+
+    if (outcome.type === "campaign-not-published") {
+      return res.status(409).json({
+        success: false,
+        message: "Cette campagne n'accepte pas de candidatures actuellement.",
+        currentStatus: outcome.currentStatus,
+      });
+    }
+
+    if (outcome.type === "invitation") {
+      return res.status(409).json({
+        success: false,
+        message:
+          "Une invitation active existe déjà pour cette campagne. Répondez à cette invitation avant de candidater.",
+      });
+    }
 
     return res.status(201).json({
       success: true,
       message: "Votre candidature a été envoyée avec succès.",
-      application,
+      application: outcome.application,
     });
   } catch (error) {
     // P2002 correspond à une violation d'une contrainte unique Prisma.
@@ -220,6 +351,10 @@ async function getMyApplications(req, res) {
       applications,
     });
   } catch (error) {
+    if (sendPrismaError(res, error)) {
+      return;
+    }
+
     console.error(
       "Erreur lors de la récupération des candidatures du créateur :",
       error,
@@ -312,6 +447,10 @@ async function getCampaignApplications(req, res) {
       applications,
     });
   } catch (error) {
+    if (sendPrismaError(res, error)) {
+      return;
+    }
+
     console.error(
       "Erreur lors de la récupération des candidatures de la campagne :",
       error,
@@ -345,6 +484,15 @@ async function updateApplicationStatus(req, res) {
 
     const body = req.body || {};
 
+    const unknownFields = findUnknownFields(body, ["status", "amount"]);
+
+    if (unknownFields.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Champs non autorisés : ${unknownFields.join(", ")}.`,
+      });
+    }
+
     if (
       typeof body.status !== "string" ||
       !["ACCEPTED", "REJECTED"].includes(body.status)
@@ -353,6 +501,24 @@ async function updateApplicationStatus(req, res) {
         success: false,
         message: "Le statut doit être ACCEPTED ou REJECTED.",
       });
+    }
+
+    const accepted = body.status === "ACCEPTED";
+
+    // Une acceptation doit préciser le montant convenu, strictement positif.
+    let agreedAmount = null;
+
+    if (accepted) {
+      const amountValidation = validateAgreedAmount(body.amount);
+
+      if (!amountValidation.valid) {
+        return res.status(400).json({
+          success: false,
+          message: amountValidation.message,
+        });
+      }
+
+      agreedAmount = amountValidation.value;
     }
 
     // Récupérer le profil de l'entreprise connectée.
@@ -383,6 +549,8 @@ async function updateApplicationStatus(req, res) {
           select: {
             id: true,
             title: true,
+            status: true,
+            currency: true,
             companyProfileId: true,
           },
         },
@@ -415,7 +583,39 @@ async function updateApplicationStatus(req, res) {
 
     // Modifier la candidature, créer éventuellement la collaboration
     // et enregistrer la notification dans une seule transaction.
-    const updatedApplication = await prisma.$transaction(async (tx) => {
+    // La campagne est verrouillée en premier pour sérialiser l'acceptation
+    // avec une clôture ou une autre transition de campagne.
+    const outcome = await prisma.$transaction(async (tx) => {
+      const lockedCampaign = await lockCampaign(tx, application.campaign.id);
+
+      if (!lockedCampaign) {
+        return { type: "campaign-missing" };
+      }
+
+      if (accepted && lockedCampaign.status !== "PUBLISHED") {
+        return {
+          type: "campaign-not-published",
+          currentStatus: lockedCampaign.status,
+        };
+      }
+
+      // Vérifier l'absence de collaboration avant toute écriture :
+      // une collaboration ne doit jamais être créée deux fois.
+      if (accepted) {
+        const existingCollaboration = await tx.collaboration.findUnique({
+          where: {
+            applicationId: application.id,
+          },
+          select: {
+            id: true,
+          },
+        });
+
+        if (existingCollaboration) {
+          return { type: "duplicate" };
+        }
+      }
+
       // La condition sur le statut protège contre les traitements simultanés.
       const updateResult = await tx.application.updateMany({
         where: {
@@ -428,27 +628,28 @@ async function updateApplicationStatus(req, res) {
       });
 
       if (updateResult.count === 0) {
-        return null;
+        return { type: "already" };
       }
 
-      let collaboration = null;
-
-      // Une acceptation crée automatiquement une collaboration.
-      if (body.status === "ACCEPTED") {
-        collaboration = await tx.collaboration.create({
+      // Une acceptation crée automatiquement une collaboration
+      // avec le montant convenu et la devise de la campagne.
+      if (accepted) {
+        await tx.collaboration.create({
           data: {
             applicationId: application.id,
+            agreedAmount,
+            currency: application.campaign.currency,
             status: "ACTIVE",
           },
           select: {
             id: true,
             status: true,
+            agreedAmount: true,
+            currency: true,
             startDate: true,
           },
         });
       }
-
-      const accepted = body.status === "ACCEPTED";
 
       const title = accepted
         ? "Candidature acceptée !"
@@ -463,16 +664,14 @@ async function updateApplicationStatus(req, res) {
         data: {
           userId: application.creatorProfile.userId,
           applicationId: application.id,
-          type: accepted
-            ? "APPLICATION_ACCEPTED"
-            : "APPLICATION_REJECTED",
+          type: accepted ? "APPLICATION_ACCEPTED" : "APPLICATION_REJECTED",
           title,
           message,
         },
       });
 
       // Retourner les données actualisées.
-      return tx.application.findUnique({
+      const updatedApplication = await tx.application.findUnique({
         where: {
           id: application.id,
         },
@@ -493,14 +692,41 @@ async function updateApplicationStatus(req, res) {
             select: {
               id: true,
               status: true,
+              agreedAmount: true,
+              currency: true,
               startDate: true,
             },
           },
         },
       });
+
+      return { type: "ok", application: updatedApplication };
     });
 
-    if (!updatedApplication) {
+    if (outcome.type === "campaign-missing") {
+      return res.status(404).json({
+        success: false,
+        message: "Candidature introuvable ou accès non autorisé.",
+      });
+    }
+
+    if (outcome.type === "campaign-not-published") {
+      return res.status(409).json({
+        success: false,
+        message:
+          "Seule une campagne publiée peut faire l'objet d'une acceptation.",
+        currentStatus: outcome.currentStatus,
+      });
+    }
+
+    if (outcome.type === "duplicate") {
+      return res.status(409).json({
+        success: false,
+        message: "Une collaboration existe déjà pour cette candidature.",
+      });
+    }
+
+    if (outcome.type === "already") {
       return res.status(409).json({
         success: false,
         message: "Cette candidature a déjà été traitée.",
@@ -509,17 +735,17 @@ async function updateApplicationStatus(req, res) {
 
     return res.status(200).json({
       success: true,
-      message:
-        body.status === "ACCEPTED"
-          ? "Candidature acceptée. Collaboration créée et notification envoyée."
-          : "Candidature refusée. Une notification a été créée pour le créateur.",
-      application: updatedApplication,
+      message: accepted
+        ? "Candidature acceptée. Collaboration créée et notification envoyée."
+        : "Candidature refusée. Une notification a été créée pour le créateur.",
+      application: outcome.application,
     });
   } catch (error) {
-    console.error(
-      "Erreur lors du traitement de la candidature :",
-      error,
-    );
+    if (sendPrismaError(res, error)) {
+      return;
+    }
+
+    console.error("Erreur lors du traitement de la candidature :", error);
 
     return res.status(500).json({
       success: false,
@@ -568,6 +794,7 @@ async function withdrawApplication(req, res) {
       select: {
         id: true,
         status: true,
+        campaignId: true,
       },
     });
 
@@ -587,20 +814,68 @@ async function withdrawApplication(req, res) {
       });
     }
 
-    // Vérifier à nouveau le statut au moment de la modification
-    // pour éviter un retrait simultané à son acceptation.
-    const updateResult = await prisma.application.updateMany({
-      where: {
-        id: application.id,
-        creatorProfileId: creatorProfile.id,
-        status: "PENDING",
-      },
-      data: {
-        status: "WITHDRAWN",
-      },
+    // Le verrou de campagne sérialise le retrait avec l'acceptation et la
+    // clôture de la campagne : une clôture ne peut pas s'intercaler entre
+    // la vérification du statut et la mise à jour de la candidature.
+    const outcome = await prisma.$transaction(async (tx) => {
+      const lockedCampaign = await lockCampaign(tx, application.campaignId);
+
+      if (!lockedCampaign) {
+        return { type: "campaign-missing" };
+      }
+
+      // Vérifier à nouveau le statut au moment de la modification
+      // pour éviter un retrait simultané à son acceptation.
+      const updateResult = await tx.application.updateMany({
+        where: {
+          id: application.id,
+          creatorProfileId: creatorProfile.id,
+          status: "PENDING",
+        },
+        data: {
+          status: "WITHDRAWN",
+        },
+      });
+
+      if (updateResult.count === 0) {
+        return { type: "already" };
+      }
+
+      // Récupérer la candidature mise à jour dans la même transaction.
+      const updatedApplication = await tx.application.findUnique({
+        where: {
+          id: application.id,
+        },
+        select: {
+          id: true,
+          status: true,
+          createdAt: true,
+          updatedAt: true,
+          campaign: {
+            select: {
+              id: true,
+              title: true,
+              companyProfile: {
+                select: {
+                  companyName: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      return { type: "ok", application: updatedApplication };
     });
 
-    if (updateResult.count === 0) {
+    if (outcome.type === "campaign-missing") {
+      return res.status(404).json({
+        success: false,
+        message: "Campagne introuvable.",
+      });
+    }
+
+    if (outcome.type === "already") {
       return res.status(409).json({
         success: false,
         message:
@@ -608,40 +883,17 @@ async function withdrawApplication(req, res) {
       });
     }
 
-    // Récupérer la candidature mise à jour.
-    const updatedApplication = await prisma.application.findUnique({
-      where: {
-        id: application.id,
-      },
-      select: {
-        id: true,
-        status: true,
-        createdAt: true,
-        updatedAt: true,
-        campaign: {
-          select: {
-            id: true,
-            title: true,
-            companyProfile: {
-              select: {
-                companyName: true,
-              },
-            },
-          },
-        },
-      },
-    });
-
     return res.status(200).json({
       success: true,
       message: "Votre candidature a été retirée avec succès.",
-      application: updatedApplication,
+      application: outcome.application,
     });
   } catch (error) {
-    console.error(
-      "Erreur lors du retrait de la candidature :",
-      error,
-    );
+    if (sendPrismaError(res, error)) {
+      return;
+    }
+
+    console.error("Erreur lors du retrait de la candidature :", error);
 
     return res.status(500).json({
       success: false,

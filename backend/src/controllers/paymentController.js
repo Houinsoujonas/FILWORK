@@ -1,6 +1,14 @@
 const prisma = require("../config/prisma");
+const { sendPrismaError } = require("../utils/prismaErrors");
+const { lockCollaboration } = require("../services/collaborationLock");
 
-const PAYMENT_STATUSES = ["PLANNED", "PENDING", "PAID", "FAILED", "CANCELLED"];
+const PAYMENT_STATUSES = [
+  "PLANNED",
+  "PENDING",
+  "PAID",
+  "FAILED",
+  "CANCELLED",
+];
 
 /**
  * Vérifier qu'une collaboration appartient à l'utilisateur connecté.
@@ -32,7 +40,6 @@ async function getAccessibleCollaboration(collaborationId, user) {
           },
         },
       },
-
       invitation: {
         select: {
           creatorProfile: {
@@ -74,8 +81,7 @@ async function getAccessibleCollaboration(collaborationId, user) {
     return null;
   }
 
-  // Seuls le créateur et l'entreprise concernés peuvent accéder
-  // à cette collaboration.
+  // Seuls les deux participants peuvent accéder à cette collaboration.
   if (user.id !== creatorUserId && user.id !== companyUserId) {
     return null;
   }
@@ -125,7 +131,7 @@ async function createPayment(req, res) {
     const amountString = String(body.amount).trim();
 
     // Decimal(12,2) : maximum 10 chiffres avant la virgule.
-    if (!/^\d{1,10}(\.\d{1,2})?$/.test(amountString)) {
+    if (!/^\d{1,10}(?:\.\d{1,2})?$/.test(amountString)) {
       return res.status(400).json({
         success: false,
         message:
@@ -225,7 +231,40 @@ async function createPayment(req, res) {
           "Vous ne pouvez gérer que les paiements de vos collaborations.",
       });
     }
-    if (collaboration.status !== "ACTIVE") {
+
+    const outcome = await prisma.$transaction(async (tx) => {
+      const locked = await lockCollaboration(tx, collaboration.id);
+
+      if (!locked) {
+        return { type: "missing" };
+      }
+
+      if (locked.status !== "ACTIVE") {
+        return { type: "inactive" };
+      }
+
+      const payment = await tx.payment.create({
+        data: {
+          collaborationId: collaboration.id,
+          amount: amountString,
+          currency,
+          dueDate,
+          notes,
+          status: "PLANNED",
+        },
+      });
+
+      return { type: "ok", payment };
+    });
+
+    if (outcome.type === "missing") {
+      return res.status(404).json({
+        success: false,
+        message: "Collaboration introuvable ou accès non autorisé.",
+      });
+    }
+
+    if (outcome.type === "inactive") {
       return res.status(409).json({
         success: false,
         message:
@@ -233,23 +272,16 @@ async function createPayment(req, res) {
       });
     }
 
-    const payment = await prisma.payment.create({
-      data: {
-        collaborationId: collaboration.id,
-        amount: amountString,
-        currency,
-        dueDate,
-        notes,
-        status: "PLANNED",
-      },
-    });
-
     return res.status(201).json({
       success: true,
       message: "Paiement enregistré avec succès.",
-      payment,
+      payment: outcome.payment,
     });
   } catch (error) {
+    if (sendPrismaError(res, error)) {
+      return;
+    }
+
     console.error("Erreur lors de la création du paiement :", error);
 
     return res.status(500).json({
@@ -297,6 +329,10 @@ async function getCollaborationPayments(req, res) {
       payments,
     });
   } catch (error) {
+    if (sendPrismaError(res, error)) {
+      return;
+    }
+
     console.error("Erreur lors de la récupération des paiements :", error);
 
     return res.status(500).json({
@@ -309,13 +345,17 @@ async function getCollaborationPayments(req, res) {
 /**
  * Mettre à jour le statut d'un paiement.
  * Seule l'entreprise propriétaire peut modifier le statut.
+ *
+ * Une notification est créée pour le créateur à chaque changement
+ * de statut autorisé.
  */
 async function updatePaymentStatus(req, res) {
   try {
     if (req.user.role !== "COMPANY") {
       return res.status(403).json({
         success: false,
-        message: "Seules les entreprises peuvent mettre à jour les paiements.",
+        message:
+          "Seules les entreprises peuvent mettre à jour les paiements.",
       });
     }
 
@@ -375,7 +415,8 @@ async function updatePaymentStatus(req, res) {
         });
       }
 
-      notes = typeof body.notes === "string" ? body.notes.trim() || null : null;
+      notes =
+        typeof body.notes === "string" ? body.notes.trim() || null : null;
 
       if (notes && notes.length > 5000) {
         return res.status(400).json({
@@ -385,6 +426,7 @@ async function updatePaymentStatus(req, res) {
       }
     }
 
+    // Charger le paiement, sa collaboration et ses deux participants.
     const payment = await prisma.payment.findUnique({
       where: {
         id: req.params.id,
@@ -394,6 +436,11 @@ async function updatePaymentStatus(req, res) {
           include: {
             application: {
               select: {
+                creatorProfile: {
+                  select: {
+                    userId: true,
+                  },
+                },
                 campaign: {
                   select: {
                     companyProfile: {
@@ -405,9 +452,13 @@ async function updatePaymentStatus(req, res) {
                 },
               },
             },
-
             invitation: {
               select: {
+                creatorProfile: {
+                  select: {
+                    userId: true,
+                  },
+                },
                 campaign: {
                   select: {
                     companyProfile: {
@@ -429,12 +480,25 @@ async function updatePaymentStatus(req, res) {
       payment?.collaboration?.application?.campaign?.companyProfile?.userId ??
       payment?.collaboration?.invitation?.campaign?.companyProfile?.userId;
 
+    // Identifier le créateur, quelle que soit l'origine de la collaboration.
+    const creatorUserId =
+      payment?.collaboration?.application?.creatorProfile?.userId ??
+      payment?.collaboration?.invitation?.creatorProfile?.userId;
+
     // Refuser l'accès si le paiement n'existe pas ou appartient
     // à une autre entreprise.
     if (!payment || companyUserId !== req.user.id) {
       return res.status(404).json({
         success: false,
         message: "Paiement introuvable ou accès non autorisé.",
+      });
+    }
+
+    if (!creatorUserId || !payment.collaboration) {
+      return res.status(409).json({
+        success: false,
+        message:
+          "Impossible d'identifier le créateur ou la collaboration associée à ce paiement.",
       });
     }
 
@@ -446,14 +510,6 @@ async function updatePaymentStatus(req, res) {
       PAID: [],
       CANCELLED: [],
     };
-
-    if (!allowedTransitions[payment.status].includes(body.status)) {
-      return res.status(409).json({
-        success: false,
-        message: `Transition impossible : ${payment.status} vers ${body.status}.`,
-        currentStatus: payment.status,
-      });
-    }
 
     const data = {
       status: body.status,
@@ -471,34 +527,114 @@ async function updatePaymentStatus(req, res) {
       data.paidAt = new Date();
     }
 
-    // Éviter deux changements de statut concurrents.
-    const updateResult = await prisma.payment.updateMany({
-      where: {
-        id: payment.id,
-        status: payment.status,
-      },
-      data,
+    // Préparer le message de notification.
+    const statusLabels = {
+      PLANNED: "prévu",
+      PENDING: "en attente",
+      PAID: "marqué comme payé",
+      FAILED: "échoué",
+      CANCELLED: "annulé",
+    };
+
+    const notificationMessage =
+      body.status === "PAID"
+        ? "L'entreprise a marqué comme payé le paiement de votre collaboration sur FILWORK."
+        : `Le statut du paiement de votre collaboration a été modifié : ${statusLabels[body.status]}.`;
+
+    // Modifier le paiement et créer sa notification dans une transaction,
+    // sous verrou de la collaboration.
+    //
+    // Les paiements existants restent gérables après clôture ou annulation
+    // (aucune vérification du statut ACTIVE ici), mais la transition doit
+    // être valide par rapport à l'état réel du paiement.
+    const outcome = await prisma.$transaction(async (tx) => {
+      const locked = await lockCollaboration(tx, payment.collaboration.id);
+
+      if (!locked) {
+        return { type: "missing" };
+      }
+
+      const fresh = await tx.payment.findUnique({
+        where: {
+          id: payment.id,
+        },
+        select: {
+          status: true,
+        },
+      });
+
+      if (!fresh) {
+        return { type: "missing" };
+      }
+
+      if (!allowedTransitions[fresh.status].includes(body.status)) {
+        return { type: "invalid-transition", currentStatus: fresh.status };
+      }
+
+      const updateResult = await tx.payment.updateMany({
+        where: {
+          id: payment.id,
+          status: fresh.status,
+        },
+        data,
+      });
+
+      // Éviter deux changements de statut concurrents.
+      if (updateResult.count === 0) {
+        return { type: "race" };
+      }
+
+      const updated = await tx.payment.findUnique({
+        where: {
+          id: payment.id,
+        },
+      });
+
+      await tx.notification.create({
+        data: {
+          userId: creatorUserId,
+          collaborationId: payment.collaboration.id,
+          type: "PAYMENT_STATUS_UPDATED",
+          title: "Statut du paiement mis à jour",
+          message: notificationMessage,
+        },
+      });
+
+      return { type: "ok", payment: updated };
     });
 
-    if (updateResult.count === 0) {
+    if (outcome.type === "missing") {
+      return res.status(404).json({
+        success: false,
+        message: "Paiement introuvable ou accès non autorisé.",
+      });
+    }
+
+    if (outcome.type === "invalid-transition") {
+      return res.status(409).json({
+        success: false,
+        message: `Transition impossible : ${outcome.currentStatus} vers ${body.status}.`,
+        currentStatus: outcome.currentStatus,
+      });
+    }
+
+    if (outcome.type === "race") {
       return res.status(409).json({
         success: false,
         message: "Le paiement a changé d'état. Actualisez la page.",
       });
     }
 
-    const updatedPayment = await prisma.payment.findUnique({
-      where: {
-        id: payment.id,
-      },
-    });
-
     return res.status(200).json({
       success: true,
       message: "Statut du paiement mis à jour.",
-      payment: updatedPayment,
+      payment: outcome.payment,
     });
   } catch (error) {
+    if (sendPrismaError(res, error)) {
+      return;
+    }
+
     console.error("Erreur lors de la mise à jour du paiement :", error);
 
     return res.status(500).json({

@@ -13,6 +13,24 @@ npm run dev
 
 Ouvrez l’adresse locale affichée par Vite.
 
+## Environnements API
+
+Le serveur Vite proxifie `/api` vers `http://localhost:5000` par défaut, l’API de développement branchée sur la base applicative (`backend/.env`, démarrée par `npm run dev` dans `backend/`).
+
+Pour travailler sur la base de test isolée, démarrez `npm run start:test` dans `backend/` (port `5051`) puis lancez Vite avec :
+
+```sh
+VITE_API_PROXY_TARGET=http://localhost:5051 npm run dev
+```
+
+Sous PowerShell :
+
+```powershell
+$env:VITE_API_PROXY_TARGET="http://localhost:5051"; npm run dev
+```
+
+La base de test n’est jamais utilisée par défaut : elle sert uniquement aux tests automatisés et aux vérifications locales explicites.
+
 ## Commandes
 
 - `npm run dev` lance le serveur de développement.

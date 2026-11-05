@@ -4,8 +4,11 @@ const {
   authenticateToken,
 } = require("../middlewares/authMiddleware");
 
+const { requireRole } = require("../middlewares/roleMiddleware");
+
 const {
   getCreatorDirectory,
+  getCreatorById,
 } = require("../controllers/creatorDirectoryController");
 
 const router = express.Router();
@@ -13,7 +16,10 @@ const router = express.Router();
 // Toutes les routes nécessitent une authentification.
 router.use(authenticateToken);
 
-// Le contrôleur réserve cette fonctionnalité au rôle COMPANY.
-router.get("/", getCreatorDirectory);
+// L'annuaire est réservé aux entreprises.
+router.get("/", requireRole("COMPANY"), getCreatorDirectory);
+
+// Consulter un profil créateur depuis l'annuaire.
+router.get("/:id", requireRole("COMPANY"), getCreatorById);
 
 module.exports = router;

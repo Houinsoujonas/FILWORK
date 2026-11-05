@@ -1,4 +1,5 @@
 const prisma = require("../config/prisma");
+const { sendPrismaError } = require("../utils/prismaErrors");
 
 const COMPANY_FIELDS = [
   "companyName",
@@ -303,6 +304,10 @@ async function getMyProfile(req, res) {
       profile,
     });
   } catch (error) {
+    if (sendPrismaError(res, error)) {
+      return;
+    }
+
     console.error(
       "Erreur lors de la récupération du profil :",
       error,
@@ -400,6 +405,10 @@ if (isCompany) {
       profile,
     });
   } catch (error) {
+    if (sendPrismaError(res, error)) {
+      return;
+    }
+
     // Affiche l'erreur complète dans le terminal du serveur.
     console.error(
       "Erreur lors de l'enregistrement du profil :",

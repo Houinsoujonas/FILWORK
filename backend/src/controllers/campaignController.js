@@ -1,4 +1,9 @@
 const prisma = require("../config/prisma");
+const { sendPrismaError } = require("../utils/prismaErrors");
+const { lockCampaign } = require("../services/collaborationLock");
+const {
+  PUBLIC_CAMPAIGN_CONDITIONS,
+} = require("../services/profileVisibility");
 
 const ALLOWED_FIELDS = [
   "title",
@@ -405,9 +410,10 @@ async function getPublishedCampaigns(req, res) {
       });
     }
 
-    // Seules les campagnes publiées sont accessibles publiquement.
+    // Seules les campagnes publiées dont l'entreprise est complète sont
+    // accessibles publiquement.
     const where = {
-      status: "PUBLISHED",
+      AND: [...PUBLIC_CAMPAIGN_CONDITIONS],
     };
 
     // Recherche textuelle dans le titre et la description.
@@ -496,6 +502,10 @@ async function getPublishedCampaigns(req, res) {
       campaigns,
     });
   } catch (error) {
+    if (sendPrismaError(res, error)) {
+      return;
+    }
+
     console.error(
       "Erreur lors de la recherche des campagnes publiées :",
       error,
@@ -504,6 +514,75 @@ async function getPublishedCampaigns(req, res) {
     return res.status(500).json({
       success: false,
       message: "Impossible de récupérer les campagnes.",
+    });
+  }
+}
+
+/**
+ * Consulter publiquement une campagne publiée.
+ *
+ * GET /api/campaigns/:id
+ *
+ * Une campagne en brouillon, suspendue ou clôturée reste invisible :
+ * elle renvoie 404, comme une campagne inexistante.
+ */
+async function getPublishedCampaignById(req, res) {
+  try {
+    const campaignId =
+      typeof req.params.id === "string" ? req.params.id.trim() : "";
+
+    if (!campaignId) {
+      return res.status(404).json({
+        success: false,
+        message: "Campagne introuvable.",
+      });
+    }
+
+    const campaign = await prisma.campaign.findFirst({
+      where: {
+        id: campaignId,
+        AND: PUBLIC_CAMPAIGN_CONDITIONS,
+      },
+      include: {
+        companyProfile: {
+          select: {
+            id: true,
+            companyName: true,
+            description: true,
+            logoUrl: true,
+            location: true,
+            country: true,
+            city: true,
+            websiteUrl: true,
+          },
+        },
+      },
+    });
+
+    if (!campaign) {
+      return res.status(404).json({
+        success: false,
+        message: "Campagne introuvable.",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      campaign,
+    });
+  } catch (error) {
+    if (sendPrismaError(res, error)) {
+      return;
+    }
+
+    console.error(
+      "Erreur lors de la récupération de la campagne :",
+      error,
+    );
+
+    return res.status(500).json({
+      success: false,
+      message: "Impossible de récupérer la campagne.",
     });
   }
 }
@@ -568,6 +647,10 @@ async function createCampaign(req, res) {
       campaign,
     });
   } catch (error) {
+    if (sendPrismaError(res, error)) {
+      return;
+    }
+
     console.error(
       "Erreur lors de la création de la campagne :",
       error,
@@ -623,6 +706,10 @@ async function getMyCampaigns(req, res) {
       campaigns,
     });
   } catch (error) {
+    if (sendPrismaError(res, error)) {
+      return;
+    }
+
     console.error(
       "Erreur lors de la récupération des campagnes de l'entreprise :",
       error,
@@ -700,13 +787,6 @@ async function updateCampaign(req, res) {
       });
     }
 
-    if (result.campaign.status === "CLOSED") {
-      return res.status(409).json({
-        success: false,
-        message: "Une campagne clôturée ne peut plus être modifiée.",
-      });
-    }
-
     const validation = validateCampaignData(req.body);
 
     if (validation.error) {
@@ -716,29 +796,63 @@ async function updateCampaign(req, res) {
       });
     }
 
-    const campaign = await prisma.campaign.update({
-      where: {
-        id: result.campaign.id,
-      },
-      data: validation.data,
-      include: {
-        companyProfile: {
-          select: {
-            id: true,
-            companyName: true,
-            logoUrl: true,
-            location: true,
+    // Le statut est relu sous verrou afin d'éviter qu'une clôture
+    // concurrente ne s'intercale entre la vérification et l'écriture.
+    const outcome = await prisma.$transaction(async (tx) => {
+      const locked = await lockCampaign(tx, result.campaign.id);
+
+      if (!locked) {
+        return { type: "missing" };
+      }
+
+      if (locked.status === "CLOSED") {
+        return { type: "closed" };
+      }
+
+      const campaign = await tx.campaign.update({
+        where: {
+          id: result.campaign.id,
+        },
+        data: validation.data,
+        include: {
+          companyProfile: {
+            select: {
+              id: true,
+              companyName: true,
+              logoUrl: true,
+              location: true,
+            },
           },
         },
-      },
+      });
+
+      return { type: "ok", campaign };
     });
+
+    if (outcome.type === "missing") {
+      return res.status(404).json({
+        success: false,
+        message: "Campagne introuvable ou accès non autorisé.",
+      });
+    }
+
+    if (outcome.type === "closed") {
+      return res.status(409).json({
+        success: false,
+        message: "Une campagne clôturée ne peut plus être modifiée.",
+      });
+    }
 
     return res.status(200).json({
       success: true,
       message: "Campagne mise à jour avec succès.",
-      campaign,
+      campaign: outcome.campaign,
     });
   } catch (error) {
+    if (sendPrismaError(res, error)) {
+      return;
+    }
+
     console.error(
       "Erreur lors de la modification de la campagne :",
       error,
@@ -782,21 +896,52 @@ async function publishCampaign(req, res) {
       });
     }
 
-    if (result.campaign.status === "PUBLISHED") {
-      return res.status(200).json({
-        success: true,
-        message: "Cette campagne est déjà publiée.",
-        campaign: result.campaign,
+    const outcome = await prisma.$transaction(async (tx) => {
+      const locked = await lockCampaign(tx, result.campaign.id);
+
+      if (!locked) {
+        return { type: "missing" };
+      }
+
+      if (locked.status === "CLOSED") {
+        return { type: "conflict", currentStatus: locked.status };
+      }
+
+      if (locked.status === "PUBLISHED") {
+        return { type: "already" };
+      }
+
+      await tx.campaign.update({
+        where: {
+          id: result.campaign.id,
+        },
+        data: {
+          status: "PUBLISHED",
+          publishedAt: new Date(),
+        },
+      });
+
+      return { type: "ok" };
+    });
+
+    if (outcome.type === "missing") {
+      return res.status(404).json({
+        success: false,
+        message: "Campagne introuvable ou accès non autorisé.",
       });
     }
 
-    const campaign = await prisma.campaign.update({
+    if (outcome.type === "conflict") {
+      return res.status(409).json({
+        success: false,
+        message: "Une campagne clôturée ne peut pas être publiée.",
+        currentStatus: outcome.currentStatus,
+      });
+    }
+
+    const campaign = await prisma.campaign.findUnique({
       where: {
         id: result.campaign.id,
-      },
-      data: {
-        status: "PUBLISHED",
-        publishedAt: new Date(),
       },
       include: {
         companyProfile: {
@@ -812,10 +957,17 @@ async function publishCampaign(req, res) {
 
     return res.status(200).json({
       success: true,
-      message: "Campagne publiée avec succès.",
+      message:
+        outcome.type === "already"
+          ? "Cette campagne est déjà publiée."
+          : "Campagne publiée avec succès.",
       campaign,
     });
   } catch (error) {
+    if (sendPrismaError(res, error)) {
+      return;
+    }
+
     console.error(
       "Erreur lors de la publication de la campagne :",
       error,
@@ -852,27 +1004,51 @@ async function pauseCampaign(req, res) {
       });
     }
 
-    if (result.campaign.status === "PAUSED") {
-      return res.status(200).json({
-        success: true,
-        message: "Cette campagne est déjà suspendue.",
-        campaign: result.campaign,
+    const outcome = await prisma.$transaction(async (tx) => {
+      const locked = await lockCampaign(tx, result.campaign.id);
+
+      if (!locked) {
+        return { type: "missing" };
+      }
+
+      if (locked.status === "PAUSED") {
+        return { type: "already" };
+      }
+
+      if (locked.status !== "PUBLISHED") {
+        return { type: "conflict", currentStatus: locked.status };
+      }
+
+      await tx.campaign.update({
+        where: {
+          id: result.campaign.id,
+        },
+        data: {
+          status: "PAUSED",
+        },
+      });
+
+      return { type: "ok" };
+    });
+
+    if (outcome.type === "missing") {
+      return res.status(404).json({
+        success: false,
+        message: "Campagne introuvable ou accès non autorisé.",
       });
     }
 
-    if (result.campaign.status !== "PUBLISHED") {
+    if (outcome.type === "conflict") {
       return res.status(409).json({
         success: false,
         message: "Seule une campagne publiée peut être suspendue.",
+        currentStatus: outcome.currentStatus,
       });
     }
 
-    const campaign = await prisma.campaign.update({
+    const campaign = await prisma.campaign.findUnique({
       where: {
         id: result.campaign.id,
-      },
-      data: {
-        status: "PAUSED",
       },
       include: {
         companyProfile: {
@@ -888,10 +1064,17 @@ async function pauseCampaign(req, res) {
 
     return res.status(200).json({
       success: true,
-      message: "Campagne suspendue avec succès.",
+      message:
+        outcome.type === "already"
+          ? "Cette campagne est déjà suspendue."
+          : "Campagne suspendue avec succès.",
       campaign,
     });
   } catch (error) {
+    if (sendPrismaError(res, error)) {
+      return;
+    }
+
     console.error(
       "Erreur lors de la suspension de la campagne :",
       error,
@@ -928,20 +1111,157 @@ async function closeCampaign(req, res) {
       });
     }
 
-    if (result.campaign.status === "CLOSED") {
-      return res.status(200).json({
-        success: true,
-        message: "Cette campagne est déjà clôturée.",
-        campaign: result.campaign,
+    const companyProfile = await prisma.companyProfile.findUnique({
+      where: {
+        userId: req.user.id,
+      },
+      select: {
+        companyName: true,
+      },
+    });
+
+    if (!companyProfile) {
+      return res.status(400).json({
+        success: false,
+        message: "Aucun profil d'entreprise n'est associé à ce compte.",
       });
     }
 
-    const campaign = await prisma.campaign.update({
+    const outcome = await prisma.$transaction(async (tx) => {
+      const locked = await lockCampaign(tx, result.campaign.id);
+
+      if (!locked) {
+        return { type: "missing" };
+      }
+
+      if (locked.status === "CLOSED") {
+        return { type: "already" };
+      }
+
+      // Les candidatures et invitations encore en attente sont fermées
+      // dans la même transaction que la campagne. Le verrou de campagne
+      // empêche une acceptation concurrente de s'intercaler.
+      const pendingApplications = await tx.application.findMany({
+        where: {
+          campaignId: result.campaign.id,
+          status: "PENDING",
+        },
+        select: {
+          id: true,
+          creatorProfile: {
+            select: {
+              userId: true,
+            },
+          },
+        },
+      });
+
+      const pendingInvitations = await tx.invitation.findMany({
+        where: {
+          campaignId: result.campaign.id,
+          status: "PENDING",
+        },
+        select: {
+          id: true,
+          creatorProfile: {
+            select: {
+              userId: true,
+            },
+          },
+        },
+      });
+
+      await tx.campaign.update({
+        where: {
+          id: result.campaign.id,
+        },
+        data: {
+          status: "CLOSED",
+        },
+      });
+
+      const applicationNotifications = [];
+
+      for (const application of pendingApplications) {
+        const updated = await tx.application.updateMany({
+          where: {
+            id: application.id,
+            status: "PENDING",
+          },
+          data: {
+            status: "REJECTED",
+          },
+        });
+
+        if (updated.count > 0) {
+          applicationNotifications.push({
+            userId: application.creatorProfile.userId,
+            applicationId: application.id,
+            type: "APPLICATION_REJECTED",
+            title: "Candidature non retenue",
+            message:
+              `${companyProfile.companyName} a clôturé la campagne ` +
+              `« ${result.campaign.title} ». Votre candidature n'a pas été retenue.`,
+          });
+        }
+      }
+
+      if (applicationNotifications.length > 0) {
+        await tx.notification.createMany({
+          data: applicationNotifications,
+        });
+      }
+
+      const invitationNotifications = [];
+
+      for (const invitation of pendingInvitations) {
+        const updated = await tx.invitation.updateMany({
+          where: {
+            id: invitation.id,
+            status: "PENDING",
+          },
+          data: {
+            status: "WITHDRAWN",
+            respondedAt: new Date(),
+          },
+        });
+
+        if (updated.count > 0) {
+          invitationNotifications.push({
+            userId: invitation.creatorProfile.userId,
+            invitationId: invitation.id,
+            type: "INVITATION_WITHDRAWN",
+            title: "Invitation retirée",
+            message:
+              `${companyProfile.companyName} a clôturé la campagne ` +
+              `« ${result.campaign.title} ». L'invitation a été retirée.`,
+          });
+        }
+      }
+
+      if (invitationNotifications.length > 0) {
+        await tx.notification.createMany({
+          data: invitationNotifications,
+        });
+      }
+
+      return {
+        type: "ok",
+        rejectedApplications: applicationNotifications.length,
+        withdrawnInvitations: invitationNotifications.length,
+      };
+    });
+
+    if (outcome.type === "missing") {
+      return res.status(404).json({
+        success: false,
+        message: "Campagne introuvable ou accès non autorisé.",
+      });
+    }
+
+    const campaign = await prisma.campaign.findUnique({
       where: {
         id: result.campaign.id,
-      },
-      data: {
-        status: "CLOSED",
       },
       include: {
         companyProfile: {
@@ -955,12 +1275,26 @@ async function closeCampaign(req, res) {
       },
     });
 
+    if (outcome.type === "already") {
+      return res.status(200).json({
+        success: true,
+        message: "Cette campagne est déjà clôturée.",
+        campaign,
+      });
+    }
+
     return res.status(200).json({
       success: true,
       message: "Campagne clôturée avec succès.",
       campaign,
+      rejectedApplications: outcome.rejectedApplications,
+      withdrawnInvitations: outcome.withdrawnInvitations,
     });
   } catch (error) {
+    if (sendPrismaError(res, error)) {
+      return;
+    }
+
     console.error(
       "Erreur lors de la clôture de la campagne :",
       error,
@@ -1031,6 +1365,10 @@ async function deleteCampaign(req, res) {
       message: "Brouillon supprimé avec succès.",
     });
   } catch (error) {
+    if (sendPrismaError(res, error)) {
+      return;
+    }
+
     console.error("Erreur lors de la suppression de la campagne :", error);
 
     return res.status(500).json({
@@ -1042,6 +1380,7 @@ async function deleteCampaign(req, res) {
 
 module.exports = {
   getPublishedCampaigns,
+  getPublishedCampaignById,
   createCampaign,
   getMyCampaigns,
   updateCampaign,

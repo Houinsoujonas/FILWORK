@@ -12,7 +12,7 @@ const navLinks = [
 
 function FilworkLogo() {
   return (
-    <Link to="/" className="filwork-logo" aria-label="Filwork — Accueil">
+    <Link to="/" className="filwork-logo" aria-label="Filwork, accueil">
       <img src="/filwork-logo.svg" alt="" />
     </Link>
   );

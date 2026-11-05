@@ -1,4 +1,5 @@
 const prisma = require("../config/prisma");
+const { sendPrismaError } = require("../utils/prismaErrors");
 
 /**
  * Tableau de bord administratif.
@@ -143,6 +144,10 @@ async function getDashboardStats(req, res) {
       },
     });
   } catch (error) {
+    if (sendPrismaError(res, error)) {
+      return;
+    }
+
     console.error(
       "Erreur lors de la récupération des statistiques administratives :",
       error,
@@ -166,7 +171,6 @@ async function getDashboardStats(req, res) {
  */
 async function getAdminUsers(req, res) {
   try {
-    // 1. Valider la pagination.
     const page = Number(req.query.page ?? 1);
     const limit = Number(req.query.limit ?? 20);
 
@@ -184,7 +188,6 @@ async function getAdminUsers(req, res) {
       });
     }
 
-    // 2. Valider le rôle demandé.
     const allowedRoles = ["CREATOR", "COMPANY", "ADMIN"];
 
     let role;
@@ -207,7 +210,6 @@ async function getAdminUsers(req, res) {
       }
     }
 
-    // 3. Valider le terme de recherche.
     let search;
 
     if (req.query.search !== undefined) {
@@ -228,7 +230,6 @@ async function getAdminUsers(req, res) {
       }
     }
 
-    // 4. Construire les filtres.
     const where = {};
 
     if (role) {
@@ -242,7 +243,6 @@ async function getAdminUsers(req, res) {
       };
     }
 
-    // 5. Compter les résultats et récupérer la page demandée.
     const [total, users] = await Promise.all([
       prisma.user.count({
         where,
@@ -301,6 +301,10 @@ async function getAdminUsers(req, res) {
       users,
     });
   } catch (error) {
+    if (sendPrismaError(res, error)) {
+      return;
+    }
+
     console.error(
       "Erreur lors de la récupération des utilisateurs administratifs :",
       error,
@@ -325,7 +329,6 @@ async function getAdminUsers(req, res) {
  */
 async function getAdminCampaigns(req, res) {
   try {
-    // 1. Valider la pagination.
     const page = Number(req.query.page ?? 1);
     const limit = Number(req.query.limit ?? 20);
 
@@ -343,7 +346,6 @@ async function getAdminCampaigns(req, res) {
       });
     }
 
-    // 2. Valider le statut demandé.
     const allowedStatuses = ["DRAFT", "PUBLISHED", "PAUSED", "CLOSED"];
 
     let status;
@@ -366,7 +368,6 @@ async function getAdminCampaigns(req, res) {
       }
     }
 
-    // 3. Valider la recherche.
     let search;
 
     if (req.query.search !== undefined) {
@@ -387,7 +388,6 @@ async function getAdminCampaigns(req, res) {
       }
     }
 
-    // 4. Construire les filtres.
     const where = {};
 
     if (status) {
@@ -411,7 +411,6 @@ async function getAdminCampaigns(req, res) {
       ];
     }
 
-    // 5. Récupérer les campagnes et le nombre total de résultats.
     const [total, campaigns] = await Promise.all([
       prisma.campaign.count({
         where,
@@ -477,6 +476,10 @@ async function getAdminCampaigns(req, res) {
       campaigns,
     });
   } catch (error) {
+    if (sendPrismaError(res, error)) {
+      return;
+    }
+
     console.error(
       "Erreur lors de la récupération des campagnes administratives :",
       error,
@@ -501,7 +504,6 @@ async function getAdminCampaigns(req, res) {
  */
 async function getAdminCollaborations(req, res) {
   try {
-    // 1. Valider la pagination.
     const page = Number(req.query.page ?? 1);
     const limit = Number(req.query.limit ?? 20);
 
@@ -519,7 +521,6 @@ async function getAdminCollaborations(req, res) {
       });
     }
 
-    // 2. Valider le statut.
     const allowedStatuses = [
       "ACTIVE",
       "COMPLETED",
@@ -547,7 +548,6 @@ async function getAdminCollaborations(req, res) {
       }
     }
 
-    // 3. Valider l'origine.
     const allowedOrigins = ["APPLICATION", "INVITATION"];
 
     let origin;
@@ -571,7 +571,6 @@ async function getAdminCollaborations(req, res) {
       }
     }
 
-    // 4. Construire les filtres.
     const where = {};
 
     if (status) {
@@ -588,7 +587,6 @@ async function getAdminCollaborations(req, res) {
       };
     }
 
-    // 5. Compter les résultats et récupérer la page demandée.
     const [total, collaborations] = await Promise.all([
       prisma.collaboration.count({
         where,
@@ -698,6 +696,10 @@ async function getAdminCollaborations(req, res) {
       collaborations,
     });
   } catch (error) {
+    if (sendPrismaError(res, error)) {
+      return;
+    }
+
     console.error(
       "Erreur lors de la récupération des collaborations administratives :",
       error
@@ -721,7 +723,6 @@ async function getAdminCollaborations(req, res) {
  */
 async function getAdminDeliverables(req, res) {
   try {
-    // 1. Valider la pagination.
     const page = Number(req.query.page ?? 1);
     const limit = Number(req.query.limit ?? 20);
 
@@ -739,7 +740,6 @@ async function getAdminDeliverables(req, res) {
       });
     }
 
-    // 2. Valider le statut du livrable.
     const allowedStatuses = [
       "PENDING",
       "SUBMITTED",
@@ -768,7 +768,6 @@ async function getAdminDeliverables(req, res) {
       }
     }
 
-    // 3. Valider la recherche.
     let search;
 
     if (req.query.search !== undefined) {
@@ -789,7 +788,6 @@ async function getAdminDeliverables(req, res) {
       }
     }
 
-    // 4. Construire les filtres.
     const where = {};
 
     if (status) {
@@ -813,7 +811,6 @@ async function getAdminDeliverables(req, res) {
       ];
     }
 
-    // 5. Compter les résultats et récupérer les livrables.
     const [total, deliverables] = await Promise.all([
       prisma.deliverable.count({
         where,
@@ -920,6 +917,10 @@ async function getAdminDeliverables(req, res) {
       deliverables,
     });
   } catch (error) {
+    if (sendPrismaError(res, error)) {
+      return;
+    }
+
     console.error(
       "Erreur lors de la récupération des livrables administratifs :",
       error
@@ -946,7 +947,6 @@ async function getAdminDeliverables(req, res) {
  */
 async function getAdminPayments(req, res) {
   try {
-    // 1. Valider la pagination.
     const page = Number(req.query.page ?? 1);
     const limit = Number(req.query.limit ?? 20);
 
@@ -964,7 +964,6 @@ async function getAdminPayments(req, res) {
       });
     }
 
-    // 2. Valider le statut du paiement.
     const allowedStatuses = [
       "PLANNED",
       "PENDING",
@@ -994,7 +993,6 @@ async function getAdminPayments(req, res) {
       }
     }
 
-    // 3. Valider l'origine de la collaboration.
     const allowedOrigins = ["APPLICATION", "INVITATION"];
 
     let origin;
@@ -1017,7 +1015,6 @@ async function getAdminPayments(req, res) {
       }
     }
 
-    // 4. Construire les filtres.
     const where = {};
 
     if (status) {
@@ -1042,7 +1039,6 @@ async function getAdminPayments(req, res) {
       };
     }
 
-    // 5. Compter les résultats et récupérer les paiements.
     const [total, payments] = await Promise.all([
       prisma.payment.count({
         where,
@@ -1154,6 +1150,10 @@ async function getAdminPayments(req, res) {
       payments,
     });
   } catch (error) {
+    if (sendPrismaError(res, error)) {
+      return;
+    }
+
     console.error(
       "Erreur lors de la récupération des paiements administratifs :",
       error

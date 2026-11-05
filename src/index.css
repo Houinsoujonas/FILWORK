@@ -21,6 +21,7 @@
 @import "./Pages/DashboardPages.css";
 @import "./Pages/FrontendPages.css";
 @import "./Pages/Inscription.css";
+@import "./Pages/AppData.css";
 :root {
 /* Couleurs principales */
 --color-bg: #f6f5f0;

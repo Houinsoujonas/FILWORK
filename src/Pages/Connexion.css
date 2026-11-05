@@ -1,5 +1,5 @@
 /* =========================================
-FILWORK — PAGE DE CONNEXION
+FILWORK : PAGE DE CONNEXION
 Identité : Noir, or et champagne
 ========================================= */
 
@@ -81,7 +81,7 @@ box-shadow:
 }
 
 /* =========================================
-PANNEAU VISUEL — GAUCHE
+PANNEAU VISUEL GAUCHE
 ========================================= */
 
 .login-visual {
@@ -368,7 +368,7 @@ user-select: none;
 }
 
 /* =========================================
-PANNEAU FORMULAIRE — DROITE
+PANNEAU FORMULAIRE DROITE
 ========================================= */
 
 .login-form-panel {
@@ -991,7 +991,7 @@ transform: scale(1.8);
 }
 
 /* =========================================
-RESPONSIVE — PETITS ÉCRANS
+RESPONSIVE PETITS ÉCRANS
 ========================================= */
 
 @media (max-width: 1100px) {
@@ -1331,7 +1331,7 @@ font-size: 9px;
 }
 
 /* =========================================
-ACCESSIBILITÉ — ANIMATIONS RÉDUITES
+ACCESSIBILITÉ ANIMATIONS RÉDUITES
 ========================================= */
 
 @media (prefers-reduced-motion: reduce) {

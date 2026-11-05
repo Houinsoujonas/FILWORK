@@ -1,4 +1,6 @@
 const prisma = require("../config/prisma");
+const { sendPrismaError } = require("../utils/prismaErrors");
+const { lockCollaboration } = require("../services/collaborationLock");
 
 /**
  * Vérifie qu'une collaboration existe et que l'utilisateur connecté
@@ -195,28 +197,53 @@ async function createDeliverable(req, res) {
       });
     }
 
-    if (collaboration.status !== "ACTIVE") {
+    const outcome = await prisma.$transaction(async (tx) => {
+      const locked = await lockCollaboration(tx, collaboration.id);
+
+      if (!locked) {
+        return { type: "missing" };
+      }
+
+      if (locked.status !== "ACTIVE") {
+        return { type: "inactive" };
+      }
+
+      const deliverable = await tx.deliverable.create({
+        data: {
+          collaborationId: collaboration.id,
+          title,
+          description,
+          dueDate,
+        },
+      });
+
+      return { type: "ok", deliverable };
+    });
+
+    if (outcome.type === "missing") {
+      return res.status(404).json({
+        success: false,
+        message: "Collaboration introuvable ou accès non autorisé.",
+      });
+    }
+
+    if (outcome.type === "inactive") {
       return res.status(409).json({
         success: false,
         message: "Cette collaboration n'est pas active.",
       });
     }
 
-    const deliverable = await prisma.deliverable.create({
-      data: {
-        collaborationId: collaboration.id,
-        title,
-        description,
-        dueDate,
-      },
-    });
-
     return res.status(201).json({
       success: true,
       message: "Livrable créé avec succès.",
-      deliverable,
+      deliverable: outcome.deliverable,
     });
   } catch (error) {
+    if (sendPrismaError(res, error)) {
+      return;
+    }
+
     console.error("Erreur lors de la création du livrable :", error);
 
     return res.status(500).json({
@@ -259,6 +286,10 @@ async function getCollaborationDeliverables(req, res) {
       deliverables,
     });
   } catch (error) {
+    if (sendPrismaError(res, error)) {
+      return;
+    }
+
     console.error("Erreur lors de la récupération des livrables :", error);
 
     return res.status(500).json({
@@ -273,6 +304,14 @@ async function getCollaborationDeliverables(req, res) {
  *
  * Un nouveau dépôt est autorisé si le livrable est en attente
  * ou si l'entreprise a demandé une révision.
+ */
+/**
+ * Le créateur soumet le lien de son travail.
+ *
+ * Un nouveau dépôt est autorisé si le livrable est en attente
+ * ou si l'entreprise a demandé une révision.
+ *
+ * Une notification est envoyée à l'entreprise propriétaire.
  */
 async function submitDeliverable(req, res) {
   try {
@@ -328,76 +367,167 @@ async function submitDeliverable(req, res) {
     }
 
     const deliverable = await prisma.deliverable.findUnique({
-  where: {
-    id: req.params.id,
-  },
-  include: {
-    collaboration: {
+      where: {
+        id: req.params.id,
+      },
       include: {
-        application: {
-          select: {
-            creatorProfile: {
+        collaboration: {
+          include: {
+            application: {
               select: {
-                userId: true,
+                creatorProfile: {
+                  select: {
+                    userId: true,
+                  },
+                },
+                campaign: {
+                  select: {
+                    companyProfile: {
+                      select: {
+                        userId: true,
+                      },
+                    },
+                  },
+                },
               },
             },
-          },
-        },
-        invitation: {
-          select: {
-            creatorProfile: {
+            invitation: {
               select: {
-                userId: true,
+                creatorProfile: {
+                  select: {
+                    userId: true,
+                  },
+                },
+                campaign: {
+                  select: {
+                    companyProfile: {
+                      select: {
+                        userId: true,
+                      },
+                    },
+                  },
+                },
               },
             },
           },
         },
       },
-    },
-  },
-});
+    });
 
-// Identifier le créateur associé à la collaboration,
-// qu'elle provienne d'une candidature ou d'une invitation.
-const creatorUserId =
-  deliverable?.collaboration?.application?.creatorProfile?.userId ??
-  deliverable?.collaboration?.invitation?.creatorProfile?.userId;
+    // Identifier le créateur associé à la collaboration.
+    const creatorUserId =
+      deliverable?.collaboration?.application?.creatorProfile?.userId ??
+      deliverable?.collaboration?.invitation?.creatorProfile?.userId;
 
-if (!deliverable || creatorUserId !== req.user.id) {
-  return res.status(404).json({
-    success: false,
-    message: "Livrable introuvable ou accès non autorisé.",
-  });
-}
-    if (deliverable.collaboration.status !== "ACTIVE") {
+    // Identifier l'entreprise propriétaire de la campagne.
+    const companyUserId =
+      deliverable?.collaboration?.application?.campaign?.companyProfile
+        ?.userId ??
+      deliverable?.collaboration?.invitation?.campaign?.companyProfile?.userId;
+
+    if (!deliverable || creatorUserId !== req.user.id) {
+      return res.status(404).json({
+        success: false,
+        message: "Livrable introuvable ou accès non autorisé.",
+      });
+    }
+
+    if (!companyUserId) {
+      return res.status(409).json({
+        success: false,
+        message: "Impossible d'identifier l'entreprise associée à ce livrable.",
+      });
+    }
+
+    const outcome = await prisma.$transaction(async (tx) => {
+      const locked = await lockCollaboration(tx, deliverable.collaboration.id);
+
+      if (!locked) {
+        return { type: "missing" };
+      }
+
+      if (locked.status !== "ACTIVE") {
+        return { type: "inactive" };
+      }
+
+      const fresh = await tx.deliverable.findUnique({
+        where: {
+          id: deliverable.id,
+        },
+        select: {
+          status: true,
+        },
+      });
+
+      if (!fresh) {
+        return { type: "missing" };
+      }
+
+      if (!["PENDING", "REVISION_REQUESTED"].includes(fresh.status)) {
+        return { type: "invalid-status" };
+      }
+
+      // Modifier le livrable et créer la notification dans la même
+      // transaction, sous verrou de la collaboration.
+      const updateResult = await tx.deliverable.updateMany({
+        where: {
+          id: deliverable.id,
+          status: fresh.status,
+        },
+        data: {
+          status: "SUBMITTED",
+          assetUrl,
+          submittedAt: new Date(),
+          feedback: null,
+          reviewedAt: null,
+        },
+      });
+
+      if (updateResult.count === 0) {
+        return { type: "race" };
+      }
+
+      const updated = await tx.deliverable.findUnique({
+        where: {
+          id: deliverable.id,
+        },
+      });
+
+      await tx.notification.create({
+        data: {
+          userId: companyUserId,
+          collaborationId: deliverable.collaboration.id,
+          type: "DELIVERABLE_SUBMITTED",
+          title: "Nouveau livrable soumis",
+          message: `Le créateur a soumis le livrable « ${deliverable.title} » pour votre examen.`,
+        },
+      });
+
+      return { type: "ok", deliverable: updated };
+    });
+
+    if (outcome.type === "missing") {
+      return res.status(404).json({
+        success: false,
+        message: "Livrable introuvable ou accès non autorisé.",
+      });
+    }
+
+    if (outcome.type === "inactive") {
       return res.status(409).json({
         success: false,
         message: "Cette collaboration n'est plus active.",
       });
     }
 
-    if (!["PENDING", "REVISION_REQUESTED"].includes(deliverable.status)) {
+    if (outcome.type === "invalid-status") {
       return res.status(409).json({
         success: false,
         message: "Ce livrable ne peut pas être soumis dans son état actuel.",
       });
     }
 
-    const updateResult = await prisma.deliverable.updateMany({
-      where: {
-        id: deliverable.id,
-        status: deliverable.status,
-      },
-      data: {
-        status: "SUBMITTED",
-        assetUrl,
-        submittedAt: new Date(),
-        feedback: null,
-        reviewedAt: null,
-      },
-    });
-
-    if (updateResult.count === 0) {
+    if (outcome.type === "race") {
       return res.status(409).json({
         success: false,
         message:
@@ -405,18 +535,16 @@ if (!deliverable || creatorUserId !== req.user.id) {
       });
     }
 
-    const updatedDeliverable = await prisma.deliverable.findUnique({
-      where: {
-        id: deliverable.id,
-      },
-    });
-
     return res.status(200).json({
       success: true,
       message: "Livrable soumis avec succès.",
-      deliverable: updatedDeliverable,
+      deliverable: outcome.deliverable,
     });
   } catch (error) {
+    if (sendPrismaError(res, error)) {
+      return;
+    }
+
     console.error("Erreur lors de la soumission du livrable :", error);
 
     return res.status(500).json({
@@ -428,6 +556,12 @@ if (!deliverable || creatorUserId !== req.user.id) {
 
 /**
  * L'entreprise valide le livrable ou demande une correction.
+ */
+/**
+ * L'entreprise valide le livrable ou demande une correction.
+ *
+ * Le créateur reçoit une notification correspondant
+ * à la décision de l'entreprise.
  */
 async function reviewDeliverable(req, res) {
   try {
@@ -489,33 +623,45 @@ async function reviewDeliverable(req, res) {
       });
     }
 
-   const deliverable = await prisma.deliverable.findUnique({
-  where: {
-    id: req.params.id,
-  },
-  include: {
-    collaboration: {
+    const deliverable = await prisma.deliverable.findUnique({
+      where: {
+        id: req.params.id,
+      },
       include: {
-        application: {
-          select: {
-            campaign: {
+        collaboration: {
+          include: {
+            application: {
               select: {
-                companyProfile: {
+                creatorProfile: {
                   select: {
                     userId: true,
                   },
                 },
+                campaign: {
+                  select: {
+                    companyProfile: {
+                      select: {
+                        userId: true,
+                      },
+                    },
+                  },
+                },
               },
             },
-          },
-        },
-        invitation: {
-          select: {
-            campaign: {
+            invitation: {
               select: {
-                companyProfile: {
+                creatorProfile: {
                   select: {
                     userId: true,
+                  },
+                },
+                campaign: {
+                  select: {
+                    companyProfile: {
+                      select: {
+                        userId: true,
+                      },
+                    },
                   },
                 },
               },
@@ -523,63 +669,140 @@ async function reviewDeliverable(req, res) {
           },
         },
       },
-    },
-  },
-});
+    });
 
-// Identifier l'entreprise propriétaire de la campagne,
-// que la collaboration provienne d'une candidature ou d'une invitation.
-const companyUserId =
-  deliverable?.collaboration?.application?.campaign
-    ?.companyProfile?.userId ??
-  deliverable?.collaboration?.invitation?.campaign
-    ?.companyProfile?.userId;
+    // Identifier l'entreprise propriétaire de la campagne.
+    const companyUserId =
+      deliverable?.collaboration?.application?.campaign?.companyProfile
+        ?.userId ??
+      deliverable?.collaboration?.invitation?.campaign?.companyProfile?.userId;
 
-if (!deliverable || companyUserId !== req.user.id) {
-  return res.status(404).json({
-    success: false,
-    message: "Livrable introuvable ou accès non autorisé.",
-  });
-}
+    // Identifier le créateur associé à la collaboration.
+    const creatorUserId =
+      deliverable?.collaboration?.application?.creatorProfile?.userId ??
+      deliverable?.collaboration?.invitation?.creatorProfile?.userId;
 
-    if (deliverable.collaboration.status !== "ACTIVE") {
+    if (!deliverable || companyUserId !== req.user.id) {
+      return res.status(404).json({
+        success: false,
+        message: "Livrable introuvable ou accès non autorisé.",
+      });
+    }
+
+    if (!creatorUserId) {
+      return res.status(409).json({
+        success: false,
+        message: "Impossible d'identifier le créateur associé à ce livrable.",
+      });
+    }
+
+    const notificationType =
+      body.status === "APPROVED"
+        ? "DELIVERABLE_APPROVED"
+        : "DELIVERABLE_REVISION_REQUESTED";
+
+    const notificationTitle =
+      body.status === "APPROVED"
+        ? "Livrable approuvé"
+        : "Corrections demandées";
+
+    const notificationMessage =
+      body.status === "APPROVED"
+        ? `Votre livrable « ${deliverable.title} » a été approuvé par l'entreprise.`
+        : `Des corrections sont demandées pour votre livrable « ${deliverable.title} ». Commentaire : ${feedback}`;
+
+    const outcome = await prisma.$transaction(async (tx) => {
+      const locked = await lockCollaboration(tx, deliverable.collaboration.id);
+
+      if (!locked) {
+        return { type: "missing" };
+      }
+
+      if (locked.status !== "ACTIVE") {
+        return { type: "inactive" };
+      }
+
+      const fresh = await tx.deliverable.findUnique({
+        where: {
+          id: deliverable.id,
+        },
+        select: {
+          status: true,
+        },
+      });
+
+      if (!fresh) {
+        return { type: "missing" };
+      }
+
+      if (fresh.status !== "SUBMITTED") {
+        return { type: "invalid-status" };
+      }
+
+      // Modifier le statut et notifier le créateur dans la même
+      // transaction, sous verrou de la collaboration.
+      const updateResult = await tx.deliverable.updateMany({
+        where: {
+          id: deliverable.id,
+          status: "SUBMITTED",
+        },
+        data: {
+          status: body.status,
+          feedback,
+          reviewedAt: new Date(),
+        },
+      });
+
+      if (updateResult.count === 0) {
+        return { type: "race" };
+      }
+
+      const updated = await tx.deliverable.findUnique({
+        where: {
+          id: deliverable.id,
+        },
+      });
+
+      await tx.notification.create({
+        data: {
+          userId: creatorUserId,
+          collaborationId: deliverable.collaboration.id,
+          type: notificationType,
+          title: notificationTitle,
+          message: notificationMessage,
+        },
+      });
+
+      return { type: "ok", deliverable: updated };
+    });
+
+    if (outcome.type === "missing") {
+      return res.status(404).json({
+        success: false,
+        message: "Livrable introuvable ou accès non autorisé.",
+      });
+    }
+
+    if (outcome.type === "inactive") {
       return res.status(409).json({
         success: false,
         message: "Cette collaboration n'est plus active.",
       });
     }
 
-    if (deliverable.status !== "SUBMITTED") {
+    if (outcome.type === "invalid-status") {
       return res.status(409).json({
         success: false,
         message: "Seul un livrable soumis peut être examiné.",
       });
     }
 
-    const updateResult = await prisma.deliverable.updateMany({
-      where: {
-        id: deliverable.id,
-        status: "SUBMITTED",
-      },
-      data: {
-        status: body.status,
-        feedback,
-        reviewedAt: new Date(),
-      },
-    });
-
-    if (updateResult.count === 0) {
+    if (outcome.type === "race") {
       return res.status(409).json({
         success: false,
         message: "Le livrable a déjà été examiné. Actualisez la page.",
       });
     }
-
-    const updatedDeliverable = await prisma.deliverable.findUnique({
-      where: {
-        id: deliverable.id,
-      },
-    });
 
     return res.status(200).json({
       success: true,
@@ -587,9 +810,13 @@ if (!deliverable || companyUserId !== req.user.id) {
         body.status === "APPROVED"
           ? "Livrable approuvé avec succès."
           : "Des corrections ont été demandées au créateur.",
-      deliverable: updatedDeliverable,
+      deliverable: outcome.deliverable,
     });
   } catch (error) {
+    if (sendPrismaError(res, error)) {
+      return;
+    }
+
     console.error("Erreur lors de l'examen du livrable :", error);
 
     return res.status(500).json({

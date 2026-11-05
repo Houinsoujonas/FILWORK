@@ -4,8 +4,11 @@ const {
   authenticateToken,
 } = require("../middlewares/authMiddleware");
 
+const { requireRole } = require("../middlewares/roleMiddleware");
+
 const {
   getPublishedCampaigns,
+  getPublishedCampaignById,
   createCampaign,
   getMyCampaigns,
   updateCampaign,
@@ -20,14 +23,24 @@ const router = express.Router();
 // Consulter les campagnes publiées sans se connecter.
 router.get("/", getPublishedCampaigns);
 
-// Toutes les routes suivantes nécessitent une authentification.
-router.use(authenticateToken);
+// Consulter les campagnes de l'entreprise connectée.
+// Déclarée avant /:id pour ne pas être interprétée comme un identifiant.
+router.get(
+  "/my-campaigns",
+  authenticateToken,
+  requireRole("COMPANY"),
+  getMyCampaigns,
+);
+
+// Consulter publiquement une campagne publiée.
+router.get("/:id", getPublishedCampaignById);
+
+// Toutes les routes suivantes nécessitent une authentification
+// et sont réservées aux entreprises.
+router.use(authenticateToken, requireRole("COMPANY"));
 
 // Créer une campagne.
 router.post("/", createCampaign);
-
-// Consulter les campagnes de l'entreprise connectée.
-router.get("/my-campaigns", getMyCampaigns);
 
 // Modifier une campagne appartenant à l'entreprise connectée.
 router.put("/:id", updateCampaign);

@@ -1,11 +1,10 @@
 import CreateurHero from "../Components/CreateurHero";
-import CreatorSection from "../Components/CreatorSection";
 import CreateurEtapes from "../Components/CreateurEtapes";
 import CreateurDomaines from "../Components/CreateurDomaines";
 import CreateurCTA from "../Components/CreateurCTA";
-import creatorPortrait from "../assets/creator.jpg";
 import creatorStudio from "../assets/creat2.jpg";
 import creatorTeam from "../assets/creat3.jpg";
+import creatorDesk from "../assets/creat4.jpg";
 
 const creatorTopics = [
   {
@@ -27,9 +26,9 @@ const creatorTopics = [
 
 const creatorGallery = [
   {
-    src: creatorPortrait,
-    alt: "Créatrice de contenu préparant une publication",
-    label: "Création de contenu",
+    src: creatorDesk,
+    alt: "Outils et espace de travail d’une créatrice de contenu",
+    label: "Développer son univers",
   },
   {
     src: creatorStudio,
@@ -47,7 +46,6 @@ function Createur() {
   return (
     <main className="createur-page">
       <CreateurHero />
-      <CreatorSection />
       <CreateurEtapes />
       <CreateurDomaines />
       <section className="creator-guide" aria-labelledby="creator-guide-title">

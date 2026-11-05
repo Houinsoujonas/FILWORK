@@ -73,7 +73,7 @@ function Inscription() {
         </Link>
 
         <div className="register-heading">
-          <span className="register-eyebrow">REJOIGNEZ FILWORK</span>
+          <span className="register-eyebrow">CRÉEZ VOTRE ESPACE</span>
 
           <h1>Créez votre compte</h1>
 

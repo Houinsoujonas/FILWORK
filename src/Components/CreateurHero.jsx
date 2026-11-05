@@ -4,8 +4,6 @@ import { gsap } from "gsap";
 import Button from "./Button";
 import creatorVisual from "../assets/creator.jpg";
 
-import "./CreateurHero.css";
-
 function CreateurHero() {
   const sectionRef = useRef(null);
 

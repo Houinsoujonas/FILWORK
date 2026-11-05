@@ -3,7 +3,7 @@ import { FiUsers, FiBriefcase } from "react-icons/fi";
 
 import Button from "./Button";
 
-import video from "../assets/video.mp4";
+import collaborationVideo from "../assets/collaboration.mp4";
 
 function CTASection() {
   const shouldReduceMotion = useReducedMotion();
@@ -50,7 +50,7 @@ function CTASection() {
         aria-hidden="true"
         tabIndex={-1}
       >
-        <source src={video} type="video/mp4" />
+        <source src={collaborationVideo} type="video/mp4" />
       </video>
 
       <div className="cta-section__overlay" />

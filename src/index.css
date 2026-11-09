@@ -12,7 +12,6 @@
 @import "./Components/DashboardLayout.css";
 @import "./Components/FAQ.css";
 @import "./Components/FeaturedCampaigns.css";
-@import "./Components/Footer.css";
 @import "./Components/Hero.css";
 @import "./Components/HowItWorks.css";
 @import "./Components/Navbar.css";
@@ -1136,44 +1135,8 @@ body {
   color: #50654b;
 }
 
-.workspace {
-  --ws-bg: #f6f5f0;
-  --ws-panel: #ffffff;
-  --ws-border: #e7e5dd;
-  --ws-gold: #52664d;
-  background: var(--ws-bg);
-  color: #20211c;
-}
-
-.workspace__sidebar {
-  background: #ffffff;
-}
-
-.workspace__brand,
-.workspace__topbar {
-  color: #20211c;
-}
-
-.workspace__role,
-.workspace__nav a,
-.workspace__back,
-.workspace__topbar {
-  color: #686961;
-}
-
-.workspace__nav a:hover,
-.workspace__nav a.active {
-  background: #edf2df;
-  color: #293a29;
-}
-
-.workspace__account,
 .dashboard-link {
   color: #405b43;
-}
-
-.workspace__topbar {
-  background: rgba(255, 255, 255, 0.88);
 }
 
 .dashboard-heading h1 {
@@ -1507,21 +1470,6 @@ body { background: var(--color-bg); color: var(--color-text); }
 }
 .dashboard-action__icon { background: #f2f7df; color: #52664d; }
 .dashboard-action small, .dashboard-heading p { color: var(--color-text-secondary); }
-.workspace__sidebar { background: #fff; border-color: var(--color-border); }
-.workspace__brand, .workspace__topbar { color: var(--color-text); }
-.workspace__role, .workspace__nav a, .workspace__back { color: var(--color-text-secondary); }
-.workspace__nav a:hover, .workspace__nav a.active {
-  background: #f2f7df;
-  color: #35452d;
-}
-.workspace__account, .workspace__menu-toggle {
-  min-height: 42px;
-  border: 1px solid var(--color-border);
-  border-radius: 12px;
-  background: #fff;
-  color: var(--color-text);
-}
-.workspace__account:hover, .workspace__menu-toggle:hover { background: #f2f1eb; }
 .login-page { --login-bg: #f6f5f0; --login-panel: #fff; --login-card: #f8f7f3; --login-gold: #52664d; --login-gold-light: #405b43; --login-text: #20211c; --login-muted: #62645d; --login-subtle: #777970; --login-border: #e2e0d8; }
 .login-form-panel { color: var(--color-text); }
 .login-brand img { filter: none; }
@@ -1731,12 +1679,9 @@ body { font-family: var(--font-body); }
 .navbar__menu-toggle { border: 1px solid var(--brand-border); background: #fff; color: var(--brand-ink); }
 .navbar__login { background: #fff; color: var(--brand-ink); }
 .navbar__signup { background: var(--brand-ink); color: #fff; }
-.workspace, .workspace__main, .dashboard-page { background: var(--brand-paper); color: var(--brand-ink); }
-.workspace__sidebar, .workspace__topbar, .dashboard-panel, .dashboard-card,
+.dashboard-page { background: var(--brand-paper); color: var(--brand-ink); }
+.dashboard-panel, .dashboard-card,
 .dashboard-action, .dashboard-notice { border-color: var(--brand-border); background: #fff; color: var(--brand-ink); }
-.workspace__nav a { color: var(--brand-muted); }
-.workspace__nav a.active { background: var(--brand-lime); color: var(--brand-ink); }
-.workspace__nav a:hover { background: var(--brand-ink); color: #fff; }
 .dashboard-action:hover { border-color: var(--brand-ink); background: var(--brand-ink); color: #fff; }
 .dashboard-action:hover :is(strong,small,svg) { color: #fff; }
 .login-page, .register-page, .auth-page { background: var(--brand-paper); color: var(--brand-ink); }
@@ -2199,14 +2144,6 @@ body { font-family: var(--font-body); }
   background: #f0efe9;
 }
 
-.workspace__sidebar {
-  border-color: #e7e5dd;
-}
-
-.workspace__nav a.active::before {
-  background: #52664d;
-}
-
 @media (max-width: 760px) {
   .hero {
     min-height: auto;
@@ -2637,10 +2574,6 @@ body {
   .navbar__action { min-height: 48px; }
 }
 
-@media (max-width: 850px) {
-  /* Le tiroir doit conserver son animation : une rÃ¨gle globale hÃ©ritÃ©e la neutralisait. */
-  .workspace__sidebar { transition: transform 220ms ease !important; }
-}
 
 @media (max-width: 760px) {
   .public-page { padding: 42px 20px 56px; }
@@ -2748,9 +2681,8 @@ body { font-family: var(--font-body); }
 :is(.creator-section__image-number,.creator-section__image-indicator) { background: var(--brand-lime); color: var(--brand-ink); }
 .creator-section__image-card:is(:hover,:focus-visible,.is-active) .creator-section__image-number { background: var(--brand-lime); color: var(--brand-ink); }
 .creator-section__image-card:is(:hover,:focus-visible,.is-active) .creator-section__image-details h3 { color: var(--brand-ink); }
-.workspace,.workspace__main,.dashboard-page { --ws-bg: #f6f5f0; --ws-panel: #fff; --ws-border: #e6e4dc; --ws-gold: #405331; background: var(--brand-paper); color: var(--brand-ink); }
-.workspace__sidebar,.workspace__topbar,.dashboard-panel,.dashboard-card,.dashboard-notice { border-color: var(--brand-border); background: #fff; color: var(--brand-ink); }
-.workspace__nav a.active { background: var(--brand-lime); color: var(--brand-ink); }
+.dashboard-page { background: var(--brand-paper); color: var(--brand-ink); }
+.dashboard-panel,.dashboard-card,.dashboard-notice { border-color: var(--brand-border); background: #fff; color: var(--brand-ink); }
 .login-page { --login-bg: #f6f5f0; --login-panel: #fff; --login-card: #fff; --login-gold: #405331; --login-gold-light: #405331; --login-text: #171814; --login-muted: #62645d; --login-subtle: #74766f; --login-border: #e6e4dc; }
 .login-form-panel,.register-form-panel,.auth-card { background: #fff; color: var(--brand-ink); }
 :is(.login-page,.register-page,.auth-page) :is(h1,h2,h3,label) { color: var(--brand-ink); }
@@ -2871,10 +2803,11 @@ body { font-family: var(--font-body); }
   background: transparent;
 }
 .login-brand img { width: 174px; }
+/* Le titre blanc est posé sur la moitié basse de la photo : le voile s’y renforce. */
 .login-visual__overlay {
   background:
-    linear-gradient(180deg, rgba(8,9,10,.34) 0%, rgba(8,9,10,.08) 34%, rgba(8,9,10,.76) 100%),
-    linear-gradient(90deg, rgba(8,9,10,.20), transparent 76%);
+    linear-gradient(180deg, rgba(8,9,10,.38) 0%, rgba(8,9,10,.12) 24%, rgba(8,9,10,.58) 46%, rgba(8,9,10,.86) 72%, rgba(8,9,10,.94) 100%),
+    linear-gradient(90deg, rgba(8,9,10,.42), transparent 80%);
 }
 .login-visual__content :is(h1,p,strong,small,.login-visual__eyebrow),
 .login-visual__top-label,

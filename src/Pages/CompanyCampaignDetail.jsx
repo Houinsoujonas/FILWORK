@@ -316,6 +316,7 @@ export default function CompanyCampaignDetail() {
         </Panel>
 
         <Panel title="Actions">
+          <div className="ui-stack ui-stack--buttons">
           {campaign.status === "DRAFT" && (
             <button
               type="button"
@@ -344,17 +345,20 @@ export default function CompanyCampaignDetail() {
             </button>
           )}
 
-          {["PUBLISHED", "PAUSED"].includes(campaign.status) && (
+          {campaign.status === "PAUSED" && (
             <button
               type="button"
               className="ui-button"
               onClick={() =>
-                act("publish", "Republier cette campagne ?", "Campagne publiée.")
+                act(
+                  "publish",
+                  "Réactiver cette campagne ? Elle redeviendra visible et ouverte aux candidatures.",
+                  "Campagne réactivée.",
+                )
               }
               disabled={busy === "publish"}
-              style={{ marginTop: 10 }}
             >
-              <FiPlay aria-hidden="true" /> Republier
+              <FiPlay aria-hidden="true" /> Réactiver la campagne
             </button>
           )}
 
@@ -370,11 +374,11 @@ export default function CompanyCampaignDetail() {
                 )
               }
               disabled={busy === "close"}
-              style={{ marginTop: 10 }}
             >
               <FiX aria-hidden="true" /> Clôturer
             </button>
           )}
+          </div>
 
           <hr className="ui-divider" />
           <p className="ui-small ui-muted">

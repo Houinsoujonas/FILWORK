@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
 import { Alert, Field, Loading, Page, Panel } from "../Components/AppUI";
+import PlatformIcon from "../Components/PlatformIcon";
 import { api, errorMessage } from "../lib/api";
+import { label } from "../lib/format";
 
 const PLATFORMS = [
   "INSTAGRAM",
@@ -286,25 +288,23 @@ export default function CampaignEditor() {
               />
             </Field>
 
-            <div className="ui-field ui-field--wide">
-              <span>Plateformes ciblées</span>
-              <div className="ui-actions-inline">
+            <fieldset className="ui-field ui-field--wide ui-fieldset">
+              <legend>Plateformes ciblées</legend>
+              <div className="ui-chips">
                 {PLATFORMS.map((platform) => (
-                  <label
-                    key={platform}
-                    className="ui-badge"
-                    style={{ cursor: "pointer" }}
-                  >
+                  <label key={platform} className="ui-chip">
                     <input
                       type="checkbox"
                       checked={form.platforms.includes(platform)}
                       onChange={() => togglePlatform(platform)}
-                    />{" "}
-                    {platform}
+                    />
+                    <PlatformIcon platform={platform} />
+                    {label(platform)}
                   </label>
                 ))}
               </div>
-            </div>
+              <small>Sélectionnez une ou plusieurs plateformes.</small>
+            </fieldset>
           </div>
 
           <div className="ui-form__actions">

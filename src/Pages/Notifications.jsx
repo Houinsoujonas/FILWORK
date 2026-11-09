@@ -1,11 +1,48 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { FiBell, FiCheck, FiCheckCircle } from "react-icons/fi";
+import {
+  FiBell,
+  FiCheck,
+  FiCheckCircle,
+  FiCreditCard,
+  FiFileText,
+  FiInbox,
+  FiLayers,
+  FiSend,
+} from "react-icons/fi";
 
-import { Alert, Badge, Loading, Page, Panel } from "../Components/AppUI";
+import { Alert, Loading, Page, Panel } from "../Components/AppUI";
 import { useAuth } from "../context/AuthContext";
 import { api, errorMessage } from "../lib/api";
 import { formatDateTime } from "../lib/format";
+
+function iconFor(type = "") {
+  if (type.startsWith("INVITATION")) return FiInbox;
+  if (type.startsWith("APPLICATION")) return FiSend;
+  if (type.startsWith("DELIVERABLE")) return FiFileText;
+  if (type.startsWith("PAYMENT")) return FiCreditCard;
+  if (type.startsWith("COLLABORATION")) return FiLayers;
+  return FiBell;
+}
+
+// « il y a 3 h », puis la date complète au-delà d’une semaine.
+function relativeTime(value) {
+  const date = new Date(value);
+  const seconds = Math.round((date.getTime() - Date.now()) / 1000);
+
+  if (!Number.isFinite(seconds)) {
+    return "-";
+  }
+
+  const rtf = new Intl.RelativeTimeFormat("fr-FR", { numeric: "auto" });
+  const abs = Math.abs(seconds);
+
+  if (abs < 60) return "à l’instant";
+  if (abs < 3600) return rtf.format(Math.round(seconds / 60), "minute");
+  if (abs < 86400) return rtf.format(Math.round(seconds / 3600), "hour");
+  if (abs < 604800) return rtf.format(Math.round(seconds / 86400), "day");
+  return formatDateTime(value);
+}
 
 const TYPE_LABELS = {
   APPLICATION_ACCEPTED: "Candidature acceptée",
@@ -148,7 +185,7 @@ export default function Notifications() {
 
   return (
     <Page
-      eyebrow="NOTIFICATIONS"
+      eyebrow="Notifications"
       title="Vos notifications"
       description="Suivez les décisions, livrables et paiements qui concernent vos projets."
       actions={
@@ -176,39 +213,37 @@ export default function Notifications() {
           </p>
         </Panel>
       ) : (
-        <div className="ui-list">
+        <ul className="notif-list">
           {notifications.map((notification) => {
             const target = linkFor(notification);
+            const Icon = iconFor(notification.type);
 
             return (
-              <article
-                className="ui-panel"
+              <li
+                className={`notif${notification.isRead ? "" : " notif--unread"}`}
                 key={notification.id}
-                style={{
-                  opacity: notification.isRead ? 0.72 : 1,
-                  borderColor: notification.isRead ? "#292c30" : "#73582f",
-                }}
               >
-                <div className="ui-panel__head">
-                  <div>
-                    <h2>
-                      <FiBell aria-hidden="true" /> {notification.title}
-                    </h2>
-                    <p>
-                      {TYPE_LABELS[notification.type] || notification.type} ·{" "}
-                      {formatDateTime(notification.createdAt)}
-                    </p>
-                  </div>
-                  <div className="ui-panel__actions">
+                <span className="notif__icon" aria-hidden="true">
+                  <Icon />
+                </span>
+
+                <div className="notif__body">
+                  <div className="notif__top">
+                    <strong>{notification.title}</strong>
                     {!notification.isRead && (
-                      <Badge value="PENDING">Non lue</Badge>
+                      <span className="notif__dot" aria-label="Non lue" />
                     )}
                   </div>
+                  <p>{notification.message}</p>
+                  <small>
+                    {TYPE_LABELS[notification.type] || "Notification"} ·{" "}
+                    <time dateTime={notification.createdAt}>
+                      {relativeTime(notification.createdAt)}
+                    </time>
+                  </small>
                 </div>
 
-                <p className="ui-small">{notification.message}</p>
-
-                <div className="ui-actions-inline" style={{ marginTop: 12 }}>
+                <div className="notif__actions">
                   {target && (
                     <Link
                       className="ui-button ui-button--ghost ui-button--small"
@@ -221,18 +256,19 @@ export default function Notifications() {
                   {!notification.isRead && (
                     <button
                       type="button"
-                      className="ui-button ui-button--small"
+                      className="ui-button ui-button--ghost ui-button--small"
                       onClick={() => markRead(notification)}
                       disabled={busy === notification.id}
+                      aria-label={`Marquer « ${notification.title} » comme lue`}
                     >
-                      <FiCheck aria-hidden="true" /> Marquer comme lue
+                      <FiCheck aria-hidden="true" /> Lue
                     </button>
                   )}
                 </div>
-              </article>
+              </li>
             );
           })}
-        </div>
+        </ul>
       )}
     </Page>
   );

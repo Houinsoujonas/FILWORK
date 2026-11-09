@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node src/server.js",
+    "build": "prisma generate",
     "start:test": "node scripts/startTestApi.js",
     "dev": "node --watch --watch-preserve-output src/server.js",
     "test": "node --test tests/http.test.js",
@@ -21,6 +22,9 @@
   "author": "",
   "license": "ISC",
   "type": "commonjs",
+  "engines": {
+    "node": "24.x"
+  },
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.1",
     "@prisma/client": "^7.10.1",
@@ -32,10 +36,10 @@
     "helmet": "^8.3.0",
     "jsonwebtoken": "^9.0.3",
     "nodemailer": "^10.2.1",
-    "pg": "^8.23.1"
+    "pg": "^8.23.1",
+    "prisma": "^7.10.1"
   },
   "devDependencies": {
-    "@types/node": "^26.6.5",
-    "prisma": "^7.10.1"
+    "@types/node": "^26.6.5"
   }
 }

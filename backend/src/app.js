@@ -25,6 +25,11 @@ const reviewRoutes = require("./routes/reviewRoutes");
 
 const app = express();
 
+// Render termine TLS sur son proxy et transmet l'IP du client via
+// X-Forwarded-For. Un seul saut de proxy est déclaré ici, afin que
+// express-rate-limit et req.ip lisent l'adresse réelle du client.
+app.set("trust proxy", 1);
+
 // Identifier chaque requête pour la journalisation et le support.
 app.use(requestIdMiddleware);
 

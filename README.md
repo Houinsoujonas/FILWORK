@@ -45,7 +45,9 @@ La base de test n’est jamais utilisée par défaut : elle sert uniquement aux 
 - `src/assets/` contient les images, vidéos et autres médias importés par l’application.
 - `public/` contient les ressources servies directement, dont le logo et le favicon.
 - `src/App.jsx` définit les routes ; `src/main.jsx` démarre React.
-- `src/index.css` est le point d’entrée unique des styles : il importe les feuilles des pages et composants, puis définit les règles globales et les ajustements communs.
+- `src/index.css` est le point d’entrée des styles : il importe les feuilles des pages et composants, puis définit les règles globales et les ajustements communs.
+- `src/styles/finitions.css` est chargée juste après `index.css` (dans `src/main.jsx`) : elle porte les finitions de la refonte visuelle (rythme des sections, aperçu produit du hero, cartes créateur, pied de page, contact, 404, inscription) et prime sur les couches précédentes.
+- `src/Pages/AppData.css` regroupe les composants des espaces connectés (panneaux, statistiques, listes, formulaires, notifications).
 - `src/App.css` reste volontairement vide afin d’éviter une seconde couche de styles globaux.
 
 Les choix de couleurs, de typographie, d’interaction et de médias sont décrits dans [`docs/IDENTITE_VISUELLE.md`](docs/IDENTITE_VISUELLE.md).

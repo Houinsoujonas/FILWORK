@@ -49,7 +49,7 @@ export default function MotDePasseOublie() {
           <FiMail aria-hidden="true" />
         </span>
         <span className="section-label">RÉCUPÉRATION DU COMPTE</span>
-        <h1>Mot de passe oublié ?</h1>
+        <h1>Mot de passe oublié&nbsp;?</h1>
         <p>
           Indiquez l’adresse e-mail associée à votre compte. Vous recevrez un
           lien pour définir un nouveau mot de passe.

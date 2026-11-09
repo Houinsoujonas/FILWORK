@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { FiPlus, FiMinus } from "react-icons/fi";
+import { Link } from "react-router-dom";
 
 const questions = [
   {
@@ -97,8 +98,8 @@ function FAQ() {
             <span>Nous avons les réponses.</span>
           </h2>
           <p>
-            Tout ce que tu dois savoir pour mieux comprendre FILWORK et profiter
-            de la plateforme.
+            Tout ce qu’il faut savoir pour comprendre FILWORK et profiter
+            pleinement de la plateforme.
           </p>
         </motion.div>
 
@@ -168,8 +169,8 @@ function FAQ() {
         </motion.div>
 
         <motion.div className="faq-bottom" variants={itemVariants}>
-          <span>Tu as encore des questions ?</span>
-          <a href="#contact">Contacte-nous</a>
+          <span>Vous avez encore des questions&nbsp;?</span>
+          <Link to="/contact">Contactez-nous</Link>
         </motion.div>
       </div>
     </motion.section>

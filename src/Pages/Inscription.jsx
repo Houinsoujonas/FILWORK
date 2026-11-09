@@ -4,6 +4,7 @@ import {
   FiArrowLeft,
   FiBriefcase,
   FiCamera,
+  FiCheck,
   FiEye,
   FiEyeOff,
 } from "react-icons/fi";
@@ -11,6 +12,27 @@ import {
 import { useAuth } from "../context/AuthContext";
 import { errorMessage } from "../lib/api";
 import { homeForRole } from "../lib/format";
+
+const ASIDE = {
+  creator: {
+    title: "Faites de votre talent un métier visible.",
+    text: "Un profil clair, des campagnes adaptées et un suivi simple de vos collaborations.",
+    points: [
+      "Un profil public avec vos réseaux et votre portfolio",
+      "Des campagnes publiées par de vraies entreprises",
+      "Livrables et paiements suivis au même endroit",
+    ],
+  },
+  business: {
+    title: "Trouvez les créateurs qui parlent à votre audience.",
+    text: "Publiez un brief, comparez les profils et pilotez chaque collaboration.",
+    points: [
+      "Un annuaire filtrable par plateforme et disponibilité",
+      "Candidatures et invitations centralisées",
+      "Validation des livrables et suivi des paiements",
+    ],
+  },
+};
 
 function Inscription() {
   const [accountType, setAccountType] = useState("creator");
@@ -21,6 +43,7 @@ function Inscription() {
   const [submitting, setSubmitting] = useState(false);
   const { register } = useAuth();
   const navigate = useNavigate();
+  const aside = ASIDE[accountType];
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -67,13 +90,29 @@ function Inscription() {
 
   return (
     <main className="register-page">
+      <div className="register-shell">
+      <aside className="register-aside" aria-label="Ce que FILWORK vous apporte">
+        <span className="register-aside__eyebrow">
+          {accountType === "creator" ? "Espace créateur" : "Espace entreprise"}
+        </span>
+        <h2>{aside.title}</h2>
+        <p>{aside.text}</p>
+        <ul className="register-aside__list">
+          {aside.points.map((point) => (
+            <li key={point}>
+              <FiCheck aria-hidden="true" /> {point}
+            </li>
+          ))}
+        </ul>
+        <ol className="register-aside__steps">
+          <li><b>1</b> Créez votre compte</li>
+          <li><b>2</b> Complétez votre profil</li>
+          <li><b>3</b> {accountType === "creator" ? "Candidatez aux campagnes" : "Publiez votre campagne"}</li>
+        </ol>
+      </aside>
       <div className="register-container">
-        <Link to="/" className="register-brand" aria-label="FILWORK, accueil">
-          <img src="/filwork-logo.svg" alt="" />
-        </Link>
-
         <div className="register-heading">
-          <span className="register-eyebrow">CRÉEZ VOTRE ESPACE</span>
+          <span className="register-eyebrow">Inscription gratuite</span>
 
           <h1>Créez votre compte</h1>
 
@@ -119,7 +158,6 @@ function Inscription() {
           )}
 
           {accountType === "creator" ? (
-            <>
               <div className="register-field">
                 <label htmlFor="creator-name">Nom complet</label>
                 <input
@@ -131,20 +169,7 @@ function Inscription() {
                   required
                 />
               </div>
-
-              <div className="register-field">
-                <label htmlFor="creator-username">Nom d'utilisateur</label>
-                <input
-                  id="creator-username"
-                  name="username"
-                  type="text"
-                  placeholder="Ex. : maurel_creative"
-                  autoComplete="username"
-                />
-              </div>
-            </>
           ) : (
-            <>
               <div className="register-field">
                 <label htmlFor="business-name">Nom de l'entreprise</label>
                 <input
@@ -156,18 +181,6 @@ function Inscription() {
                   required
                 />
               </div>
-
-              <div className="register-field">
-                <label htmlFor="business-contact">Nom du responsable</label>
-                <input
-                  id="business-contact"
-                  name="contactName"
-                  type="text"
-                  placeholder="Nom et prénom du responsable"
-                  autoComplete="name"
-                />
-              </div>
-            </>
           )}
 
           <div className="register-field">
@@ -266,6 +279,7 @@ function Inscription() {
           <FiArrowLeft aria-hidden="true" />
           Retour à l'accueil
         </Link>
+      </div>
       </div>
     </main>
   );

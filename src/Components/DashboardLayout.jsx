@@ -1,12 +1,15 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
+  FiArrowUpRight,
   FiBell,
   FiBriefcase,
+  FiChevronRight,
   FiCreditCard,
   FiFileText,
   FiGrid,
   FiInbox,
+  FiLayers,
   FiLogOut,
   FiMenu,
   FiSend,
@@ -25,12 +28,12 @@ const navigation = {
     home: "/espace/createur",
     links: [
       ["Vue d’ensemble", "/espace/createur", FiGrid],
-      ["Mon profil", "/espace/createur/profil", FiUser],
       ["Opportunités", "/espace/createur/campagnes", FiBriefcase],
       ["Candidatures", "/espace/createur/candidatures", FiSend],
       ["Invitations", "/espace/createur/invitations", FiInbox],
-      ["Collaborations", "/espace/createur/collaborations", FiUsers],
+      ["Collaborations", "/espace/createur/collaborations", FiLayers],
       ["Notifications", "/espace/createur/notifications", FiBell],
+      ["Mon profil", "/espace/createur/profil", FiUser],
     ],
   },
   business: {
@@ -38,12 +41,12 @@ const navigation = {
     home: "/espace/entreprise",
     links: [
       ["Vue d’ensemble", "/espace/entreprise", FiGrid],
-      ["Mon organisation", "/espace/entreprise/organisation", FiUser],
       ["Mes campagnes", "/espace/entreprise/campagnes", FiBriefcase],
       ["Créateurs", "/espace/entreprise/createurs", FiUsers],
       ["Invitations", "/espace/entreprise/invitations", FiSend],
-      ["Collaborations", "/espace/entreprise/collaborations", FiUsers],
+      ["Collaborations", "/espace/entreprise/collaborations", FiLayers],
       ["Notifications", "/espace/entreprise/notifications", FiBell],
+      ["Mon organisation", "/espace/entreprise/organisation", FiUser],
     ],
   },
   admin: {
@@ -53,21 +56,34 @@ const navigation = {
       ["Vue d’ensemble", "/administration", FiGrid],
       ["Comptes", "/administration/comptes", FiUsers],
       ["Campagnes", "/administration/campagnes", FiBriefcase],
-      ["Collaborations", "/administration/collaborations", FiUsers],
+      ["Collaborations", "/administration/collaborations", FiLayers],
       ["Livrables", "/administration/livrables", FiFileText],
       ["Paiements", "/administration/paiements", FiCreditCard],
     ],
   },
 };
 
+// Titre de la page courante : lien dont le chemin est le plus long préfixe.
+function currentSection(config, pathname) {
+  return config.links
+    .filter(([, to]) => pathname === to || pathname.startsWith(`${to}/`))
+    .sort((a, b) => b[1].length - a[1].length)[0];
+}
+
 export default function DashboardLayout({ role }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loggingOut, setLoggingOut] = useState(false);
-  const { user, logout } = useAuth();
+  const { user, profile, logout } = useAuth();
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const config = navigation[role];
+  const section = currentSection(config, pathname);
+  const notificationsPath = `${config.home}/notifications`;
+
+  const displayName =
+    profile?.displayName || profile?.companyName || (role === "admin" ? "Administrateur" : "");
+  const avatarUrl = profile?.profileImageUrl || profile?.logoUrl || "";
 
   useEffect(() => {
     let active = true;
@@ -90,15 +106,34 @@ export default function DashboardLayout({ role }) {
     };
   }, [pathname, user?.id]);
 
+  useEffect(() => {
+    if (!menuOpen) {
+      return undefined;
+    }
+
+    const handleKey = (event) => {
+      if (event.key === "Escape") {
+        setMenuOpen(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleKey);
+
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [menuOpen]);
+
   const handleLogout = async () => {
     setLoggingOut(true);
     await logout();
     navigate("/connexion", { replace: true });
   };
 
+  const badge = unreadCount > 9 ? "9+" : unreadCount;
+
   return (
     <div className="workspace">
       <aside
+        id="workspace-sidebar"
         className={`workspace__sidebar ${
           menuOpen ? "workspace__sidebar--open" : ""
         }`}
@@ -106,11 +141,13 @@ export default function DashboardLayout({ role }) {
         <Link
           className="workspace__brand"
           to={config.home}
-          aria-label="FILWORK, espace de travail"
+          aria-label="FILWORK, retour à la vue d’ensemble"
         >
           <img src="/filwork-logo.svg" alt="" />
         </Link>
+
         <p className="workspace__role">{config.name}</p>
+
         <nav className="workspace__nav" aria-label="Navigation de l’espace">
           {config.links.map(([linkLabel, to, Icon]) => (
             <NavLink
@@ -121,13 +158,40 @@ export default function DashboardLayout({ role }) {
             >
               <Icon aria-hidden="true" />
               <span>{linkLabel}</span>
+              {to === notificationsPath && unreadCount > 0 && (
+                <span className="workspace__count" aria-label={`${unreadCount} non lues`}>
+                  {badge}
+                </span>
+              )}
             </NavLink>
           ))}
         </nav>
-        <Link className="workspace__back" to="/">
-          <FiLogOut aria-hidden="true" />
-          Retour au site
-        </Link>
+
+        <div className="workspace__account-card">
+          <div className="workspace__identity">
+            <span className="workspace__account-avatar" aria-hidden="true">
+              {avatarUrl ? (
+                <img src={avatarUrl} alt="" />
+              ) : (
+                initials(displayName || user?.email)
+              )}
+            </span>
+            <span className="workspace__identity-text">
+              <strong>{displayName || "Mon compte"}</strong>
+              <span className="workspace__email">{user?.email}</span>
+            </span>
+          </div>
+
+          <button
+            type="button"
+            className="workspace__logout"
+            onClick={handleLogout}
+            disabled={loggingOut}
+          >
+            <FiLogOut aria-hidden="true" />
+            {loggingOut ? "Déconnexion…" : "Se déconnecter"}
+          </button>
+        </div>
       </aside>
 
       {menuOpen && (
@@ -145,17 +209,31 @@ export default function DashboardLayout({ role }) {
             className="workspace__menu-toggle"
             onClick={() => setMenuOpen((open) => !open)}
             aria-expanded={menuOpen}
+            aria-controls="workspace-sidebar"
             aria-label={menuOpen ? "Fermer le menu" : "Ouvrir le menu"}
             type="button"
           >
-            {menuOpen ? <FiX /> : <FiMenu />}
+            {menuOpen ? <FiX aria-hidden="true" /> : <FiMenu aria-hidden="true" />}
           </button>
 
-          <span>{config.name}</span>
+          <div className="workspace__crumbs">
+            <span>{config.name}</span>
+            {section && (
+              <>
+                <FiChevronRight aria-hidden="true" />
+                <strong>{section[0]}</strong>
+              </>
+            )}
+          </div>
 
           <div className="workspace__topbar-right">
-            <Link
-              to={`${config.home}/notifications`}
+            <Link className="workspace__site-link" to="/">
+              <FiArrowUpRight aria-hidden="true" />
+              <span>Voir le site</span>
+            </Link>
+
+            <NavLink
+              to={notificationsPath}
               className="workspace__bell"
               aria-label={`Notifications${
                 unreadCount ? `, ${unreadCount} non lues` : ""
@@ -163,28 +241,11 @@ export default function DashboardLayout({ role }) {
             >
               <FiBell aria-hidden="true" />
               {unreadCount > 0 && (
-                <span className="workspace__bell-badge">
-                  {unreadCount > 9 ? "9+" : unreadCount}
+                <span className="workspace__bell-badge" aria-hidden="true">
+                  {badge}
                 </span>
               )}
-            </Link>
-
-            <span className="workspace__identity">
-              <span className="workspace__account-avatar">
-                {initials(user?.email)}
-              </span>
-              <span className="workspace__email">{user?.email}</span>
-            </span>
-
-            <button
-              type="button"
-              className="workspace__logout"
-              onClick={handleLogout}
-              disabled={loggingOut}
-            >
-              <FiLogOut aria-hidden="true" />
-              {loggingOut ? "Déconnexion…" : "Déconnexion"}
-            </button>
+            </NavLink>
           </div>
         </header>
 

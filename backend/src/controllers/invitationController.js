@@ -1,5 +1,7 @@
 const prisma = require("../config/prisma");
 const { sendPrismaError } = require("../utils/prismaErrors");
+const { enqueueCollaborationEmail } = require("../services/emailService");
+const { buildLink } = require("../services/notificationService");
 const { lockCampaign } = require("../services/collaborationLock");
 const { findUnknownFields } = require("../utils/validation");
 const {
@@ -352,8 +354,9 @@ async function createInvitation(req, res) {
           type: "INVITATION_RECEIVED",
           title: "Nouvelle invitation",
           message:
-            `${companyProfile.companyName} vous invite à participer à la campagne ` +
-            `« ${campaign.title} ».`,
+            companyProfile.companyName + " vous invite à participer à la campagne « " +
+            campaign.title + " ».",
+          link: "/espace/createur/invitations",
         },
       });
 
@@ -390,6 +393,26 @@ async function createInvitation(req, res) {
         message:
           "Une invitation en attente ou acceptée existe déjà pour ce créateur et cette campagne.",
       });
+    }
+
+    // L'invitation est commitée : mettre en file l'e-mail de proposition.
+    try {
+      const creatorUser = await prisma.user.findUnique({
+        where: { id: creator.userId },
+        select: { email: true },
+      });
+
+      if (creatorUser) {
+        await enqueueCollaborationEmail({
+          to: creatorUser.email,
+          displayName: creator.displayName || undefined,
+          companyName: companyProfile.companyName,
+          campaignTitle: campaign.title,
+          link: buildLink("/espace/createur/invitations"),
+        });
+      }
+    } catch (emailError) {
+      console.error("Erreur email invitation:", emailError.message);
     }
 
     return res.status(201).json({

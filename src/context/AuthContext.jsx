@@ -1,7 +1,5 @@
 import {
-  createContext,
   useCallback,
-  useContext,
   useEffect,
   useMemo,
   useState,
@@ -9,7 +7,7 @@ import {
 
 import { api, clearToken, getToken, setToken } from "../lib/api";
 
-const AuthContext = createContext(null);
+import { AuthContext } from "./AuthContext.js";
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -51,7 +49,9 @@ export function AuthProvider({ children }) {
   }, [loadProfile]);
 
   useEffect(() => {
-    loadSession();
+    (async () => {
+      await loadSession();
+    })();
   }, [loadSession]);
 
   useEffect(() => {
@@ -141,12 +141,4 @@ export function AuthProvider({ children }) {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
-export function useAuth() {
-  const context = useContext(AuthContext);
-
-  if (!context) {
-    throw new Error("useAuth doit être utilisé dans un AuthProvider.");
-  }
-
-  return context;
-}
+export { AuthContext };

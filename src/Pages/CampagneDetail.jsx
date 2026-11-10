@@ -9,7 +9,7 @@ import {
 } from "react-icons/fi";
 
 import EmptyState from "../Components/EmptyState";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/useAuth";
 import { api, errorMessage } from "../lib/api";
 import { formatDate, formatMoney, label } from "../lib/format";
 
@@ -27,27 +27,29 @@ export default function CampagneDetail() {
   useEffect(() => {
     let active = true;
 
-    setLoading(true);
+    (async () => {
+      setLoading(true);
 
-    api
-      .get(`/campaigns/${campaignId}`, undefined, { auth: false })
-      .then((data) => {
+      try {
+        const data = await api.get(`/campaigns/${campaignId}`, undefined, {
+          auth: false,
+        });
+
         if (active) {
           setCampaign(data.campaign);
           setError("");
         }
-      })
-      .catch((requestError) => {
+      } catch (requestError) {
         if (active) {
           setCampaign(null);
           setError(errorMessage(requestError));
         }
-      })
-      .finally(() => {
+      } finally {
         if (active) {
           setLoading(false);
         }
-      });
+      }
+    })();
 
     return () => {
       active = false;

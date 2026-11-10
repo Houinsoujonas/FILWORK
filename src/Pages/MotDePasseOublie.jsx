@@ -1,37 +1,43 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { FiArrowLeft, FiMail } from "react-icons/fi";
 
 import { api, errorMessage } from "../lib/api";
 
 export default function MotDePasseOublie() {
-  const [submitted, setSubmitted] = useState(false);
+  const navigate = useNavigate();
+  const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const [submitting, setSubmitting] = useState(false);
+
+  const [email, setEmail] = useState("");
 
   const handleSubmit = async (event) => {
     event.preventDefault();
     setError("");
     setMessage("");
 
-    const formData = new FormData(event.currentTarget);
-    const email = String(formData.get("email") || "").trim();
+    const emailValue = String(email || "").trim();
+
+    if (!emailValue || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailValue)) {
+      setError("Veuillez fournir une adresse e-mail valide.");
+      return;
+    }
 
     setSubmitting(true);
-
     try {
       const data = await api.post(
         "/auth/forgot-password",
-        { email },
+        { email: emailValue },
         { auth: false },
       );
 
       setMessage(
         data.message ||
-          "Si un compte correspond à cette adresse, un e-mail de réinitialisation sera envoyé.",
+          "Si un compte correspond à cette adresse, un code de vérification a été envoyé par e-mail.",
       );
-      setSubmitted(true);
+
+      navigate(`/reset-password?email=${encodeURIComponent(emailValue)}`);
     } catch (requestError) {
       setError(errorMessage(requestError));
     } finally {
@@ -51,8 +57,8 @@ export default function MotDePasseOublie() {
         <span className="section-label">RÉCUPÉRATION DU COMPTE</span>
         <h1>Mot de passe oublié&nbsp;?</h1>
         <p>
-          Indiquez l’adresse e-mail associée à votre compte. Vous recevrez un
-          lien pour définir un nouveau mot de passe.
+          Indiquez votre adresse e-mail. Vous recevrez un code de vérification
+          à 6 chiffres pour définir un nouveau mot de passe.
         </p>
         <form onSubmit={handleSubmit}>
           <label htmlFor="recovery-email">Adresse e-mail</label>
@@ -61,11 +67,13 @@ export default function MotDePasseOublie() {
             name="email"
             type="email"
             autoComplete="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
             required
             placeholder="vous@exemple.com"
           />
           <button className="public-button" type="submit" disabled={submitting}>
-            {submitting ? "Envoi…" : "Continuer"}
+            {submitting ? "Envoi…" : "Envoyer le code"}
           </button>
         </form>
         {(message || error) && (
@@ -74,12 +82,6 @@ export default function MotDePasseOublie() {
             role={error ? "alert" : "status"}
           >
             {error || message}
-          </p>
-        )}
-        {submitted && (
-          <p className="public-empty-hint">
-            Pensez à vérifier vos courriers indésirables. Le lien reste valable
-            15 minutes.
           </p>
         )}
       </div>

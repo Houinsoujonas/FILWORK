@@ -29,6 +29,8 @@ const CreatorInvitations = lazy(() => import("./Pages/CreatorInvitations"));
 const CollaborationList = lazy(() => import("./Pages/CollaborationList"));
 const CollaborationDetail = lazy(() => import("./Pages/CollaborationDetail"));
 const Notifications = lazy(() => import("./Pages/Notifications"));
+const Announcements = lazy(() => import("./Pages/Announcements"));
+const Preferences = lazy(() => import("./Pages/Preferences"));
 
 const DashboardEntreprise = lazy(() => import("./Pages/DashboardEntreprise"));
 const CompanyProfilePage = lazy(() => import("./Pages/CompanyProfilePage"));
@@ -44,6 +46,8 @@ const AdminCampaigns = lazy(() => import("./Pages/AdminCampaigns"));
 const AdminCollaborations = lazy(() => import("./Pages/AdminCollaborations"));
 const AdminDeliverables = lazy(() => import("./Pages/AdminDeliverables"));
 const AdminPayments = lazy(() => import("./Pages/AdminPayments"));
+const AdminAnnouncements = lazy(() => import("./Pages/AdminAnnouncements"));
+const AdminAnnouncementCreate = lazy(() => import("./Pages/AdminAnnouncementCreate"));
 
 function PublicLayout() {
   return (
@@ -143,6 +147,8 @@ function App() {
             <Route path="collaborations" element={<CollaborationList />} />
             <Route path="collaborations/:id" element={<CollaborationDetail />} />
             <Route path="notifications" element={<Notifications />} />
+            <Route path="annonces" element={<Announcements />} />
+            <Route path="preferences" element={<Preferences />} />
           </Route>
 
           <Route
@@ -164,6 +170,8 @@ function App() {
             <Route path="collaborations" element={<CollaborationList />} />
             <Route path="collaborations/:id" element={<CollaborationDetail />} />
             <Route path="notifications" element={<Notifications />} />
+            <Route path="annonces" element={<Announcements />} />
+            <Route path="preferences" element={<Preferences />} />
           </Route>
 
           <Route
@@ -181,6 +189,10 @@ function App() {
             <Route path="livrables" element={<AdminDeliverables />} />
             <Route path="paiements" element={<AdminPayments />} />
             <Route path="notifications" element={<Notifications />} />
+            <Route path="annonces" element={<AdminAnnouncements />} />
+            <Route path="annonces/nouvelle" element={<AdminAnnouncementCreate />} />
+            <Route path="annonces/:id/modifier" element={<AdminAnnouncementCreate />} />
+            <Route path="preferences" element={<Preferences />} />
           </Route>
         </Routes>
       </Suspense>

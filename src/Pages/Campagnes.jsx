@@ -28,17 +28,18 @@ export default function Campagnes() {
   useEffect(() => {
     let active = true;
 
-    setLoading(true);
-    setError("");
+    (async () => {
+      setLoading(true);
+      setError("");
 
-    api
-      .get("/campaigns", {
-        search: search || undefined,
-        platform: platform || undefined,
-        page,
-        limit: 9,
-      })
-      .then((data) => {
+      try {
+        const data = await api.get("/campaigns", {
+          search: search || undefined,
+          platform: platform || undefined,
+          page,
+          limit: 9,
+        });
+
         if (!active) {
           return;
         }
@@ -48,18 +49,17 @@ export default function Campagnes() {
           total: data.total ?? data.count ?? 0,
           totalPages: data.totalPages ?? 1,
         });
-      })
-      .catch((requestError) => {
+      } catch (requestError) {
         if (active) {
           setError(errorMessage(requestError));
           setCampaigns([]);
         }
-      })
-      .finally(() => {
+      } finally {
         if (active) {
           setLoading(false);
         }
-      });
+      }
+    })();
 
     return () => {
       active = false;

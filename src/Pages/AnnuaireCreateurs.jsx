@@ -4,7 +4,7 @@ import { FiSearch } from "react-icons/fi";
 
 import CreatorCard from "../Components/CreatorCard";
 import EmptyState from "../Components/EmptyState";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/useAuth";
 import { api, errorMessage } from "../lib/api";
 
 const PLATFORMS = [
@@ -45,18 +45,19 @@ export default function AnnuaireCreateurs() {
 
     let active = true;
 
-    setLoading(true);
-    setError("");
+    (async () => {
+      setLoading(true);
+      setError("");
 
-    api
-      .get("/creators", {
-        search: search || undefined,
-        platform: platform || undefined,
-        availabilityStatus: availabilityStatus || undefined,
-        page,
-        limit: 12,
-      })
-      .then((data) => {
+      try {
+        const data = await api.get("/creators", {
+          search: search || undefined,
+          platform: platform || undefined,
+          availabilityStatus: availabilityStatus || undefined,
+          page,
+          limit: 12,
+        });
+
         if (!active) {
           return;
         }
@@ -66,18 +67,17 @@ export default function AnnuaireCreateurs() {
           total: data.total ?? data.count ?? 0,
           totalPages: data.totalPages ?? 1,
         });
-      })
-      .catch((requestError) => {
+      } catch (requestError) {
         if (active) {
           setError(errorMessage(requestError));
           setCreators([]);
         }
-      })
-      .finally(() => {
+      } finally {
         if (active) {
           setLoading(false);
         }
-      });
+      }
+    })();
 
     return () => {
       active = false;

@@ -91,7 +91,9 @@ export default function CompanyCampaignDetail() {
   };
 
   useEffect(() => {
-    load();
+    (async () => {
+      await load();
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 

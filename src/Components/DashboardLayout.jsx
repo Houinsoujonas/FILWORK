@@ -18,7 +18,7 @@ import {
   FiX,
 } from "react-icons/fi";
 
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/useAuth";
 import { api } from "../lib/api";
 import { initials } from "../lib/format";
 
@@ -33,7 +33,12 @@ const navigation = {
       ["Invitations", "/espace/createur/invitations", FiInbox],
       ["Collaborations", "/espace/createur/collaborations", FiLayers],
       ["Notifications", "/espace/createur/notifications", FiBell],
+
       ["Mon profil", "/espace/createur/profil", FiUser],
+
+      ["Annonces", "/espace/createur/annonces", FiFileText],
+      ["Préférences", "/espace/createur/preferences", FiUser],
+
     ],
   },
   business: {
@@ -46,7 +51,12 @@ const navigation = {
       ["Invitations", "/espace/entreprise/invitations", FiSend],
       ["Collaborations", "/espace/entreprise/collaborations", FiLayers],
       ["Notifications", "/espace/entreprise/notifications", FiBell],
+
       ["Mon organisation", "/espace/entreprise/organisation", FiUser],
+
+      ["Annonces", "/espace/entreprise/annonces", FiFileText],
+      ["Préférences", "/espace/entreprise/preferences", FiUser],
+
     ],
   },
   admin: {
@@ -59,6 +69,9 @@ const navigation = {
       ["Collaborations", "/administration/collaborations", FiLayers],
       ["Livrables", "/administration/livrables", FiFileText],
       ["Paiements", "/administration/paiements", FiCreditCard],
+      ["Notifications", "/administration/notifications", FiBell],
+      ["Annonces", "/administration/annonces", FiFileText],
+      ["Préférences", "/administration/preferences", FiUser],
     ],
   },
 };

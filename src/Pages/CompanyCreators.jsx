@@ -40,19 +40,20 @@ export default function CompanyCreators() {
   useEffect(() => {
     let active = true;
 
-    setLoading(true);
-    setError("");
+    (async () => {
+      setLoading(true);
+      setError("");
 
-    api
-      .get("/creators", {
-        search: filters.search || undefined,
-        niche: filters.niche.trim() || undefined,
-        availabilityStatus: filters.availabilityStatus || undefined,
-        platform: filters.platform || undefined,
-        page,
-        limit: 12,
-      })
-      .then((data) => {
+      try {
+        const data = await api.get("/creators", {
+          search: filters.search || undefined,
+          niche: filters.niche.trim() || undefined,
+          availabilityStatus: filters.availabilityStatus || undefined,
+          platform: filters.platform || undefined,
+          page,
+          limit: 12,
+        });
+
         if (!active) {
           return;
         }
@@ -63,8 +64,7 @@ export default function CompanyCreators() {
           totalPages: data.totalPages || 1,
           total: data.total,
         });
-      })
-      .catch((requestError) => {
+      } catch (requestError) {
         if (!active) {
           return;
         }
@@ -72,12 +72,12 @@ export default function CompanyCreators() {
         setError(errorMessage(requestError));
         setCreators([]);
         setPagination(null);
-      })
-      .finally(() => {
+      } finally {
         if (active) {
           setLoading(false);
         }
-      });
+      }
+    })();
 
     return () => {
       active = false;

@@ -3,22 +3,53 @@ const bcrypt = require("bcryptjs");
 
 const prisma = require("../config/prisma");
 const { sendPrismaError } = require("../utils/prismaErrors");
-const { sendPasswordResetEmail } = require("../services/emailService");
+const { enqueuePasswordResetCodeEmail } = require("../services/emailService");
 
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+$/;
 
-const RESET_TOKEN_TTL_MS = 15 * 60 * 1000;
+const RESET_CODE_TTL_MS = 15 * 60 * 1000;
+
+const MAX_RESET_ATTEMPTS = 5;
+
+const RESET_CODE_LENGTH = 6;
 
 const GENERIC_RESET_MESSAGE =
   "Si un compte correspond à cette adresse, un e-mail de réinitialisation sera envoyé.";
 
-const INVALID_TOKEN_MESSAGE =
-  "Le lien de réinitialisation est invalide ou a expiré.";
+const INVALID_CODE_MESSAGE =
+  "Le code de réinitialisation est invalide ou a expiré.";
 
 /**
- * Prépare le lien destiné à l'interface frontend.
+ * Génère un code numérique à six chiffres.
+ *
+ * @returns {string}
  */
-function buildResetUrl(token) {
+function generateResetCode() {
+  let code = "";
+  for (let i = 0; i < RESET_CODE_LENGTH; i += 1) {
+    code += String(crypto.randomInt(0, 10));
+  }
+  return code;
+}
+
+/**
+ * Calcule le hash SHA-256 d'un code de réinitialisation.
+ *
+ * @param {string} code
+ * @returns {string}
+ */
+function hashResetCode(code) {
+  return crypto.createHash("sha256").update(code).digest("hex");
+}
+
+/**
+ * Prépare l'URL de la page de réinitialisation côté frontend,
+ * en y associant l'adresse e-mail concernée.
+ *
+ * @param {string} email
+ * @returns {string}
+ */
+function buildResetUrl(email) {
   const configuredUrl =
     process.env.FRONTEND_URL ||
     (process.env.NODE_ENV === "production" ? "" : "http://localhost:5173");
@@ -41,14 +72,16 @@ function buildResetUrl(token) {
   }
 
   const resetUrl = new URL("/reset-password", frontendUrl);
-
-  resetUrl.searchParams.set("token", token);
-
+  resetUrl.searchParams.set("email", email);
   return resetUrl.toString();
 }
 
 /**
- * Demande de réinitialisation du mot de passe.
+ * Demande de réinitialisation du mot de passe par code.
+ *
+ * Génère un code à six chiffres, stocke uniquement son hash, et met en file
+ * l'e-mail contenant le code. La réponse publique reste identique si le
+ * compte n'existe pas, afin de limiter l'énumération des comptes.
  */
 async function forgotPassword(req, res) {
   const body = req.body || {};
@@ -71,6 +104,12 @@ async function forgotPassword(req, res) {
       select: {
         id: true,
         email: true,
+        creatorProfile: {
+          select: { displayName: true },
+        },
+        companyProfile: {
+          select: { companyName: true },
+        },
       },
     });
 
@@ -83,16 +122,20 @@ async function forgotPassword(req, res) {
       });
     }
 
-    const token = crypto.randomBytes(32).toString("hex");
+    const displayName =
+      user.creatorProfile?.displayName ||
+      user.companyProfile?.companyName ||
+      undefined;
 
-    // Seul le hash du jeton sera stocké en base de données.
-    const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+    const code = generateResetCode();
+
+    // Seul le hash du code sera stocké en base de données.
+    // Le code en clair ne doit jamais être journalisé.
+    const codeHash = hashResetCode(code);
 
     const now = new Date();
 
-    const expiresAt = new Date(now.getTime() + RESET_TOKEN_TTL_MS);
-
-    const resetUrl = buildResetUrl(token);
+    const expiresAt = new Date(now.getTime() + RESET_CODE_TTL_MS);
 
     // Invalider les anciennes demandes encore utilisables.
     await prisma.passwordResetToken.updateMany({
@@ -108,25 +151,32 @@ async function forgotPassword(req, res) {
     const resetToken = await prisma.passwordResetToken.create({
       data: {
         userId: user.id,
-        tokenHash,
+        codeHash,
         expiresAt,
+        attempts: 0,
       },
     });
 
     createdTokenId = resetToken.id;
 
+    const resetUrl = buildResetUrl(user.email);
+
+    // Mettre en file l'e-mail contenant le code.
+    // L'échec de l'envoi ne doit pas annuler la demande.
     try {
-      await sendPasswordResetEmail({
+      await enqueuePasswordResetCodeEmail({
         to: user.email,
+        displayName,
+        code,
         resetUrl,
       });
-    } catch (error) {
-      if (sendPrismaError(res, error)) {
-        return;
-      }
+    } catch (emailError) {
+      console.error(
+        "Erreur lors de la mise en file de l'e-mail de code de réinitialisation :",
+        emailError.message,
+      );
 
-      // Ne pas laisser un jeton utilisable si l'envoi
-      // du message échoue.
+      // Ne pas laisser un code utilisable si l'envoi échoue.
       await prisma.passwordResetToken.updateMany({
         where: {
           id: resetToken.id,
@@ -136,8 +186,6 @@ async function forgotPassword(req, res) {
           usedAt: new Date(),
         },
       });
-
-      throw error;
     }
 
     return res.status(200).json({
@@ -154,7 +202,7 @@ async function forgotPassword(req, res) {
       error.message,
     );
 
-    // En cas d'échec, invalider le jeton qui aurait
+    // En cas d'échec, invalider le code qui aurait
     // éventuellement déjà été enregistré.
     if (createdTokenId) {
       try {
@@ -169,7 +217,7 @@ async function forgotPassword(req, res) {
         });
       } catch (cleanupError) {
         console.error(
-          "Erreur lors de l'invalidation du jeton :",
+          "Erreur lors de l'invalidation du code :",
           cleanupError.message,
         );
       }
@@ -184,21 +232,32 @@ async function forgotPassword(req, res) {
 }
 
 /**
- * Vérification du jeton et changement du mot de passe.
+ * Vérification du code et changement du mot de passe.
+ *
+ * L'adresse e-mail est requise pour rattacher le code au bon compte : un code
+ * à six chiffres n'est pas unique globalement et seul son hash est stocké.
  */
 async function resetPassword(req, res) {
   const body = req.body || {};
 
-  const token = typeof body.token === "string" ? body.token.trim() : "";
+  const email =
+    typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
+
+  const code = typeof body.code === "string" ? body.code.trim() : "";
 
   const password = typeof body.password === "string" ? body.password : "";
 
-  // Le jeton généré contient 32 octets, représentés
-  // par une chaîne hexadécimale de 64 caractères.
-  if (!/^[a-f0-9]{64}$/i.test(token)) {
+  if (!EMAIL_REGEX.test(email)) {
     return res.status(400).json({
       success: false,
-      message: INVALID_TOKEN_MESSAGE,
+      message: INVALID_CODE_MESSAGE,
+    });
+  }
+
+  if (!/^\d{6}$/.test(code)) {
+    return res.status(400).json({
+      success: false,
+      message: INVALID_CODE_MESSAGE,
     });
   }
 
@@ -217,43 +276,96 @@ async function resetPassword(req, res) {
   }
 
   try {
-    const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
-
-    const resetToken = await prisma.passwordResetToken.findUnique({
-      where: { tokenHash },
-      select: {
-        id: true,
-        userId: true,
-        expiresAt: true,
-        usedAt: true,
-      },
+    const user = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true },
     });
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: INVALID_CODE_MESSAGE,
+      });
+    }
 
     const now = new Date();
 
-    if (
-      !resetToken ||
-      resetToken.usedAt !== null ||
-      resetToken.expiresAt <= now
-    ) {
+    const resetToken = await prisma.passwordResetToken.findFirst({
+      where: {
+        userId: user.id,
+        usedAt: null,
+        expiresAt: { gt: now },
+      },
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        userId: true,
+        codeHash: true,
+        attempts: true,
+      },
+    });
+
+    if (!resetToken) {
       return res.status(400).json({
         success: false,
-        message: INVALID_TOKEN_MESSAGE,
+        message: INVALID_CODE_MESSAGE,
+      });
+    }
+
+    if (resetToken.attempts >= MAX_RESET_ATTEMPTS) {
+      return res.status(400).json({
+        success: false,
+        message: INVALID_CODE_MESSAGE,
+      });
+    }
+
+    const submittedHash = hashResetCode(code);
+
+    const codeIsValid =
+      submittedHash.length === resetToken.codeHash.length &&
+      crypto.timingSafeEqual(
+        Buffer.from(submittedHash),
+        Buffer.from(resetToken.codeHash),
+      );
+
+    if (!codeIsValid) {
+      // Incrémenter le compteur uniquement tant que la limite n'est pas atteinte.
+      await prisma.passwordResetToken.updateMany({
+        where: {
+          id: resetToken.id,
+          usedAt: null,
+          attempts: { lt: MAX_RESET_ATTEMPTS },
+        },
+        data: {
+          attempts: { increment: 1 },
+        },
+      });
+
+      // Bloquer le code dès que le nombre maximal de tentatives est atteint.
+      if (resetToken.attempts + 1 >= MAX_RESET_ATTEMPTS) {
+        await prisma.passwordResetToken.updateMany({
+          where: { id: resetToken.id, usedAt: null },
+          data: { usedAt: now },
+        });
+      }
+
+      return res.status(400).json({
+        success: false,
+        message: INVALID_CODE_MESSAGE,
       });
     }
 
     const passwordHash = await bcrypt.hash(password, 12);
 
     await prisma.$transaction(async (tx) => {
-      // Une seule requête peut consommer ce jeton.
-      // Le contrôle atomique évite les doubles utilisations.
+      // Consommer le code de façon atomique : une seule requête concurrente
+      // peut réussir.
       const consumeResult = await tx.passwordResetToken.updateMany({
         where: {
           id: resetToken.id,
           usedAt: null,
-          expiresAt: {
-            gt: now,
-          },
+          expiresAt: { gt: now },
+          attempts: { lt: MAX_RESET_ATTEMPTS },
         },
         data: {
           usedAt: now,
@@ -261,10 +373,8 @@ async function resetPassword(req, res) {
       });
 
       if (consumeResult.count !== 1) {
-        const error = new Error("RESET_TOKEN_INVALID_OR_USED");
-
-        error.code = "RESET_TOKEN_INVALID_OR_USED";
-
+        const error = new Error("RESET_CODE_INVALID_OR_USED");
+        error.code = "RESET_CODE_INVALID_OR_USED";
         throw error;
       }
 
@@ -302,10 +412,10 @@ async function resetPassword(req, res) {
       return;
     }
 
-    if (error.code === "RESET_TOKEN_INVALID_OR_USED") {
+    if (error.code === "RESET_CODE_INVALID_OR_USED") {
       return res.status(400).json({
         success: false,
-        message: INVALID_TOKEN_MESSAGE,
+        message: INVALID_CODE_MESSAGE,
       });
     }
 

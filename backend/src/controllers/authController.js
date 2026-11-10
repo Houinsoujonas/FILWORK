@@ -2,6 +2,7 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const prisma = require("../config/prisma");
 const { sendPrismaError } = require("../utils/prismaErrors");
+const { enqueueWelcomeEmail } = require("../services/emailService");
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -104,6 +105,33 @@ async function register(req, res) {
         role,
       },
     });
+
+    // Créer les préférences de communication par défaut.
+    try {
+      await prisma.notificationPreference.create({
+        data: { userId: user.id },
+      });
+    } catch (prefError) {
+      console.error(
+        "Erreur lors de la création des préférences de notification :",
+        prefError.message,
+      );
+    }
+
+    // Mettre en file l'e-mail de bienvenue. L'échec de l'envoi
+    // ne doit pas annuler l'inscription réussie.
+    try {
+      await enqueueWelcomeEmail({
+        to: user.email,
+        displayName: undefined,
+        role: user.role,
+      });
+    } catch (emailError) {
+      console.error(
+        "Erreur lors de la mise en file de l'e-mail de bienvenue :",
+        emailError.message,
+      );
+    }
 
     const token = generateToken(user);
 

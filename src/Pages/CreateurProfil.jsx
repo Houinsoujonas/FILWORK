@@ -10,8 +10,10 @@ import {
 
 import { Badge } from "../Components/AppUI";
 import EmptyState from "../Components/EmptyState";
+
 import PlatformIcon from "../Components/PlatformIcon";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/useAuth";
+
 import { api, errorMessage } from "../lib/api";
 import { compactNumber, creatorAudience, creatorPlace } from "../lib/creator";
 import { formatMoney, initials, label } from "../lib/format";
@@ -40,14 +42,16 @@ export default function CreateurProfil() {
 
     let active = true;
 
-    setLoading(true);
-    setError("");
+    (async () => {
+      setLoading(true);
+      setError("");
 
-    Promise.all([
-      api.get(`/creators/${creatorId}`),
-      api.get("/campaigns/my-campaigns").catch(() => ({ campaigns: [] })),
-    ])
-      .then(([creatorData, campaignData]) => {
+      try {
+        const [creatorData, campaignData] = await Promise.all([
+          api.get(`/creators/${creatorId}`),
+          api.get("/campaigns/my-campaigns").catch(() => ({ campaigns: [] })),
+        ]);
+
         if (!active) {
           return;
         }
@@ -66,18 +70,17 @@ export default function CreateurProfil() {
             current.proposedAmount ||
             (published[0]?.budget ? String(published[0].budget) : ""),
         }));
-      })
-      .catch((requestError) => {
+      } catch (requestError) {
         if (active) {
           setError(errorMessage(requestError));
           setCreator(null);
         }
-      })
-      .finally(() => {
+      } finally {
         if (active) {
           setLoading(false);
         }
-      });
+      }
+    })();
 
     return () => {
       active = false;

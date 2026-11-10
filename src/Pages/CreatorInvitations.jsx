@@ -25,7 +25,9 @@ export default function CreatorInvitations() {
   };
 
   useEffect(() => {
-    load();
+    (async () => {
+      await load();
+    })();
   }, []);
 
   const respond = async (invitation, status) => {

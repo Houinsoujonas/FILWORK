@@ -23,6 +23,7 @@ export default function AdminDeliverables() {
   const [status, setStatus] = useState("");
   const [page, setPage] = useState(1);
 
+<<<<<<< HEAD
   const { data, loading, error } = useApiQuery(
     () =>
       api.get("/admin/deliverables", {
@@ -34,6 +35,38 @@ export default function AdminDeliverables() {
     [search, status, page],
     EMPTY_DELIVERABLES,
   );
+=======
+  useEffect(() => {
+    let active = true;
+
+    (async () => {
+      setLoading(true);
+      setError("");
+
+      try {
+        const data = await api.get("/admin/deliverables", {
+          search: search || undefined,
+          status: status || undefined,
+          page,
+          limit: 20,
+        });
+
+        if (active) {
+          setDeliverables(data.deliverables || []);
+          setPagination(data.pagination || null);
+        }
+      } catch (requestError) {
+        if (active) {
+          setError(errorMessage(requestError));
+          setDeliverables([]);
+        }
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    })();
+>>>>>>> 79d98d87328d46967b35c400b98945f8bc408d3b
 
   const deliverables = data.deliverables;
   const pagination = data.pagination;

@@ -96,6 +96,7 @@ export default function CompanyCampaignDetail() {
   }, [applyBundle, id]);
 
   useEffect(() => {
+<<<<<<< HEAD
     let active = true;
 
     fetchCampaignBundle(id)
@@ -116,6 +117,13 @@ export default function CompanyCampaignDetail() {
       active = false;
     };
   }, [applyBundle, id]);
+=======
+    (async () => {
+      await load();
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+>>>>>>> 79d98d87328d46967b35c400b98945f8bc408d3b
 
   const notify = (type, message) => {
     setFeedbackType(type);
@@ -338,6 +346,7 @@ export default function CompanyCampaignDetail() {
         </Panel>
 
         <Panel title="Actions">
+          <div className="ui-stack ui-stack--buttons">
           {campaign.status === "DRAFT" && (
             <button
               type="button"
@@ -366,17 +375,20 @@ export default function CompanyCampaignDetail() {
             </button>
           )}
 
-          {["PUBLISHED", "PAUSED"].includes(campaign.status) && (
+          {campaign.status === "PAUSED" && (
             <button
               type="button"
               className="ui-button"
               onClick={() =>
-                act("publish", "Republier cette campagne ?", "Campagne publiée.")
+                act(
+                  "publish",
+                  "Réactiver cette campagne ? Elle redeviendra visible et ouverte aux candidatures.",
+                  "Campagne réactivée.",
+                )
               }
               disabled={busy === "publish"}
-              style={{ marginTop: 10 }}
             >
-              <FiPlay aria-hidden="true" /> Republier
+              <FiPlay aria-hidden="true" /> Réactiver la campagne
             </button>
           )}
 
@@ -392,11 +404,11 @@ export default function CompanyCampaignDetail() {
                 )
               }
               disabled={busy === "close"}
-              style={{ marginTop: 10 }}
             >
               <FiX aria-hidden="true" /> Clôturer
             </button>
           )}
+          </div>
 
           <hr className="ui-divider" />
           <p className="ui-small ui-muted">

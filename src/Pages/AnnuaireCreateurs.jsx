@@ -5,10 +5,14 @@ import { FiSearch } from "react-icons/fi";
 import CreatorCard from "../Components/CreatorCard";
 import EmptyState from "../Components/EmptyState";
 import { useAuth } from "../context/useAuth";
+<<<<<<< HEAD
 import { api } from "../lib/api";
 import { useApiQuery } from "../lib/useApiQuery";
 
 const EMPTY_CREATORS = { creators: [], total: 0, totalPages: 1 };
+=======
+import { api, errorMessage } from "../lib/api";
+>>>>>>> 79d98d87328d46967b35c400b98945f8bc408d3b
 
 const PLATFORMS = [
   ["", "Toutes les plateformes"],
@@ -57,8 +61,51 @@ export default function AnnuaireCreateurs() {
     { enabled: isCompany },
   );
 
+<<<<<<< HEAD
   const creators = data.creators;
   const meta = { total: data.total, totalPages: data.totalPages };
+=======
+    let active = true;
+
+    (async () => {
+      setLoading(true);
+      setError("");
+
+      try {
+        const data = await api.get("/creators", {
+          search: search || undefined,
+          platform: platform || undefined,
+          availabilityStatus: availabilityStatus || undefined,
+          page,
+          limit: 12,
+        });
+
+        if (!active) {
+          return;
+        }
+
+        setCreators(data.creators || []);
+        setMeta({
+          total: data.total ?? data.count ?? 0,
+          totalPages: data.totalPages ?? 1,
+        });
+      } catch (requestError) {
+        if (active) {
+          setError(errorMessage(requestError));
+          setCreators([]);
+        }
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [isCompany, search, platform, availabilityStatus, page]);
+>>>>>>> 79d98d87328d46967b35c400b98945f8bc408d3b
 
   const handleSearch = (event) => {
     event.preventDefault();

@@ -28,6 +28,7 @@ export default function AdminPayments() {
   const [origin, setOrigin] = useState("");
   const [page, setPage] = useState(1);
 
+<<<<<<< HEAD
   const { data, loading, error } = useApiQuery(
     () =>
       api.get("/admin/payments", {
@@ -39,6 +40,38 @@ export default function AdminPayments() {
     [status, origin, page],
     EMPTY_PAYMENTS,
   );
+=======
+  useEffect(() => {
+    let active = true;
+
+    (async () => {
+      setLoading(true);
+      setError("");
+
+      try {
+        const data = await api.get("/admin/payments", {
+          status: status || undefined,
+          origin: origin || undefined,
+          page,
+          limit: 20,
+        });
+
+        if (active) {
+          setPayments(data.payments || []);
+          setPagination(data.pagination || null);
+        }
+      } catch (requestError) {
+        if (active) {
+          setError(errorMessage(requestError));
+          setPayments([]);
+        }
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    })();
+>>>>>>> 79d98d87328d46967b35c400b98945f8bc408d3b
 
   const payments = data.payments;
   const pagination = data.pagination;

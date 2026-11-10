@@ -1,4 +1,12 @@
-import { FiAlertCircle, FiCheckCircle, FiInfo, FiLoader } from "react-icons/fi";
+import { Link } from "react-router-dom";
+import {
+  FiAlertCircle,
+  FiArrowRight,
+  FiArrowUpRight,
+  FiCheckCircle,
+  FiInfo,
+  FiLoader,
+} from "react-icons/fi";
 
 import { label } from "../lib/format";
 
@@ -31,7 +39,10 @@ export function Alert({ type = "info", children }) {
         : FiInfo;
 
   return (
-    <div className={`ui-alert ui-alert--${type}`} role="status">
+    <div
+      className={`ui-alert ui-alert--${type}`}
+      role={type === "error" ? "alert" : "status"}
+    >
       <Icon aria-hidden="true" />
       <span>{children}</span>
     </div>
@@ -86,12 +97,82 @@ export function Panel({ title, description, actions, children, className = "" })
   );
 }
 
-export function Stat({ label: statLabel, value, hint }) {
-  return (
-    <div className="ui-stat">
-      <span>{statLabel}</span>
+export function Stat({
+  label: statLabel,
+  value,
+  hint,
+  icon: Icon,
+  to,
+  attention = false,
+}) {
+  const className = `ui-stat${attention ? " ui-stat--attention" : ""}`;
+  const content = (
+    <>
+      {(Icon || to) && (
+        <span className="ui-stat__top">
+          {Icon ? (
+            <span className="ui-stat__icon" aria-hidden="true">
+              <Icon />
+            </span>
+          ) : (
+            <span />
+          )}
+          {to && <FiArrowUpRight className="ui-stat__arrow" aria-hidden="true" />}
+        </span>
+      )}
+      <span className="ui-stat__label">{statLabel}</span>
       <strong>{value}</strong>
       {hint && <small>{hint}</small>}
+    </>
+  );
+
+  if (to) {
+    return (
+      <Link className={className} to={to}>
+        {content}
+      </Link>
+    );
+  }
+
+  return <div className={className}>{content}</div>;
+}
+
+export function Shortcut({ to, icon: Icon, title, description }) {
+  return (
+    <Link className="ui-shortcut" to={to}>
+      {Icon && (
+        <span className="ui-shortcut__icon" aria-hidden="true">
+          <Icon />
+        </span>
+      )}
+      <span className="ui-shortcut__text">
+        <strong>{title}</strong>
+        {description && <small>{description}</small>}
+      </span>
+      <FiArrowRight aria-hidden="true" />
+    </Link>
+  );
+}
+
+export function Progress({ label: progressLabel, value, max = 100 }) {
+  const percent = max > 0 ? Math.round((value / max) * 100) : 0;
+
+  return (
+    <div className="ui-progress">
+      <div className="ui-progress__head">
+        <span>{progressLabel}</span>
+        <strong>{percent} %</strong>
+      </div>
+      <div
+        className="ui-progress__track"
+        role="progressbar"
+        aria-label={progressLabel}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={percent}
+      >
+        <span className="ui-progress__bar" style={{ width: `${percent}%` }} />
+      </div>
     </div>
   );
 }

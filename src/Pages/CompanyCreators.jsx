@@ -59,8 +59,54 @@ export default function CompanyCreators() {
     EMPTY_CREATORS,
   );
 
+<<<<<<< HEAD
   const creators = data.creators;
   const pagination = data.pagination;
+=======
+    (async () => {
+      setLoading(true);
+      setError("");
+
+      try {
+        const data = await api.get("/creators", {
+          search: filters.search || undefined,
+          niche: filters.niche.trim() || undefined,
+          availabilityStatus: filters.availabilityStatus || undefined,
+          platform: filters.platform || undefined,
+          page,
+          limit: 12,
+        });
+
+        if (!active) {
+          return;
+        }
+
+        setCreators(data.creators || []);
+        setPagination({
+          page: data.page || page,
+          totalPages: data.totalPages || 1,
+          total: data.total,
+        });
+      } catch (requestError) {
+        if (!active) {
+          return;
+        }
+
+        setError(errorMessage(requestError));
+        setCreators([]);
+        setPagination(null);
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [filters, page]);
+>>>>>>> 79d98d87328d46967b35c400b98945f8bc408d3b
 
   const applyFilters = (event) => {
     event.preventDefault();

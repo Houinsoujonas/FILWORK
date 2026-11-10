@@ -26,6 +26,7 @@ export default function AdminCollaborations() {
   const [origin, setOrigin] = useState("");
   const [page, setPage] = useState(1);
 
+<<<<<<< HEAD
   const { data, loading, error } = useApiQuery(
     () =>
       api.get("/admin/collaborations", {
@@ -37,6 +38,38 @@ export default function AdminCollaborations() {
     [status, origin, page],
     EMPTY_COLLABORATIONS,
   );
+=======
+  useEffect(() => {
+    let active = true;
+
+    (async () => {
+      setLoading(true);
+      setError("");
+
+      try {
+        const data = await api.get("/admin/collaborations", {
+          status: status || undefined,
+          origin: origin || undefined,
+          page,
+          limit: 20,
+        });
+
+        if (active) {
+          setCollaborations(data.collaborations || []);
+          setPagination(data.pagination || null);
+        }
+      } catch (requestError) {
+        if (active) {
+          setError(errorMessage(requestError));
+          setCollaborations([]);
+        }
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    })();
+>>>>>>> 79d98d87328d46967b35c400b98945f8bc408d3b
 
   const collaborations = data.collaborations;
   const pagination = data.pagination;

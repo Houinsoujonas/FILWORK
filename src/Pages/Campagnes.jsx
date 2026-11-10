@@ -42,8 +42,48 @@ export default function Campagnes() {
     EMPTY_CAMPAIGNS,
   );
 
+<<<<<<< HEAD
   const campaigns = data.campaigns;
   const meta = { total: data.total, totalPages: data.totalPages };
+=======
+    (async () => {
+      setLoading(true);
+      setError("");
+
+      try {
+        const data = await api.get("/campaigns", {
+          search: search || undefined,
+          platform: platform || undefined,
+          page,
+          limit: 9,
+        });
+
+        if (!active) {
+          return;
+        }
+
+        setCampaigns(data.campaigns || []);
+        setMeta({
+          total: data.total ?? data.count ?? 0,
+          totalPages: data.totalPages ?? 1,
+        });
+      } catch (requestError) {
+        if (active) {
+          setError(errorMessage(requestError));
+          setCampaigns([]);
+        }
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [search, platform, page]);
+>>>>>>> 79d98d87328d46967b35c400b98945f8bc408d3b
 
   const handleSearch = (event) => {
     event.preventDefault();

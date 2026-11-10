@@ -3885,18 +3885,18 @@ test("POST /api/auth/reset-password - invalide les anciennes sessions", async ()
     // 2. Obtenir un JWT avant la réinitialisation.
     const oldToken = await getTestToken(email, initialPassword);
 
-    // 3. Créer un jeton temporaire de réinitialisation.
-    const resetToken = crypto.randomBytes(32).toString("hex");
+    // 3. Créer un code temporaire de réinitialisation.
+    const resetCode = "123456";
 
-    const tokenHash = crypto
+    const codeHash = crypto
       .createHash("sha256")
-      .update(resetToken)
+      .update(resetCode)
       .digest("hex");
 
     await prisma.passwordResetToken.create({
       data: {
         userId: user.id,
-        tokenHash,
+        codeHash,
         expiresAt: new Date(Date.now() + 15 * 60 * 1000),
       },
     });
@@ -3910,7 +3910,8 @@ test("POST /api/auth/reset-password - invalide les anciennes sessions", async ()
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          token: resetToken,
+          email,
+          code: resetCode,
           password: newPassword,
         }),
       },
@@ -3926,7 +3927,7 @@ test("POST /api/auth/reset-password - invalide les anciennes sessions", async ()
 
     assert.equal(resetData.success, true);
 
-    // Vérifier que le même jeton ne peut pas être réutilisé.
+    // Vérifier que le même code ne peut pas être réutilisé.
     const reusedTokenResponse = await fetch(
       `${API_BASE_URL}/api/auth/reset-password`,
       {
@@ -3935,7 +3936,8 @@ test("POST /api/auth/reset-password - invalide les anciennes sessions", async ()
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          token: resetToken,
+          email,
+          code: resetCode,
           password: "AnotherPassword789!",
         }),
       },
@@ -3944,7 +3946,7 @@ test("POST /api/auth/reset-password - invalide les anciennes sessions", async ()
     assert.equal(
       reusedTokenResponse.status,
       400,
-      "Un jeton de réinitialisation déjà utilisé doit être refusé.",
+      "Un code de réinitialisation déjà utilisé doit être refusé.",
     );
 
     // 5. Vérifier que l'ancien JWT est désormais refusé.
@@ -6636,25 +6638,47 @@ test(
 
     assert.ok(creatorUser);
 
-    const response = await fetch(`${API_BASE_URL}/api/notifications`, {
-      headers: {
-        Authorization: `Bearer ${creatorToken}`,
-      },
-    });
+    const returnedIds = [];
+    let page = 1;
+    let total = 0;
 
-    const data = await response.json();
+    // Lire toutes les pages : la base de test peut contenir des notifications
+    // accumulées par les exécutions précédentes, au-delà de la limite par
+    // défaut de l'API. On compare ainsi l'intégralité des notifications de
+    // l'utilisateur, sans dépendre d'un état de base vierge.
+    do {
+      const response = await fetch(
+        `${API_BASE_URL}/api/notifications?limit=100&page=${page}`,
+        {
+          headers: {
+            Authorization: `Bearer ${creatorToken}`,
+          },
+        },
+      );
 
-    assert.equal(response.status, 200);
-    assert.equal(data.success, true);
-    assert.ok(Array.isArray(data.notifications));
+      const data = await response.json();
 
-    const returnedIds = data.notifications.map((notification) => notification.id);
+      assert.equal(response.status, 200);
+      assert.equal(data.success, true);
+      assert.ok(Array.isArray(data.notifications));
+
+      returnedIds.push(
+        ...data.notifications.map((notification) => notification.id),
+      );
+
+      total = data.pagination.total;
+
+      if (data.notifications.length < 100) {
+        break;
+      }
+
+      page += 1;
+    } while (returnedIds.length < total);
 
     const expected = await prisma.notification.findMany({
       where: { userId: creatorUser.id },
       select: { id: true },
       orderBy: { createdAt: "desc" },
-      take: 50,
     });
 
     assert.deepEqual(

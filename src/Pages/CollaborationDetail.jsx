@@ -124,6 +124,7 @@ export default function CollaborationDetail() {
   }, [id]);
 
   useEffect(() => {
+<<<<<<< HEAD
     let active = true;
 
     fetchCollaborationBundle(id)
@@ -146,6 +147,12 @@ export default function CollaborationDetail() {
       active = false;
     };
   }, [id]);
+=======
+    (async () => {
+      await load();
+    })();
+  }, [load]);
+>>>>>>> 79d98d87328d46967b35c400b98945f8bc408d3b
 
   const run = async (key, action, successMessage) => {
     setBusy(key);

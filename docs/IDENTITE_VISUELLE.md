@@ -11,7 +11,8 @@ L’interface aide les créateurs et les entreprises à comprendre rapidement le
 - Accent vert doux : `#d5f36a`, réservé aux repères et aux mises en évidence courtes.
 - Les sections peuvent reprendre les accents doux du visuel FILWORK : bleu `#5d79c7`, violet `#806db8`, corail `#dc896a`, rose `#d990aa`, vert `#91ad63` et jaune `#d5b15d`.
 - Choisir une seule couleur secondaire par section, en petite touche sur une icône, un repère, une illustration ou un détail de carte. Garder les fonds ivoire ou blancs et les textes en encre sombre ; ne pas utiliser ces accents pour colorer de longs paragraphes ou remplacer les couleurs de statut.
-- Les grandes sections peuvent recevoir une teinte pastel associée : bleu très clair pour le fonctionnement, corail pâle pour les campagnes, lavande pour les catégories, vert pâle pour les entreprises et jaune doux pour l’appel à l’action. Les pages Créateur et À propos suivent la même alternance, avec des surfaces blanches pour les cartes et les formulaires.
+- Les grandes sections alternent entre le blanc et l’ivoire ; les teintes pastel ne colorent plus des sections entières. Les mots mis en avant dans les titres utilisent le vert olive `#405331`. Les pages Créateur et À propos posent leurs sections blanches sur le fond ivoire.
+- Le pied de page est sombre (`#171814`) avec le logo clair et un appel à l’action vert citron.
 - L’espace Entreprise conserve son fond clair ; son en-tête et ses actions utilisent des nuances vertes et bleues discrètes pour distinguer les groupes d’actions.
 - Les couleurs de statut restent sémantiques et conservent un contraste suffisant.
 - Manrope sert aux titres ; Inter sert au texte courant, aux champs et aux contrôles.

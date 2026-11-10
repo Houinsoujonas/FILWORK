@@ -1,7 +1,20 @@
+<<<<<<< HEAD
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { api, clearToken, getToken, setToken } from "../lib/api";
 import { AuthContext } from "./useAuth";
+=======
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+
+import { api, clearToken, getToken, setToken } from "../lib/api";
+
+import { AuthContext } from "./AuthContext.js";
+>>>>>>> 79d98d87328d46967b35c400b98945f8bc408d3b
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -20,6 +33,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   useEffect(() => {
+<<<<<<< HEAD
     let active = true;
 
     async function loadSession() {
@@ -57,6 +71,12 @@ export function AuthProvider({ children }) {
       active = false;
     };
   }, [loadProfile]);
+=======
+    (async () => {
+      await loadSession();
+    })();
+  }, [loadSession]);
+>>>>>>> 79d98d87328d46967b35c400b98945f8bc408d3b
 
   useEffect(() => {
     const handleUnauthorized = () => {
@@ -144,3 +164,8 @@ export function AuthProvider({ children }) {
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
+<<<<<<< HEAD
+=======
+
+export { AuthContext };
+>>>>>>> 79d98d87328d46967b35c400b98945f8bc408d3b

@@ -15,15 +15,23 @@ const profileRoutes = require("./routes/profileRoutes");
 const campaignRoutes = require("./routes/campaignRoutes");
 const applicationRoutes = require("./routes/applicationRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
+const announcementRoutes = require("./routes/announcementRoutes");
+const preferencesRoutes = require("./routes/preferencesRoutes");
 const collaborationRoutes = require("./routes/collaborationRoutes");
 const deliverableRoutes = require("./routes/deliverableRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
 const creatorRoutes = require("./routes/creatorRoutes");
 const invitationRoutes = require("./routes/invitationRoutes");
 const adminRoutes = require("./routes/adminRoutes");
+const adminAnnouncementRoutes = require("./routes/adminAnnouncementRoutes");
 const reviewRoutes = require("./routes/reviewRoutes");
 
 const app = express();
+
+// Render termine TLS sur son proxy et transmet l'IP du client via
+// X-Forwarded-For. Un seul saut de proxy est déclaré ici, afin que
+// express-rate-limit et req.ip lisent l'adresse réelle du client.
+app.set("trust proxy", 1);
 
 // Identifier chaque requête pour la journalisation et le support.
 app.use(requestIdMiddleware);
@@ -81,8 +89,17 @@ app.use("/api/applications", applicationRoutes);
 // Routes des notifications.
 app.use("/api/notifications", notificationRoutes);
 
+// Routes des préférences de communication.
+app.use("/api", preferencesRoutes);
+
+// Routes des annonces (utilisateurs connectés).
+app.use("/api/announcements", announcementRoutes);
+
 // Routes d'administration.
 app.use("/api/admin", adminRoutes);
+
+// Routes d'administration des annonces.
+app.use("/api/admin", adminAnnouncementRoutes);
 
 // Routes des collaborations.
 app.use("/api/collaborations", collaborationRoutes);

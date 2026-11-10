@@ -108,11 +108,19 @@ Authentifié. Révoque le jeton courant. Réponse `{ success, message }`.
 
 ### `POST /api/auth/forgot-password`
 
-Public. Corps : `{ email }`. La réponse ne révèle pas si le compte existe.
+Public. Corps : `{ email }`. La réponse est toujours générique et ne permet
+pas de savoir si l'adresse est enregistrée. Si le compte existe, un code
+numérique à six chiffres est envoyé par e-mail.
 
 ### `POST /api/auth/reset-password`
 
-Public. Corps : `{ token, password }` (le jeton est celui reçu par e-mail).
+Public. Corps : `{ email, code, password }`.
+
+- `code` : six chiffres, valable 15 minutes, stocké uniquement sous forme de
+  hash SHA-256 ;
+- cinq tentatives maximum par code ;
+- un code consommé ne peut plus être réutilisé (consommation atomique) ;
+- `password` : mot de passe hashé avec bcrypt après validation.
 
 ---
 
@@ -446,27 +454,31 @@ Le passage à `PAID` exige une référence et notifie le créateur.
 
 ### `GET /api/notifications`
 
-Authentifié. Réponse :
+Authentifié. Paramètres facultatifs : `page` (défaut 1), `limit` (défaut 20,
+max 100), `type`, `isRead` (`true` ou `false`).
 
 ```json
 {
   "success": true,
-  "count": 5,
-  "unreadCount": 2,
+  "message": "Notifications récupérées avec succès.",
   "notifications": [
     {
       "id": "...",
-      "collaborationId": "...",
-      "type": "PAYMENT_STATUS_UPDATED",
+      "type": "ANNOUNCEMENT",
       "title": "...",
       "message": "...",
+      "link": "/annonces",
       "isRead": false,
       "readAt": null,
       "createdAt": "...",
-      "application": null,
-      "invitation": null
+      "announcementId": "...",
+      "applicationId": null,
+      "invitationId": null,
+      "collaborationId": null
     }
-  ]
+  ],
+  "unreadCount": 2,
+  "pagination": { "page": 1, "limit": 20, "total": 42, "totalPages": 3 }
 }
 ```
 
@@ -515,7 +527,64 @@ Public. Réponse `{ success, review }`.
 
 ---
 
-## 13. Administration
+## 13. Annonces, préférences et file d'e-mails
+
+### Annonces utilisateur
+
+Authentifié. Les administrateurs peuvent consulter toutes les annonces
+publiées ; les créateurs et entreprises ne voient que `ALL` et leur audience.
+
+- `GET /api/announcements?page=&limit=` →
+  `{ success, message, announcements, pagination }`
+- `GET /api/announcements/:id` → `{ success, message, announcement }`
+
+Seules les annonces `PUBLISHED`, non expirées, sont visibles.
+
+### Annonces administratives
+
+Toutes les routes exigent `ADMIN`.
+
+- `POST /api/admin/announcements`
+  Corps : `{ title, body, audience, linkUrl?, expiresAt? }`.
+  `audience` ∈ `ALL`, `CREATORS`, `COMPANIES`. Crée un brouillon (`201`).
+- `PATCH /api/admin/announcements/:id`
+  Modifie une annonce uniquement si elle est en brouillon (`409` sinon).
+- `POST /api/admin/announcements/:id/publish`
+  Publie le brouillon, crée une notification `ANNOUNCEMENT` pour chaque
+  utilisateur ciblé et met en file les e-mails correspondants. Les
+  administrateurs ne reçoivent jamais ces notifications.
+- `PATCH /api/admin/announcements/:id/archive`
+- `GET /api/admin/announcements?status=&audience=&page=&limit=`
+- `GET /api/admin/announcements/:id`
+
+### Préférences de communication
+
+Authentifié.
+
+- `GET /api/preferences` → `{ success, message, preferences }`
+- `PATCH /api/preferences`
+  Corps partiel : `{ collaborationEmails?, announcementEmails?, notificationEmails? }`
+  (booléens). Au moins un champ est requis (`400` sinon).
+
+Les e-mails de sécurité (réinitialisation du mot de passe) ne sont pas
+désactivables par ces préférences.
+
+### File d'envoi des e-mails
+
+Les e-mails sont persistés dans `EmailOutbox` (`PENDING`, `PROCESSING`,
+`SENT`, `FAILED`) puis envoyés par un processeur :
+
+- le serveur démarre le processeur automatiquement hors mode test ;
+- `EMAIL_OUTBOX_ENABLED=false` le désactive ;
+- `npm run emails:process` lance le processeur en continu ;
+- `npm run emails:process:once` traite un seul lot (cron/Render) ;
+- la réservation est atomique (`FOR UPDATE SKIP LOCKED`) ;
+- les tentatives échouées sont replanifiées avec backoff exponentiel ;
+- les tâches `PROCESSING` bloquées depuis plus de 10 minutes sont reprises.
+
+---
+
+## 14. Administration
 
 Toutes les routes exigent `ADMIN`.
 
@@ -542,7 +611,7 @@ La clé de collection varie : `users`, `campaigns`, `collaborations`,
 
 ---
 
-## 14. Points d'intégration frontend
+## 15. Points d'intégration frontend
 
 1. **Inscription** : `POST /api/auth/register` puis `PUT /api/profile/me`.
 2. **Session** : conserver `token` puis vérifier avec `GET /api/auth/me`.

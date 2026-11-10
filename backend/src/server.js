@@ -36,6 +36,9 @@ if (!isTest && process.env.NODE_ENV === "test") {
   process.exit(1);
 }
 
+// Le mode production est évalué après le chargement de l'environnement.
+const isProduction = process.env.NODE_ENV === "production";
+
 // Vérifier la configuration indispensable à l'authentification JWT.
 if (
   typeof process.env.JWT_SECRET !== "string" ||
@@ -46,6 +49,51 @@ if (
   );
 
   process.exit(1);
+}
+
+// En production, refuser une configuration CORS qui ne contiendrait que des
+// origines locales : le frontend déployé ne pourrait pas appeler l'API.
+if (isProduction) {
+  const origins = (process.env.CORS_ORIGINS || "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
+  const hasNonLocalOrigin = origins.some((origin) => {
+    try {
+      const { hostname } = new URL(origin);
+
+      return !["localhost", "127.0.0.1", "::1", "[::1]"].includes(
+        hostname.toLowerCase(),
+      );
+    } catch {
+      return false;
+    }
+  });
+
+  if (!hasNonLocalOrigin) {
+    console.error(
+      "[FILWORK] Configuration refusée : CORS_ORIGINS doit contenir au moins une origine non locale en production.",
+    );
+
+    process.exit(1);
+  }
+
+  let frontendUrl;
+
+  try {
+    frontendUrl = new URL(process.env.FRONTEND_URL);
+  } catch {
+    frontendUrl = null;
+  }
+
+  if (!frontendUrl || frontendUrl.protocol !== "https:") {
+    console.error(
+      "[FILWORK] Configuration refusée : FRONTEND_URL doit être une URL HTTPS en production.",
+    );
+
+    process.exit(1);
+  }
 }
 
 const PORT = Number(process.env.PORT) || (isTest ? 5051 : 5000);
@@ -84,12 +132,23 @@ try {
 
 const app = require("./app");
 const prisma = require("./config/prisma");
+const {
+  startEmailOutboxWorker,
+  stopEmailOutboxWorker,
+} = require("./services/emailOutboxWorker");
 
 const server = app.listen(PORT, HOST, () => {
   console.log(`[FILWORK] Environnement : ${process.env.NODE_ENV || "development"}`);
   console.log(`[FILWORK] Base de données : ${maskTarget(databaseTarget)}`);
   console.log(`Serveur FILWORK démarré sur le port ${PORT}`);
   console.log(`Vérification : http://localhost:${PORT}/api/health`);
+
+  // Le traitement de la file d'envoi est désactivé en mode test pour ne pas
+  // interférer avec les assertions (aucun SMTP réel n'y est configuré).
+  if (!isTest && process.env.EMAIL_OUTBOX_ENABLED !== "false") {
+    startEmailOutboxWorker();
+    console.log("[FILWORK] Processeur de la file d'e-mails démarré.");
+  }
 });
 
 server.on("error", (error) => {
@@ -116,6 +175,8 @@ function shutdown(signal) {
   }
 
   shuttingDown = true;
+
+  stopEmailOutboxWorker();
 
   console.log(`[FILWORK] Arrêt demandé (${signal}).`);
 

@@ -28,6 +28,7 @@ export default function CompanyCampaigns() {
   };
 
   useEffect(() => {
+<<<<<<< HEAD
     let active = true;
 
     fetchMyCampaigns()
@@ -51,6 +52,11 @@ export default function CompanyCampaigns() {
     return () => {
       active = false;
     };
+=======
+    (async () => {
+      await load();
+    })();
+>>>>>>> 79d98d87328d46967b35c400b98945f8bc408d3b
   }, []);
 
   const act = async (campaign, action, confirmation) => {
@@ -185,7 +191,7 @@ export default function CompanyCampaigns() {
                   </button>
                 )}
 
-                {["PUBLISHED", "PAUSED"].includes(campaign.status) && (
+                {campaign.status === "PAUSED" && (
                   <button
                     type="button"
                     className="ui-button ui-button--small"
@@ -193,12 +199,12 @@ export default function CompanyCampaigns() {
                       act(
                         campaign,
                         "publish",
-                        "Republier cette campagne ?",
+                        "Réactiver cette campagne ? Elle redeviendra visible et ouverte aux candidatures.",
                       )
                     }
                     disabled={busy === `${campaign.id}-publish`}
                   >
-                    <FiPlay aria-hidden="true" /> Republier
+                    <FiPlay aria-hidden="true" /> Réactiver
                   </button>
                 )}
 

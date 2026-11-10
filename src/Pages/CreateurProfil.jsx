@@ -3,17 +3,27 @@ import { Link, useParams } from "react-router-dom";
 import {
   FiArrowLeft,
   FiExternalLink,
-  FiInstagram,
   FiMapPin,
   FiSend,
   FiUser,
 } from "react-icons/fi";
 
+import { Badge } from "../Components/AppUI";
 import EmptyState from "../Components/EmptyState";
+<<<<<<< HEAD
 import { useAuth } from "../context/useAuth";
 import { api, errorMessage } from "../lib/api";
 import { formatMoney, label } from "../lib/format";
 import { useApiQuery } from "../lib/useApiQuery";
+=======
+
+import PlatformIcon from "../Components/PlatformIcon";
+import { useAuth } from "../context/useAuth";
+
+import { api, errorMessage } from "../lib/api";
+import { compactNumber, creatorAudience, creatorPlace } from "../lib/creator";
+import { formatMoney, initials, label } from "../lib/format";
+>>>>>>> 79d98d87328d46967b35c400b98945f8bc408d3b
 
 export default function CreateurProfil() {
   const { creatorId } = useParams();
@@ -29,6 +39,7 @@ export default function CreateurProfil() {
   const [feedbackType, setFeedbackType] = useState("info");
   const [submitting, setSubmitting] = useState(false);
 
+<<<<<<< HEAD
   const { data, loading, error } = useApiQuery(
     () =>
       Promise.all([
@@ -37,6 +48,32 @@ export default function CreateurProfil() {
       ]).then(([creatorData, campaignData]) => ({
         creator: creatorData.creator,
         campaigns: (campaignData.campaigns || []).filter(
+=======
+  useEffect(() => {
+    if (!isCompany) {
+      return undefined;
+    }
+
+    let active = true;
+
+    (async () => {
+      setLoading(true);
+      setError("");
+
+      try {
+        const [creatorData, campaignData] = await Promise.all([
+          api.get(`/creators/${creatorId}`),
+          api.get("/campaigns/my-campaigns").catch(() => ({ campaigns: [] })),
+        ]);
+
+        if (!active) {
+          return;
+        }
+
+        setCreator(creatorData.creator);
+
+        const published = (campaignData.campaigns || []).filter(
+>>>>>>> 79d98d87328d46967b35c400b98945f8bc408d3b
           (campaign) => campaign.status === "PUBLISHED",
         ),
       })),
@@ -45,8 +82,30 @@ export default function CreateurProfil() {
     { enabled: isCompany },
   );
 
+<<<<<<< HEAD
   const creator = data.creator;
   const campaigns = data.campaigns;
+=======
+        setCampaigns(published);
+        setForm((current) => ({
+          ...current,
+          campaignId: current.campaignId || published[0]?.id || "",
+          proposedAmount:
+            current.proposedAmount ||
+            (published[0]?.budget ? String(published[0].budget) : ""),
+        }));
+      } catch (requestError) {
+        if (active) {
+          setError(errorMessage(requestError));
+          setCreator(null);
+        }
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    })();
+>>>>>>> 79d98d87328d46967b35c400b98945f8bc408d3b
 
   // Le formulaire reprend la première campagne publiée dès que la liste
   // arrive. L'ajustement est fait pendant le rendu, une seule fois par
@@ -156,12 +215,16 @@ export default function CreateurProfil() {
     );
   }
 
+  const audience = creatorAudience(creator);
+  const place = creatorPlace(creator);
+
   return (
     <main className="public-page detail-page">
       <Link to="/annuaire-createurs" className="back-link">
         <FiArrowLeft aria-hidden="true" /> Annuaire des créateurs
       </Link>
 
+<<<<<<< HEAD
       <section className="public-profile-head">
         {creator.profileImageUrl ? (
           <img
@@ -175,29 +238,61 @@ export default function CreateurProfil() {
             {String(creator.displayName || "C")[0]}
           </span>
         )}
+=======
+      <section className="profile-hero">
+        <div className="profile-hero__cover" aria-hidden="true" />
+        <div className="profile-hero__body">
+          {creator.profileImageUrl ? (
+            <img className="profile-hero__avatar" src={creator.profileImageUrl} alt="" />
+          ) : (
+            <span className="profile-hero__avatar" aria-hidden="true">
+              {initials(creator.displayName)}
+            </span>
+          )}
+>>>>>>> 79d98d87328d46967b35c400b98945f8bc408d3b
 
-        <div>
-          <h2>{creator.displayName}</h2>
-          <p>
-            {creator.niche || "Créateur"} · {label(creator.availabilityStatus)}
-          </p>
-          <div className="public-profile-head__meta">
-            {creator.location && (
-              <span className="ui-badge">
-                <FiMapPin aria-hidden="true" /> {creator.location}
-              </span>
-            )}
-            {creator.startingRate && (
-              <span className="ui-badge ui-badge--gold">
-                À partir de{" "}
-                {formatMoney(creator.startingRate, creator.rateCurrency)}
-              </span>
-            )}
+          <div className="profile-hero__identity">
+            <div className="profile-hero__title">
+              <h1>{creator.displayName}</h1>
+              <Badge value={creator.availabilityStatus} />
+            </div>
+            <p>
+              {creator.niche || "Créateur de contenu"}
+              {place && (
+                <>
+                  {" · "}
+                  <FiMapPin aria-hidden="true" /> {place}
+                </>
+              )}
+            </p>
           </div>
+
+          <dl className="profile-hero__stats">
+            <div>
+              <dt>Audience</dt>
+              <dd>{audience > 0 ? compactNumber(audience) : "-"}</dd>
+            </div>
+            <div>
+              <dt>Réseaux</dt>
+              <dd>{creator.creatorSocials?.length ?? 0}</dd>
+            </div>
+            <div>
+              <dt>Réalisations</dt>
+              <dd>{creator.portfolioItems?.length ?? 0}</dd>
+            </div>
+            <div>
+              <dt>Tarif de départ</dt>
+              <dd>
+                {creator.startingRate
+                  ? formatMoney(creator.startingRate, creator.rateCurrency)
+                  : "Sur demande"}
+              </dd>
+            </div>
+          </dl>
         </div>
       </section>
 
-      <div className="public-profile-grid">
+      <div className="public-detail-grid">
         <div className="public-panel">
           <h2>Présentation</h2>
           <p>{creator.bio || "Ce créateur n’a pas encore renseigné sa présentation."}</p>
@@ -206,18 +301,19 @@ export default function CreateurProfil() {
           {creator.creatorSocials?.length > 0 ? (
             <ul className="ui-list">
               {creator.creatorSocials.map((social) => (
-                <li className="ui-list-item" key={social.id}>
+                <li className="ui-list-item social-row" key={social.id}>
+                  <span className="social-row__icon">
+                    <PlatformIcon platform={social.platform} />
+                  </span>
                   <span className="ui-list-item__main">
-                    <strong>
-                      <FiInstagram aria-hidden="true" /> {label(social.platform)}
-                    </strong>
-                    <span>{social.profileUrl}</span>
+                    <strong>{label(social.platform)}</strong>
+                    <span>{String(social.profileUrl || "").replace(/^https?:\/\/(www\.)?/, "")}</span>
                   </span>
                   <span className="ui-list-item__side">
                     {social.followerCount !== null &&
                       social.followerCount !== undefined && (
-                        <span className="ui-badge">
-                          {social.followerCount} abonnés
+                        <span className="social-row__count">
+                          <strong>{compactNumber(social.followerCount)}</strong> abonnés
                         </span>
                       )}
                     <a

@@ -1,34 +1,59 @@
 const prisma = require("../config/prisma");
 const { sendPrismaError } = require("../utils/prismaErrors");
 
+const DEFAULT_PAGE = 1;
+const DEFAULT_LIMIT = 20;
+const MAX_LIMIT = 100;
+
+function normalizePagination(query) {
+  const page = Math.max(parseInt(query.page, 10) || DEFAULT_PAGE, 1);
+  const limit = Math.min(
+    Math.max(parseInt(query.limit, 10) || DEFAULT_LIMIT, 1),
+    MAX_LIMIT,
+  );
+  return { page, limit, skip: (page - 1) * limit };
+}
+
 /**
  * Récupérer les notifications de l'utilisateur connecté.
+ * Supporte la pagination, le filtrage par type et par état de lecture.
  */
-
 async function getMyNotifications(req, res) {
   try {
     const userId = req.user.id;
+    const { page, limit, skip } = normalizePagination(req.query);
 
-    const [notifications, unreadCount] = await Promise.all([
+    const { type, isRead } = req.query;
+
+    const where = { userId };
+
+    if (type) {
+      where.type = type;
+    }
+
+    if (isRead !== undefined) {
+      where.isRead = isRead === "true";
+    }
+
+    const [notifications, unreadCount, total] = await Promise.all([
       prisma.notification.findMany({
-        where: {
-          userId,
-        },
-        orderBy: {
-          createdAt: "desc",
-        },
-        take: 50,
+        where,
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: limit,
         select: {
           id: true,
-          collaborationId: true,
           type: true,
           title: true,
           message: true,
+          link: true,
           isRead: true,
           readAt: true,
           createdAt: true,
-
-          // Informations liées à une candidature.
+          announcementId: true,
+          applicationId: true,
+          invitationId: true,
+          collaborationId: true,
           application: {
             select: {
               id: true,
@@ -41,71 +66,61 @@ async function getMyNotifications(req, res) {
               },
             },
           },
-
-          // Informations liées à une invitation.
           invitation: {
             select: {
               id: true,
               status: true,
-              message: true,
-              proposedAmount: true,
-              currency: true,
-              respondedAt: true,
-              createdAt: true,
-
               campaign: {
                 select: {
                   id: true,
                   title: true,
-                  companyProfile: {
-                    select: {
-                      id: true,
-                      companyName: true,
-                      logoUrl: true,
-                    },
-                  },
-                },
-              },
-
-              creatorProfile: {
-                select: {
-                  id: true,
-                  displayName: true,
-                  profileImageUrl: true,
                 },
               },
             },
           },
+          collaboration: {
+            select: {
+              id: true,
+              status: true,
+            },
+          },
+          announcement: {
+            select: {
+              id: true,
+              title: true,
+              status: true,
+            },
+          },
         },
       }),
-
       prisma.notification.count({
-        where: {
-          userId,
-          isRead: false,
-        },
+        where: { ...where, isRead: false },
       }),
+      prisma.notification.count({ where }),
     ]);
 
     return res.status(200).json({
       success: true,
-      count: notifications.length,
-      unreadCount,
+      message: "Notifications récupérées avec succès.",
       notifications,
+      unreadCount,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
     });
   } catch (error) {
     if (sendPrismaError(res, error)) {
       return;
     }
 
-    console.error(
-      "Erreur lors de la récupération des notifications :",
-      error
-    );
+    console.error("Erreur lors de la récupération des notifications :", error.message);
 
     return res.status(500).json({
       success: false,
-      message: "Impossible de récupérer les notifications.",
+      message: "Une erreur est survenue lors de la récupération des notifications.",
     });
   }
 }
@@ -116,18 +131,11 @@ async function getMyNotifications(req, res) {
 async function markNotificationAsRead(req, res) {
   try {
     const userId = req.user.id;
-    const notificationId = req.params.id;
+    const { id } = req.params;
 
-    // La notification doit appartenir à l'utilisateur connecté.
     const notification = await prisma.notification.findFirst({
-      where: {
-        id: notificationId,
-        userId,
-      },
-      select: {
-        id: true,
-        isRead: true,
-      },
+      where: { id, userId },
+      select: { id: true, isRead: true },
     });
 
     if (!notification) {
@@ -140,13 +148,52 @@ async function markNotificationAsRead(req, res) {
     if (notification.isRead) {
       return res.status(200).json({
         success: true,
-        message: "Cette notification est déjà lue.",
+        message: "La notification est déjà marquée comme lue.",
+        notification: { id: notification.id, isRead: true },
       });
     }
 
+    const updated = await prisma.notification.update({
+      where: { id },
+      data: {
+        isRead: true,
+        readAt: new Date(),
+      },
+      select: {
+        id: true,
+        isRead: true,
+        readAt: true,
+      },
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Notification marquée comme lue.",
+      notification: updated,
+    });
+  } catch (error) {
+    if (sendPrismaError(res, error)) {
+      return;
+    }
+
+    console.error("Erreur lors du marquage de la notification :", error.message);
+
+    return res.status(500).json({
+      success: false,
+      message: "Une erreur est survenue lors du marquage de la notification.",
+    });
+  }
+}
+
+/**
+ * Marquer toutes les notifications de l'utilisateur comme lues.
+ */
+async function markAllNotificationsAsRead(req, res) {
+  try {
+    const userId = req.user.id;
+
     await prisma.notification.updateMany({
       where: {
-        id: notificationId,
         userId,
         isRead: false,
       },
@@ -158,7 +205,7 @@ async function markNotificationAsRead(req, res) {
 
     return res.status(200).json({
       success: true,
-      message: "Notification marquée comme lue.",
+      message: "Toutes les notifications ont été marquées comme lues.",
     });
   } catch (error) {
     if (sendPrismaError(res, error)) {
@@ -166,51 +213,13 @@ async function markNotificationAsRead(req, res) {
     }
 
     console.error(
-      "Erreur lors du marquage de la notification :",
-      error,
+      "Erreur lors du marquage global des notifications :",
+      error.message,
     );
 
     return res.status(500).json({
       success: false,
-      message: "Impossible de modifier la notification.",
-    });
-  }
-}
-
-/**
- * Marquer toutes les notifications de l'utilisateur comme lues.
- */
-async function markAllNotificationsAsRead(req, res) {
-  try {
-    const result = await prisma.notification.updateMany({
-      where: {
-        userId: req.user.id,
-        isRead: false,
-      },
-      data: {
-        isRead: true,
-        readAt: new Date(),
-      },
-    });
-
-    return res.status(200).json({
-      success: true,
-      message: "Vos notifications ont été marquées comme lues.",
-      updatedCount: result.count,
-    });
-  } catch (error) {
-    if (sendPrismaError(res, error)) {
-      return;
-    }
-
-    console.error(
-      "Erreur lors du marquage des notifications :",
-      error,
-    );
-
-    return res.status(500).json({
-      success: false,
-      message: "Impossible de marquer les notifications comme lues.",
+      message: "Une erreur est survenue lors du marquage des notifications.",
     });
   }
 }

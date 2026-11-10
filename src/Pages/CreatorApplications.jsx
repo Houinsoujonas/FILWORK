@@ -24,7 +24,9 @@ export default function CreatorApplications() {
   };
 
   useEffect(() => {
-    load();
+    (async () => {
+      await load();
+    })();
   }, []);
 
   const withdraw = async (application) => {

@@ -1,5 +1,6 @@
 const prisma = require("../config/prisma");
 const { sendPrismaError } = require("../utils/prismaErrors");
+const { createNotification, buildLink } = require("../services/notificationService");
 const { lockCampaign } = require("../services/collaborationLock");
 const { findUnknownFields } = require("../utils/validation");
 
@@ -224,7 +225,9 @@ async function submitApplication(req, res) {
               title: true,
               companyProfile: {
                 select: {
+                  id: true,
                   companyName: true,
+                  userId: true,
                 },
               },
             },
@@ -262,6 +265,49 @@ async function submitApplication(req, res) {
         message:
           "Une invitation active existe déjà pour cette campagne. Répondez à cette invitation avant de candidater.",
       });
+    }
+
+    // La candidature est validée : notifier l'entreprise hors transaction.
+    // Une notification créée dans la transaction ne verrait pas la ligne
+    // encore non commitée (violation de clé étrangère).
+    const application = outcome.application;
+    const companyUserId = application.campaign.companyProfile.userId;
+    const companyName = application.campaign.companyProfile.companyName;
+    const creatorDisplayName =
+      application.creatorProfile.displayName || "Un créateur";
+    const campaignPath = `/espace/entreprise/campagnes/${application.campaign.id}`;
+
+    try {
+      const companyUser = await prisma.user.findUnique({
+        where: { id: companyUserId },
+        select: { email: true },
+      });
+
+      await createNotification({
+        userId: companyUserId,
+        type: "COLLABORATION_PROPOSED",
+        title: "Nouvelle candidature",
+        message:
+          creatorDisplayName +
+          " a candidaté à votre campagne « " +
+          application.campaign.title +
+          " ».",
+        link: campaignPath,
+        applicationId: application.id,
+        email: companyUser
+          ? {
+              to: companyUser.email,
+              template: "new_application",
+              displayName: companyName || undefined,
+              creatorName: creatorDisplayName,
+              campaignTitle: application.campaign.title,
+              link: buildLink(campaignPath),
+              preferenceCategory: "collaborationEmails",
+            }
+          : undefined,
+      });
+    } catch (notifError) {
+      console.error("Erreur notification candidature:", notifError.message);
     }
 
     return res.status(201).json({

@@ -132,12 +132,23 @@ try {
 
 const app = require("./app");
 const prisma = require("./config/prisma");
+const {
+  startEmailOutboxWorker,
+  stopEmailOutboxWorker,
+} = require("./services/emailOutboxWorker");
 
 const server = app.listen(PORT, HOST, () => {
   console.log(`[FILWORK] Environnement : ${process.env.NODE_ENV || "development"}`);
   console.log(`[FILWORK] Base de données : ${maskTarget(databaseTarget)}`);
   console.log(`Serveur FILWORK démarré sur le port ${PORT}`);
   console.log(`Vérification : http://localhost:${PORT}/api/health`);
+
+  // Le traitement de la file d'envoi est désactivé en mode test pour ne pas
+  // interférer avec les assertions (aucun SMTP réel n'y est configuré).
+  if (!isTest && process.env.EMAIL_OUTBOX_ENABLED !== "false") {
+    startEmailOutboxWorker();
+    console.log("[FILWORK] Processeur de la file d'e-mails démarré.");
+  }
 });
 
 server.on("error", (error) => {
@@ -164,6 +175,8 @@ function shutdown(signal) {
   }
 
   shuttingDown = true;
+
+  stopEmailOutboxWorker();
 
   console.log(`[FILWORK] Arrêt demandé (${signal}).`);
 

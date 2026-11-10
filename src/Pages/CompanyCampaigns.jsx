@@ -28,7 +28,9 @@ export default function CompanyCampaigns() {
   };
 
   useEffect(() => {
-    load();
+    (async () => {
+      await load();
+    })();
   }, []);
 
   const act = async (campaign, action, confirmation) => {

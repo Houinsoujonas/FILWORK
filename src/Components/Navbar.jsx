@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, NavLink } from "react-router-dom";
 import { FiArrowRight, FiGrid, FiMenu, FiX } from "react-icons/fi";
 
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/useAuth";
 import { homeForRole } from "../lib/format";
 
 const navLinks = [

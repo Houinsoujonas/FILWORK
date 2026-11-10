@@ -48,6 +48,9 @@ enum NotificationType {
   PAYMENT_STATUS_UPDATED
   COLLABORATION_COMPLETED
   COLLABORATION_CANCELLED
+
+  ANNOUNCEMENT
+  COLLABORATION_PROPOSED
 }
 
 enum CollaborationStatus {
@@ -105,6 +108,8 @@ model User {
   notifications       Notification[]
   passwordResetTokens PasswordResetToken[]
   reviewResponses     ReviewResponse[]
+  notificationPreference NotificationPreference?
+  announcements       Announcement[]
   tokenVersion Int @default(0)
 }
 
@@ -246,10 +251,12 @@ model Notification {
   applicationId   String?
   invitationId    String?
   collaborationId String?
+  announcementId  String?
 
   type    NotificationType
   title   String
   message String           @db.Text
+  link    String?
 
   isRead Boolean   @default(false)
   readAt DateTime?
@@ -260,11 +267,13 @@ model Notification {
   application   Application?  @relation(fields: [applicationId], references: [id], onDelete: SetNull)
   invitation    Invitation?   @relation(fields: [invitationId], references: [id], onDelete: SetNull)
   collaboration Collaboration? @relation(fields: [collaborationId], references: [id], onDelete: SetNull)
+  announcement  Announcement? @relation(fields: [announcementId], references: [id], onDelete: SetNull)
 
   @@index([userId, isRead, createdAt])
   @@index([applicationId])
   @@index([invitationId])
   @@index([collaborationId])
+  @@index([announcementId])
 }
 
 model Collaboration {
@@ -350,7 +359,8 @@ model Payment {
 model PasswordResetToken {
   id        String    @id @default(cuid())
   userId    String
-  tokenHash String    @unique
+  codeHash  String    @unique
+  attempts  Int       @default(0)
   expiresAt DateTime
   usedAt    DateTime?
   createdAt DateTime  @default(now())
@@ -439,4 +449,75 @@ model ReviewResponse {
   author User   @relation(fields: [authorId], references: [id], onDelete: Restrict)
 
   @@index([authorId])
+}
+
+enum AnnouncementAudience {
+  ALL
+  CREATORS
+  COMPANIES
+}
+
+enum AnnouncementStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+model Announcement {
+  id          String             @id @default(cuid())
+  title       String
+  body        String             @db.Text
+  audience    AnnouncementAudience @default(ALL)
+  status      AnnouncementStatus @default(DRAFT)
+  linkUrl     String?
+  createdById String
+  createdBy   User               @relation(fields: [createdById], references: [id])
+  publishedAt DateTime?
+  expiresAt   DateTime?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  notifications Notification[]
+
+  @@index([status, publishedAt])
+  @@index([audience])
+}
+
+enum EmailOutboxStatus {
+  PENDING
+  PROCESSING
+  SENT
+  FAILED
+}
+
+model EmailOutbox {
+  id        String   @id @default(cuid())
+  to        String
+  subject   String
+  template  String
+  payload   Json
+  status    EmailOutboxStatus @default(PENDING)
+  attempts  Int      @default(0)
+  maxAttempts Int   @default(5)
+  lastError String?  @db.Text
+  nextAttemptAt DateTime @default(now())
+  sentAt    DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, nextAttemptAt])
+  @@index([to, createdAt])
+}
+
+model NotificationPreference {
+  id            String @id @default(cuid())
+  userId        String @unique
+  user          User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  collaborationEmails Boolean @default(true)
+  announcementEmails  Boolean @default(true)
+  notificationEmails  Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

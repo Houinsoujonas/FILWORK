@@ -38,7 +38,9 @@ export default function CompanyInvitations() {
   };
 
   useEffect(() => {
-    load();
+    (async () => {
+      await load();
+    })();
   }, []);
 
   const withdraw = async (invitation) => {

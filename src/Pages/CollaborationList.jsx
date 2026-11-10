@@ -21,26 +21,26 @@ export default function CollaborationList() {
   useEffect(() => {
     let active = true;
 
-    setLoading(true);
-    setError("");
+    (async () => {
+      setLoading(true);
+      setError("");
 
-    api
-      .get("/collaborations")
-      .then((data) => {
+      try {
+        const data = await api.get("/collaborations");
+
         if (active) {
           setCollaborations(data.collaborations || []);
         }
-      })
-      .catch((requestError) => {
+      } catch (requestError) {
         if (active) {
           setError(errorMessage(requestError));
         }
-      })
-      .finally(() => {
+      } finally {
         if (active) {
           setLoading(false);
         }
-      });
+      }
+    })();
 
     return () => {
       active = false;

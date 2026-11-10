@@ -26,33 +26,33 @@ export default function AdminUsers() {
   useEffect(() => {
     let active = true;
 
-    setLoading(true);
-    setError("");
+    (async () => {
+      setLoading(true);
+      setError("");
 
-    api
-      .get("/admin/users", {
-        search: search || undefined,
-        role: role || undefined,
-        page,
-        limit: 20,
-      })
-      .then((data) => {
+      try {
+        const data = await api.get("/admin/users", {
+          search: search || undefined,
+          role: role || undefined,
+          page,
+          limit: 20,
+        });
+
         if (active) {
           setUsers(data.users || []);
           setPagination(data.pagination || null);
         }
-      })
-      .catch((requestError) => {
+      } catch (requestError) {
         if (active) {
           setError(errorMessage(requestError));
           setUsers([]);
         }
-      })
-      .finally(() => {
+      } finally {
         if (active) {
           setLoading(false);
         }
-      });
+      }
+    })();
 
     return () => {
       active = false;

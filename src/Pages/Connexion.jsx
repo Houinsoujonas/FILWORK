@@ -12,7 +12,7 @@ import {
 } from "react-icons/fi";
 
 import connectImage from "../assets/connect.jpg";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/useAuth";
 import { errorMessage } from "../lib/api";
 import { homeForRole } from "../lib/format";
 

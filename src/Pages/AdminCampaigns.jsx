@@ -27,33 +27,33 @@ export default function AdminCampaigns() {
   useEffect(() => {
     let active = true;
 
-    setLoading(true);
-    setError("");
+    (async () => {
+      setLoading(true);
+      setError("");
 
-    api
-      .get("/admin/campaigns", {
-        search: search || undefined,
-        status: status || undefined,
-        page,
-        limit: 20,
-      })
-      .then((data) => {
+      try {
+        const data = await api.get("/admin/campaigns", {
+          search: search || undefined,
+          status: status || undefined,
+          page,
+          limit: 20,
+        });
+
         if (active) {
           setCampaigns(data.campaigns || []);
           setPagination(data.pagination || null);
         }
-      })
-      .catch((requestError) => {
+      } catch (requestError) {
         if (active) {
           setError(errorMessage(requestError));
           setCampaigns([]);
         }
-      })
-      .finally(() => {
+      } finally {
         if (active) {
           setLoading(false);
         }
-      });
+      }
+    })();
 
     return () => {
       active = false;

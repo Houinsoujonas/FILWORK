@@ -19,7 +19,7 @@ import {
   Panel,
   Stat,
 } from "../Components/AppUI";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/useAuth";
 import { api, errorMessage } from "../lib/api";
 import {
   collaborationAmount,
@@ -117,7 +117,9 @@ export default function CollaborationDetail() {
   }, [id]);
 
   useEffect(() => {
-    load();
+    (async () => {
+      await load();
+    })();
   }, [load]);
 
   const run = async (key, action, successMessage) => {

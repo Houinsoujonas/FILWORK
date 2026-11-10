@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { Alert, Field, Loading, Page, Panel } from "../Components/AppUI";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/useAuth";
 import { api, errorMessage } from "../lib/api";
 import { isPlaceholderName } from "../lib/profileIdentity";
 
@@ -27,16 +27,18 @@ export default function CompanyProfilePage() {
   const [success, setSuccess] = useState("");
 
   useEffect(() => {
-    if (profile) {
-      setForm({
-        ...EMPTY,
-        ...Object.fromEntries(
-          Object.keys(EMPTY).map((key) => [key, profile[key] ?? ""]),
-        ),
-      });
-    }
+    (async () => {
+      if (profile) {
+        setForm({
+          ...EMPTY,
+          ...Object.fromEntries(
+            Object.keys(EMPTY).map((key) => [key, profile[key] ?? ""]),
+          ),
+        });
+      }
 
-    setLoading(false);
+      setLoading(false);
+    })();
   }, [profile]);
 
   const handleChange = (event) => {

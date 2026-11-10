@@ -32,33 +32,33 @@ export default function AdminPayments() {
   useEffect(() => {
     let active = true;
 
-    setLoading(true);
-    setError("");
+    (async () => {
+      setLoading(true);
+      setError("");
 
-    api
-      .get("/admin/payments", {
-        status: status || undefined,
-        origin: origin || undefined,
-        page,
-        limit: 20,
-      })
-      .then((data) => {
+      try {
+        const data = await api.get("/admin/payments", {
+          status: status || undefined,
+          origin: origin || undefined,
+          page,
+          limit: 20,
+        });
+
         if (active) {
           setPayments(data.payments || []);
           setPagination(data.pagination || null);
         }
-      })
-      .catch((requestError) => {
+      } catch (requestError) {
         if (active) {
           setError(errorMessage(requestError));
           setPayments([]);
         }
-      })
-      .finally(() => {
+      } finally {
         if (active) {
           setLoading(false);
         }
-      });
+      }
+    })();
 
     return () => {
       active = false;

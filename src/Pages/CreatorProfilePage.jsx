@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { FiPlus, FiTrash2 } from "react-icons/fi";
 
 import { Alert, Badge, Field, Loading, Page, Panel } from "../Components/AppUI";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/useAuth";
 import { api, errorMessage } from "../lib/api";
 import { formatNumber, label } from "../lib/format";
 import { isPlaceholderName } from "../lib/profileIdentity";
@@ -56,19 +56,21 @@ export default function CreatorProfilePage() {
   const [portfolioBusy, setPortfolioBusy] = useState(false);
 
   useEffect(() => {
-    if (profile) {
-      setForm({
-        ...EMPTY_PROFILE,
-        ...Object.fromEntries(
-          Object.keys(EMPTY_PROFILE).map((key) => [
-            key,
-            profile[key] ?? (key === "startingRate" ? "" : EMPTY_PROFILE[key]),
-          ]),
-        ),
-      });
-    }
+    (async () => {
+      if (profile) {
+        setForm({
+          ...EMPTY_PROFILE,
+          ...Object.fromEntries(
+            Object.keys(EMPTY_PROFILE).map((key) => [
+              key,
+              profile[key] ?? (key === "startingRate" ? "" : EMPTY_PROFILE[key]),
+            ]),
+          ),
+        });
+      }
 
-    setLoading(false);
+      setLoading(false);
+    })();
   }, [profile]);
 
   const handleChange = (event) => {

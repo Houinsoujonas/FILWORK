@@ -1,6 +1,6 @@
 import { Navigate, useLocation } from "react-router-dom";
 
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/useAuth";
 import { homeForRole } from "../lib/format";
 
 export default function ProtectedRoute({ roles, children }) {

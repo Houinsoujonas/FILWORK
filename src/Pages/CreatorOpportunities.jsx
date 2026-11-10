@@ -27,31 +27,31 @@ export default function CreatorOpportunities() {
   useEffect(() => {
     let active = true;
 
-    setLoading(true);
-    setError("");
+    (async () => {
+      setLoading(true);
+      setError("");
 
-    api
-      .get("/campaigns", {
-        search: search || undefined,
-        platform: platform || undefined,
-        limit: 50,
-      })
-      .then((data) => {
+      try {
+        const data = await api.get("/campaigns", {
+          search: search || undefined,
+          platform: platform || undefined,
+          limit: 50,
+        });
+
         if (active) {
           setCampaigns(data.campaigns || []);
         }
-      })
-      .catch((requestError) => {
+      } catch (requestError) {
         if (active) {
           setError(errorMessage(requestError));
           setCampaigns([]);
         }
-      })
-      .finally(() => {
+      } finally {
         if (active) {
           setLoading(false);
         }
-      });
+      }
+    })();
 
     return () => {
       active = false;

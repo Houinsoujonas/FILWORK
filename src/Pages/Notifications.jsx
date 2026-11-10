@@ -11,8 +11,10 @@ import {
   FiSend,
 } from "react-icons/fi";
 
+
 import { Alert, Loading, Page, Panel } from "../Components/AppUI";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/useAuth";
+
 import { api, errorMessage } from "../lib/api";
 import { formatDateTime } from "../lib/format";
 
@@ -51,12 +53,14 @@ const TYPE_LABELS = {
   INVITATION_ACCEPTED: "Invitation acceptée",
   INVITATION_REJECTED: "Invitation refusée",
   INVITATION_WITHDRAWN: "Invitation retirée",
+  COLLABORATION_PROPOSED: "Proposition de collaboration",
   DELIVERABLE_SUBMITTED: "Livrable soumis",
   DELIVERABLE_APPROVED: "Livrable approuvé",
   DELIVERABLE_REVISION_REQUESTED: "Révision demandée",
   PAYMENT_STATUS_UPDATED: "Paiement mis à jour",
   COLLABORATION_COMPLETED: "Collaboration terminée",
   COLLABORATION_CANCELLED: "Collaboration annulée",
+  ANNOUNCEMENT: "Annonce",
 };
 
 export default function Notifications() {
@@ -75,23 +79,38 @@ export default function Notifications() {
         ? "/administration"
         : "/espace/createur";
 
-  const load = async () => {
-    setLoading(true);
-    setError("");
-
-    try {
-      const data = await api.get("/notifications");
-      setNotifications(data.notifications || []);
-      setUnreadCount(data.unreadCount || 0);
-    } catch (requestError) {
-      setError(errorMessage(requestError));
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    load();
+    let active = true;
+
+    (async () => {
+      setLoading(true);
+      setError("");
+
+      try {
+        const data = await api.get("/notifications");
+
+        if (!active) {
+          return;
+        }
+
+        setNotifications(data.notifications || []);
+        setUnreadCount(data.unreadCount || 0);
+      } catch (requestError) {
+        if (!active) {
+          return;
+        }
+
+        setError(errorMessage(requestError));
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   const markRead = async (notification) => {
@@ -140,6 +159,8 @@ export default function Notifications() {
   };
 
   const linkFor = (notification) => {
+    const announcementId =
+      notification.announcementId || notification.announcement?.id;
     const collaborationId =
       notification.collaborationId || notification.collaboration?.id;
     const invitationId =
@@ -149,6 +170,10 @@ export default function Notifications() {
     const campaignId =
       notification.application?.campaign?.id ||
       notification.invitation?.campaign?.id;
+
+    if (announcementId) {
+      return `${roleBase}/annonces`;
+    }
 
     if (user?.role === "ADMIN") {
       if (collaborationId) {

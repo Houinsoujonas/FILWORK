@@ -30,33 +30,33 @@ export default function AdminCollaborations() {
   useEffect(() => {
     let active = true;
 
-    setLoading(true);
-    setError("");
+    (async () => {
+      setLoading(true);
+      setError("");
 
-    api
-      .get("/admin/collaborations", {
-        status: status || undefined,
-        origin: origin || undefined,
-        page,
-        limit: 20,
-      })
-      .then((data) => {
+      try {
+        const data = await api.get("/admin/collaborations", {
+          status: status || undefined,
+          origin: origin || undefined,
+          page,
+          limit: 20,
+        });
+
         if (active) {
           setCollaborations(data.collaborations || []);
           setPagination(data.pagination || null);
         }
-      })
-      .catch((requestError) => {
+      } catch (requestError) {
         if (active) {
           setError(errorMessage(requestError));
           setCollaborations([]);
         }
-      })
-      .finally(() => {
+      } finally {
         if (active) {
           setLoading(false);
         }
-      });
+      }
+    })();
 
     return () => {
       active = false;

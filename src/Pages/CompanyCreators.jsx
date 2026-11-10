@@ -1,10 +1,13 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { FiSearch, FiSend } from "react-icons/fi";
 
 import { Alert, Loading, Page, Panel } from "../Components/AppUI";
 import CreatorCard from "../Components/CreatorCard";
 import Pagination from "../Components/Pagination";
-import { api, errorMessage } from "../lib/api";
+import { api } from "../lib/api";
+import { useApiQuery } from "../lib/useApiQuery";
+
+const EMPTY_CREATORS = { creators: [], pagination: null };
 
 const AVAILABILITY = [
   ["", "Toutes les disponibilités"],
@@ -32,57 +35,32 @@ export default function CompanyCreators() {
     platform: "",
   });
   const [page, setPage] = useState(1);
-  const [creators, setCreators] = useState([]);
-  const [pagination, setPagination] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
 
-  useEffect(() => {
-    let active = true;
+  const { data, loading, error } = useApiQuery(
+    () =>
+      api
+        .get("/creators", {
+          search: filters.search || undefined,
+          niche: filters.niche.trim() || undefined,
+          availabilityStatus: filters.availabilityStatus || undefined,
+          platform: filters.platform || undefined,
+          page,
+          limit: 12,
+        })
+        .then((response) => ({
+          creators: response.creators || [],
+          pagination: {
+            page: response.page || page,
+            totalPages: response.totalPages || 1,
+            total: response.total,
+          },
+        })),
+    [filters, page],
+    EMPTY_CREATORS,
+  );
 
-    setLoading(true);
-    setError("");
-
-    api
-      .get("/creators", {
-        search: filters.search || undefined,
-        niche: filters.niche.trim() || undefined,
-        availabilityStatus: filters.availabilityStatus || undefined,
-        platform: filters.platform || undefined,
-        page,
-        limit: 12,
-      })
-      .then((data) => {
-        if (!active) {
-          return;
-        }
-
-        setCreators(data.creators || []);
-        setPagination({
-          page: data.page || page,
-          totalPages: data.totalPages || 1,
-          total: data.total,
-        });
-      })
-      .catch((requestError) => {
-        if (!active) {
-          return;
-        }
-
-        setError(errorMessage(requestError));
-        setCreators([]);
-        setPagination(null);
-      })
-      .finally(() => {
-        if (active) {
-          setLoading(false);
-        }
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [filters, page]);
+  const creators = data.creators;
+  const pagination = data.pagination;
 
   const applyFilters = (event) => {
     event.preventDefault();

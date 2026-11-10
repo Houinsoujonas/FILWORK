@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
   FiEdit,
@@ -23,77 +23,99 @@ import {
 import { api, errorMessage } from "../lib/api";
 import { formatDate, formatMoney, label } from "../lib/format";
 
+async function fetchCampaignBundle(campaignId) {
+  const [campaignData, applicationsData, invitationsData] = await Promise.all([
+    api.get("/campaigns/my-campaigns"),
+    api.get(`/applications/campaigns/${campaignId}`).catch((requestError) => {
+      if (requestError?.status === 404) {
+        return { applications: [] };
+      }
+      throw requestError;
+    }),
+    api.get("/invitations/sent").catch(() => ({ invitations: [] })),
+  ]);
+
+  const campaign = (campaignData.campaigns || []).find(
+    (item) => item.id === campaignId,
+  );
+
+  if (!campaign) {
+    throw new Error("Campagne introuvable ou accès non autorisé.");
+  }
+
+  const defaults = {};
+
+  for (const application of applicationsData.applications || []) {
+    if (application.status === "PENDING") {
+      defaults[application.id] =
+        campaign.budget !== null && campaign.budget !== undefined
+          ? String(campaign.budget)
+          : "";
+    }
+  }
+
+  return {
+    campaign,
+    applications: applicationsData.applications || [],
+    invitations: (invitationsData.invitations || []).filter(
+      (invitation) => invitation.campaign?.id === campaignId,
+    ),
+    defaults,
+  };
+}
+
 export default function CompanyCampaignDetail() {
   const { id } = useParams();
   const [campaign, setCampaign] = useState(null);
   const [applications, setApplications] = useState([]);
   const [invitations, setInvitations] = useState([]);
   const [amounts, setAmounts] = useState({});
-  const [loading, setLoading] = useState(true);
+  const [loadedId, setLoadedId] = useState(null);
   const [error, setError] = useState("");
   const [feedback, setFeedback] = useState("");
   const [feedbackType, setFeedbackType] = useState("info");
   const [busy, setBusy] = useState("");
 
-  const load = async () => {
-    setLoading(true);
-    setError("");
+  const loading = loadedId !== id;
 
+  const applyBundle = useCallback((bundle) => {
+    setCampaign(bundle.campaign);
+    setApplications(bundle.applications);
+    setInvitations(bundle.invitations);
+    setAmounts((current) => ({ ...bundle.defaults, ...current }));
+  }, []);
+
+  const load = useCallback(async () => {
     try {
-      const [campaignData, applicationsData, invitationsData] =
-        await Promise.all([
-          api.get("/campaigns/my-campaigns"),
-          api.get(`/applications/campaigns/${id}`).catch((requestError) => {
-            if (requestError?.status === 404) {
-              return { applications: [] };
-            }
-            throw requestError;
-          }),
-          api
-            .get("/invitations/sent")
-            .catch(() => ({ invitations: [] })),
-        ]);
-
-      const ownCampaign = (campaignData.campaigns || []).find(
-        (item) => item.id === id,
-      );
-
-      if (!ownCampaign) {
-        throw new Error("Campagne introuvable ou accès non autorisé.");
-      }
-
-      setCampaign(ownCampaign);
-      setApplications(applicationsData.applications || []);
-      setInvitations(
-        (invitationsData.invitations || []).filter(
-          (invitation) => invitation.campaign?.id === id,
-        ),
-      );
-
-      const defaults = {};
-
-      for (const application of applicationsData.applications || []) {
-        if (application.status === "PENDING") {
-          defaults[application.id] =
-            ownCampaign.budget !== null &&
-            ownCampaign.budget !== undefined
-              ? String(ownCampaign.budget)
-              : "";
-        }
-      }
-
-      setAmounts((current) => ({ ...defaults, ...current }));
+      applyBundle(await fetchCampaignBundle(id));
+      setLoadedId(id);
     } catch (requestError) {
       setError(errorMessage(requestError));
-    } finally {
-      setLoading(false);
+      setLoadedId(id);
     }
-  };
+  }, [applyBundle, id]);
 
   useEffect(() => {
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+    let active = true;
+
+    fetchCampaignBundle(id)
+      .then((bundle) => {
+        if (active) {
+          applyBundle(bundle);
+          setLoadedId(id);
+        }
+      })
+      .catch((requestError) => {
+        if (active) {
+          setError(errorMessage(requestError));
+          setLoadedId(id);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [applyBundle, id]);
 
   const notify = (type, message) => {
     setFeedbackType(type);

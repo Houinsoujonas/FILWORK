@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
   FiArrowLeft,
@@ -9,50 +9,27 @@ import {
 } from "react-icons/fi";
 
 import EmptyState from "../Components/EmptyState";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/useAuth";
 import { api, errorMessage } from "../lib/api";
 import { formatDate, formatMoney, label } from "../lib/format";
+import { useApiQuery } from "../lib/useApiQuery";
 
 export default function CampagneDetail() {
   const { campaignId } = useParams();
   const { user, loading: authLoading } = useAuth();
-  const [campaign, setCampaign] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [feedback, setFeedback] = useState("");
   const [feedbackType, setFeedbackType] = useState("info");
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
-    let active = true;
-
-    setLoading(true);
-
-    api
-      .get(`/campaigns/${campaignId}`, undefined, { auth: false })
-      .then((data) => {
-        if (active) {
-          setCampaign(data.campaign);
-          setError("");
-        }
-      })
-      .catch((requestError) => {
-        if (active) {
-          setCampaign(null);
-          setError(errorMessage(requestError));
-        }
-      })
-      .finally(() => {
-        if (active) {
-          setLoading(false);
-        }
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [campaignId]);
+  const { data: campaign, loading, error } = useApiQuery(
+    () =>
+      api
+        .get(`/campaigns/${campaignId}`, undefined, { auth: false })
+        .then((data) => data.campaign),
+    [campaignId],
+    null,
+  );
 
   const handleApply = async (event) => {
     event.preventDefault();
@@ -124,7 +101,7 @@ export default function CampagneDetail() {
 
       <div className="public-detail-company">
         {campaign.companyProfile?.logoUrl ? (
-          <img src={campaign.companyProfile.logoUrl} alt="" />
+          <img src={campaign.companyProfile.logoUrl} alt="" decoding="async" />
         ) : (
           <span className="ui-avatar">
             {String(campaign.companyProfile?.companyName || "F")[0]}

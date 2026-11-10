@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import {
   FiEye,
   FiEyeOff,
@@ -12,20 +12,23 @@ import {
 } from "react-icons/fi";
 
 import connectImage from "../assets/connect.jpg";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/useAuth";
 import { errorMessage } from "../lib/api";
 import { homeForRole } from "../lib/format";
 
 function Connexion() {
-  const [accountType, setAccountType] = useState("creator");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [submitMessage, setSubmitMessage] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const { login } = useAuth();
+  const { login, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
+  if (user) {
+    return <Navigate to={homeForRole(user.role)} replace />;
+  }
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -172,61 +175,12 @@ function Connexion() {
               )}
 
               <fieldset className="login-account">
-                <legend>Vous êtes sur FILWORK en tant que...</legend>
+                <legend>Votre compte FILWORK</legend>
 
-                <div className="login-account__options">
-                  <button
-                    type="button"
-                    className={`login-account__option ${
-                      accountType === "creator"
-                        ? "login-account__option--active"
-                        : ""
-                    }`}
-                    aria-pressed={accountType === "creator"}
-                    onClick={() => setAccountType("creator")}
-                  >
-                    <span className="login-account__icon">
-                      <FiCamera aria-hidden="true" />
-                    </span>
-
-                    <span className="login-account__text">
-                      <strong>Créateur</strong>
-                      <small>Je crée du contenu</small>
-                    </span>
-
-                    <span className="login-account__check">
-                      {accountType === "creator" && (
-                        <FiCheck aria-hidden="true" />
-                      )}
-                    </span>
-                  </button>
-
-                  <button
-                    type="button"
-                    className={`login-account__option ${
-                      accountType === "business"
-                        ? "login-account__option--active"
-                        : ""
-                    }`}
-                    aria-pressed={accountType === "business"}
-                    onClick={() => setAccountType("business")}
-                  >
-                    <span className="login-account__icon">
-                      <FiBriefcase aria-hidden="true" />
-                    </span>
-
-                    <span className="login-account__text">
-                      <strong>Entreprise</strong>
-                      <small>Je cherche des talents</small>
-                    </span>
-
-                    <span className="login-account__check">
-                      {accountType === "business" && (
-                        <FiCheck aria-hidden="true" />
-                      )}
-                    </span>
-                  </button>
-                </div>
+                <p className="login-account__hint">
+                  Le type de compte est déterminé par vos identifiants. Utilisez
+                  l’adresse liée à votre espace créateur ou entreprise.
+                </p>
               </fieldset>
 
               <div className="login-field">

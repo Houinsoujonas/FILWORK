@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
   FiArrowLeft,
@@ -10,77 +10,57 @@ import {
 } from "react-icons/fi";
 
 import EmptyState from "../Components/EmptyState";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/useAuth";
 import { api, errorMessage } from "../lib/api";
 import { formatMoney, label } from "../lib/format";
+import { useApiQuery } from "../lib/useApiQuery";
 
 export default function CreateurProfil() {
   const { creatorId } = useParams();
   const { user, loading: authLoading } = useAuth();
   const isCompany = user?.role === "COMPANY";
-  const [creator, setCreator] = useState(null);
-  const [campaigns, setCampaigns] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
   const [form, setForm] = useState({
     campaignId: "",
     proposedAmount: "",
     message: "",
   });
+  const [seededCreatorId, setSeededCreatorId] = useState(null);
   const [feedback, setFeedback] = useState("");
   const [feedbackType, setFeedbackType] = useState("info");
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
-    if (!isCompany) {
-      return undefined;
-    }
-
-    let active = true;
-
-    setLoading(true);
-    setError("");
-
-    Promise.all([
-      api.get(`/creators/${creatorId}`),
-      api.get("/campaigns/my-campaigns").catch(() => ({ campaigns: [] })),
-    ])
-      .then(([creatorData, campaignData]) => {
-        if (!active) {
-          return;
-        }
-
-        setCreator(creatorData.creator);
-
-        const published = (campaignData.campaigns || []).filter(
+  const { data, loading, error } = useApiQuery(
+    () =>
+      Promise.all([
+        api.get(`/creators/${creatorId}`),
+        api.get("/campaigns/my-campaigns").catch(() => ({ campaigns: [] })),
+      ]).then(([creatorData, campaignData]) => ({
+        creator: creatorData.creator,
+        campaigns: (campaignData.campaigns || []).filter(
           (campaign) => campaign.status === "PUBLISHED",
-        );
+        ),
+      })),
+    [creatorId],
+    { creator: null, campaigns: [] },
+    { enabled: isCompany },
+  );
 
-        setCampaigns(published);
-        setForm((current) => ({
-          ...current,
-          campaignId: current.campaignId || published[0]?.id || "",
-          proposedAmount:
-            current.proposedAmount ||
-            (published[0]?.budget ? String(published[0].budget) : ""),
-        }));
-      })
-      .catch((requestError) => {
-        if (active) {
-          setError(errorMessage(requestError));
-          setCreator(null);
-        }
-      })
-      .finally(() => {
-        if (active) {
-          setLoading(false);
-        }
-      });
+  const creator = data.creator;
+  const campaigns = data.campaigns;
 
-    return () => {
-      active = false;
-    };
-  }, [creatorId, isCompany]);
+  // Le formulaire reprend la première campagne publiée dès que la liste
+  // arrive. L'ajustement est fait pendant le rendu, une seule fois par
+  // créateur, pour éviter un effet de synchronisation.
+  if (campaigns.length > 0 && seededCreatorId !== creatorId) {
+    setSeededCreatorId(creatorId);
+    setForm((current) => ({
+      ...current,
+      campaignId: current.campaignId || campaigns[0].id || "",
+      proposedAmount:
+        current.proposedAmount ||
+        (campaigns[0].budget ? String(campaigns[0].budget) : ""),
+    }));
+  }
 
   const selectedCampaign =
     campaigns.find((campaign) => campaign.id === form.campaignId) || null;
@@ -188,6 +168,7 @@ export default function CreateurProfil() {
             className="ui-avatar"
             src={creator.profileImageUrl}
             alt=""
+            decoding="async"
           />
         ) : (
           <span className="ui-avatar">

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 import {
   FiArrowLeft,
   FiBriefcase,
@@ -8,7 +8,7 @@ import {
   FiEyeOff,
 } from "react-icons/fi";
 
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/useAuth";
 import { errorMessage } from "../lib/api";
 import { homeForRole } from "../lib/format";
 
@@ -19,8 +19,12 @@ function Inscription() {
   const [submitMessage, setSubmitMessage] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const { register } = useAuth();
+  const { register, user } = useAuth();
   const navigate = useNavigate();
+
+  if (user) {
+    return <Navigate to={homeForRole(user.role)} replace />;
+  }
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -69,7 +73,7 @@ function Inscription() {
     <main className="register-page">
       <div className="register-container">
         <Link to="/" className="register-brand" aria-label="FILWORK, accueil">
-          <img src="/filwork-logo.svg" alt="" />
+          <img src="/filwork-logo.svg" alt="" width={254} height={56} />
         </Link>
 
         <div className="register-heading">

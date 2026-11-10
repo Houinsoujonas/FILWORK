@@ -5,6 +5,11 @@ import { Alert, Badge, Loading, Page, Panel } from "../Components/AppUI";
 import { api, errorMessage } from "../lib/api";
 import { formatDate, formatMoney } from "../lib/format";
 
+async function fetchReceivedInvitations() {
+  const data = await api.get("/invitations/received");
+  return data.invitations || [];
+}
+
 export default function CreatorInvitations() {
   const [invitations, setInvitations] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -13,19 +18,39 @@ export default function CreatorInvitations() {
   const [busyId, setBusyId] = useState("");
   const [createdCollaboration, setCreatedCollaboration] = useState(null);
 
-  const load = () => {
-    setLoading(true);
-    setError("");
-
-    return api
-      .get("/invitations/received")
-      .then((data) => setInvitations(data.invitations || []))
-      .catch((requestError) => setError(errorMessage(requestError)))
-      .finally(() => setLoading(false));
+  const load = async () => {
+    try {
+      setInvitations(await fetchReceivedInvitations());
+      setError("");
+    } catch (requestError) {
+      setError(errorMessage(requestError));
+    }
   };
 
   useEffect(() => {
-    load();
+    let active = true;
+
+    fetchReceivedInvitations()
+      .then((items) => {
+        if (active) {
+          setInvitations(items);
+          setError("");
+        }
+      })
+      .catch((requestError) => {
+        if (active) {
+          setError(errorMessage(requestError));
+        }
+      })
+      .finally(() => {
+        if (active) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   const respond = async (invitation, status) => {

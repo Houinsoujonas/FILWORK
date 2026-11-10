@@ -7,7 +7,7 @@ color: var(--color-text, #f5f3ee);
 }
 
 .creator-categories__container {
-width: min(1280px, calc(100% - 64px));
+width: min(1240px, calc(100% - 64px));
 margin: 0 auto;
 }
 

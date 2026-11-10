@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { FiPlus, FiTrash2 } from "react-icons/fi";
 
 import { Alert, Badge, Field, Loading, Page, Panel } from "../Components/AppUI";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/useAuth";
 import { api, errorMessage } from "../lib/api";
 import { formatNumber, label } from "../lib/format";
 import { isPlaceholderName } from "../lib/profileIdentity";
@@ -33,10 +33,25 @@ const SOCIAL_PLATFORMS = [
   "TWITCH",
 ];
 
+function formFromProfile(profile) {
+  return {
+    ...EMPTY_PROFILE,
+    ...Object.fromEntries(
+      Object.keys(EMPTY_PROFILE).map((key) => [
+        key,
+        profile[key] ??
+          (key === "startingRate" ? "" : EMPTY_PROFILE[key]),
+      ]),
+    ),
+  };
+}
+
 export default function CreatorProfilePage() {
-  const { profile, refreshProfile } = useAuth();
-  const [form, setForm] = useState(EMPTY_PROFILE);
-  const [loading, setLoading] = useState(!profile);
+  const { profile, refreshProfile, loading: authLoading } = useAuth();
+  const [form, setForm] = useState(() =>
+    profile ? formFromProfile(profile) : EMPTY_PROFILE,
+  );
+  const [syncedProfile, setSyncedProfile] = useState(profile ?? null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -55,21 +70,14 @@ export default function CreatorProfilePage() {
   });
   const [portfolioBusy, setPortfolioBusy] = useState(false);
 
-  useEffect(() => {
-    if (profile) {
-      setForm({
-        ...EMPTY_PROFILE,
-        ...Object.fromEntries(
-          Object.keys(EMPTY_PROFILE).map((key) => [
-            key,
-            profile[key] ?? (key === "startingRate" ? "" : EMPTY_PROFILE[key]),
-          ]),
-        ),
-      });
-    }
+  const loading = authLoading && !profile;
 
-    setLoading(false);
-  }, [profile]);
+  // Le profil peut être rechargé après une sauvegarde : on recale le
+  // formulaire pendant le rendu plutôt que dans un effet.
+  if (profile && profile !== syncedProfile) {
+    setSyncedProfile(profile);
+    setForm(formFromProfile(profile));
+  }
 
   const handleChange = (event) => {
     const { name, value } = event.target;

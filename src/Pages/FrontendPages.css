@@ -122,9 +122,9 @@
   flex:none
 }
 .listing-page {
-  max-width:1280px;
+  max-width:none;
   margin:auto;
-  padding-inline:clamp(20px,5vw,64px)
+  padding-inline:max(calc((100% - 1240px)/2),clamp(26px,5vw,50px))
 }
 .listing-heading {
   padding:20px 0 44px

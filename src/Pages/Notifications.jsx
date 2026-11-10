@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { FiBell, FiCheck, FiCheckCircle } from "react-icons/fi";
 
 import { Alert, Badge, Loading, Page, Panel } from "../Components/AppUI";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/useAuth";
 import { api, errorMessage } from "../lib/api";
 import { formatDateTime } from "../lib/format";
 
@@ -38,23 +38,32 @@ export default function Notifications() {
         ? "/administration"
         : "/espace/createur";
 
-  const load = async () => {
-    setLoading(true);
-    setError("");
-
-    try {
-      const data = await api.get("/notifications");
-      setNotifications(data.notifications || []);
-      setUnreadCount(data.unreadCount || 0);
-    } catch (requestError) {
-      setError(errorMessage(requestError));
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    load();
+    let active = true;
+
+    api
+      .get("/notifications")
+      .then((data) => {
+        if (active) {
+          setNotifications(data.notifications || []);
+          setUnreadCount(data.unreadCount || 0);
+          setError("");
+        }
+      })
+      .catch((requestError) => {
+        if (active) {
+          setError(errorMessage(requestError));
+        }
+      })
+      .finally(() => {
+        if (active) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   const markRead = async (notification) => {

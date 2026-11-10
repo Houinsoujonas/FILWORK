@@ -123,7 +123,7 @@ export function Avatar({ name, src }) {
     .join("");
 
   if (src) {
-    return <img className="ui-avatar" src={src} alt="" />;
+    return <img className="ui-avatar" src={src} alt="" loading="lazy" decoding="async" />;
   }
 
   return <span className="ui-avatar">{text || "F"}</span>;

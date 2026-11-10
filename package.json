@@ -8,7 +8,7 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test": "node --test tests/profileIdentity.test.js tests/frontendIsolation.test.js"
+    "test": "node --test tests/profileIdentity.test.js tests/frontendIsolation.test.js tests/frontendRegressions.test.js"
   },
   "dependencies": {
     "framer-motion": "^14.4.0",

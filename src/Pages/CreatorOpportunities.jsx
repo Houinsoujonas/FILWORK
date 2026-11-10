@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { FiSearch } from "react-icons/fi";
 
 import { Alert, Loading, Page } from "../Components/AppUI";
-import { api, errorMessage } from "../lib/api";
+import { api } from "../lib/api";
 import { formatDate, formatMoney, label } from "../lib/format";
+import { useApiQuery } from "../lib/useApiQuery";
 
 const PLATFORMS = [
   ["", "Toutes les plateformes"],
@@ -20,43 +21,19 @@ export default function CreatorOpportunities() {
   const [query, setQuery] = useState("");
   const [search, setSearch] = useState("");
   const [platform, setPlatform] = useState("");
-  const [campaigns, setCampaigns] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
 
-  useEffect(() => {
-    let active = true;
-
-    setLoading(true);
-    setError("");
-
-    api
-      .get("/campaigns", {
-        search: search || undefined,
-        platform: platform || undefined,
-        limit: 50,
-      })
-      .then((data) => {
-        if (active) {
-          setCampaigns(data.campaigns || []);
-        }
-      })
-      .catch((requestError) => {
-        if (active) {
-          setError(errorMessage(requestError));
-          setCampaigns([]);
-        }
-      })
-      .finally(() => {
-        if (active) {
-          setLoading(false);
-        }
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [search, platform]);
+  const { data: campaigns, loading, error } = useApiQuery(
+    () =>
+      api
+        .get("/campaigns", {
+          search: search || undefined,
+          platform: platform || undefined,
+          limit: 50,
+        })
+        .then((response) => response.campaigns || []),
+    [search, platform],
+    [],
+  );
 
   return (
     <Page

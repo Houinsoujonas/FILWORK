@@ -11,7 +11,7 @@ export default function CampaignCard({ campaign, to }) {
       <div className="public-card__top">
         <span className="public-card__company">
           {campaign.companyProfile?.logoUrl ? (
-            <img src={campaign.companyProfile.logoUrl} alt="" />
+            <img src={campaign.companyProfile.logoUrl} alt="" loading="lazy" decoding="async" />
           ) : (
             <span className="ui-avatar">
               {String(campaign.companyProfile?.companyName || "F")[0]}

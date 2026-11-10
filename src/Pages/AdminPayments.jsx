@@ -1,9 +1,12 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { Alert, Badge, Loading, Page, Panel } from "../Components/AppUI";
 import Pagination from "../Components/Pagination";
-import { api, errorMessage } from "../lib/api";
+import { api } from "../lib/api";
 import { formatDate, formatMoney } from "../lib/format";
+import { useApiQuery } from "../lib/useApiQuery";
+
+const EMPTY_PAYMENTS = { payments: [], pagination: null };
 
 const STATUSES = [
   ["", "Tous les statuts"],
@@ -24,46 +27,21 @@ export default function AdminPayments() {
   const [status, setStatus] = useState("");
   const [origin, setOrigin] = useState("");
   const [page, setPage] = useState(1);
-  const [payments, setPayments] = useState([]);
-  const [pagination, setPagination] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
 
-  useEffect(() => {
-    let active = true;
-
-    setLoading(true);
-    setError("");
-
-    api
-      .get("/admin/payments", {
+  const { data, loading, error } = useApiQuery(
+    () =>
+      api.get("/admin/payments", {
         status: status || undefined,
         origin: origin || undefined,
         page,
         limit: 20,
-      })
-      .then((data) => {
-        if (active) {
-          setPayments(data.payments || []);
-          setPagination(data.pagination || null);
-        }
-      })
-      .catch((requestError) => {
-        if (active) {
-          setError(errorMessage(requestError));
-          setPayments([]);
-        }
-      })
-      .finally(() => {
-        if (active) {
-          setLoading(false);
-        }
-      });
+      }),
+    [status, origin, page],
+    EMPTY_PAYMENTS,
+  );
 
-    return () => {
-      active = false;
-    };
-  }, [status, origin, page]);
+  const payments = data.payments;
+  const pagination = data.pagination;
 
   return (
     <Page

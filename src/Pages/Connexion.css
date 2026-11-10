@@ -524,6 +524,13 @@ grid-template-columns: repeat(2, minmax(0, 1fr));
 gap: 11px;
 }
 
+.login-account__hint {
+  margin: 0;
+  color: #a9a196;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
 .login-account__option {
 position: relative;
 display: flex;
@@ -1042,12 +1049,17 @@ TABLETTES ET MOBILES
 ========================================= */
 
 @media (max-width: 800px) {
-.login-page {
-align-items: flex-start;
-min-height: 100vh;
-padding: 20px;
-overflow: auto;
-}
+  .login-page {
+    align-items: flex-start;
+    min-height: 100vh;
+    padding: 20px;
+    overflow: auto;
+  }
+
+  .login-page__ambient {
+    right: 0;
+    width: min(460px, 100%);
+  }
 
 .login-layout {
 grid-template-columns: minmax(0, 1fr);

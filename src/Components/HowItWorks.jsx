@@ -15,6 +15,8 @@ const steps = [
     number: "01",
     icon: FiUserPlus,
     image: hero2a,
+    imageWidth: 736,
+    imageHeight: 981,
     title: "Créez votre profil",
     description:
       "Présentez votre activité, vos compétences et vos ambitions pour permettre aux entreprises ou aux créateurs de mieux vous connaître.",
@@ -24,6 +26,8 @@ const steps = [
     number: "02",
     icon: FiSearch,
     image: hero3,
+    imageWidth: 736,
+    imageHeight: 1104,
     title: "Trouvez la bonne opportunité",
     description:
       "Explorez les campagnes, découvrez des profils pertinents et identifiez les collaborations qui correspondent à vos objectifs.",
@@ -33,6 +37,8 @@ const steps = [
     number: "03",
     icon: FiUsers,
     image: hero4,
+    imageWidth: 1024,
+    imageHeight: 1024,
     title: "Donnez vie aux projets",
     description:
       "Entrez en contact avec les bons partenaires, suivez les livrables et faites avancer vos collaborations sur Filwork.",
@@ -149,7 +155,10 @@ function HowItWorks() {
                     className="how-it-works__image"
                     src={step.image}
                     alt={step.title}
+                    width={step.imageWidth}
+                    height={step.imageHeight}
                     loading="lazy"
+                    decoding="async"
                   />
 
                   <div

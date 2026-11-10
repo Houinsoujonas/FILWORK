@@ -5,6 +5,11 @@ import { Alert, Badge, Loading, Page, Panel } from "../Components/AppUI";
 import { api, errorMessage } from "../lib/api";
 import { formatDate, formatMoney } from "../lib/format";
 
+async function fetchMyApplications() {
+  const data = await api.get("/applications/my-applications");
+  return data.applications || [];
+}
+
 export default function CreatorApplications() {
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -12,19 +17,39 @@ export default function CreatorApplications() {
   const [success, setSuccess] = useState("");
   const [busyId, setBusyId] = useState("");
 
-  const load = () => {
-    setLoading(true);
-    setError("");
-
-    return api
-      .get("/applications/my-applications")
-      .then((data) => setApplications(data.applications || []))
-      .catch((requestError) => setError(errorMessage(requestError)))
-      .finally(() => setLoading(false));
+  const load = async () => {
+    try {
+      setApplications(await fetchMyApplications());
+      setError("");
+    } catch (requestError) {
+      setError(errorMessage(requestError));
+    }
   };
 
   useEffect(() => {
-    load();
+    let active = true;
+
+    fetchMyApplications()
+      .then((items) => {
+        if (active) {
+          setApplications(items);
+          setError("");
+        }
+      })
+      .catch((requestError) => {
+        if (active) {
+          setError(errorMessage(requestError));
+        }
+      })
+      .finally(() => {
+        if (active) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   const withdraw = async (application) => {

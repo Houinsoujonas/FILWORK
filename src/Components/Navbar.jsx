@@ -2,6 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import { Link, NavLink } from "react-router-dom";
 import { FiArrowRight, FiMenu, FiX } from "react-icons/fi";
 
+import { useAuth } from "../context/useAuth";
+import { homeForRole } from "../lib/format";
+
 const navLinks = [
   { label: "Accueil", path: "/" },
   { label: "Créateur", path: "/createurs" },
@@ -13,7 +16,7 @@ const navLinks = [
 function FilworkLogo() {
   return (
     <Link to="/" className="filwork-logo" aria-label="Filwork, accueil">
-      <img src="/filwork-logo.svg" alt="" />
+      <img src="/filwork-logo.svg" alt="" width={254} height={56} />
     </Link>
   );
 }
@@ -22,6 +25,7 @@ function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const headerRef = useRef(null);
   const menuToggleRef = useRef(null);
+  const { user } = useAuth();
 
   const closeMenu = () => {
     setMenuOpen(false);
@@ -101,21 +105,33 @@ function Navbar() {
             </div>
 
             <div className="navbar__actions">
-              <a
-                href="/connexion"
-                className="navbar__action navbar__login"
-                onClick={closeMenu}
-              >
-                Se connecter
-              </a>
+              {user ? (
+                <Link
+                  to={homeForRole(user.role)}
+                  className="navbar__action navbar__signup"
+                  onClick={closeMenu}
+                >
+                  <span>Mon espace</span>
+                </Link>
+              ) : (
+                <>
+                  <Link
+                    to="/connexion"
+                    className="navbar__action navbar__login"
+                    onClick={closeMenu}
+                  >
+                    Se connecter
+                  </Link>
 
-              <a
-                href="/inscription"
-                className="navbar__action navbar__signup"
-                onClick={closeMenu}
-              >
-                <span>Commencer</span>
-              </a>
+                  <Link
+                    to="/inscription"
+                    className="navbar__action navbar__signup"
+                    onClick={closeMenu}
+                  >
+                    <span>Commencer</span>
+                  </Link>
+                </>
+              )}
             </div>
           </nav>
         </div>

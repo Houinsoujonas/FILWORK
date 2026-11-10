@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 
 import { Alert, Badge, Loading, Page, Panel } from "../Components/AppUI";
-import { api, errorMessage } from "../lib/api";
+import { api } from "../lib/api";
+import { useApiQuery } from "../lib/useApiQuery";
 import {
   collaborationAmount,
   collaborationCampaign,
@@ -14,38 +14,11 @@ import {
 export default function CollaborationList() {
   const { pathname } = useLocation();
   const basePath = pathname.replace(/\/collaborations\/?$/, "/collaborations");
-  const [collaborations, setCollaborations] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    let active = true;
-
-    setLoading(true);
-    setError("");
-
-    api
-      .get("/collaborations")
-      .then((data) => {
-        if (active) {
-          setCollaborations(data.collaborations || []);
-        }
-      })
-      .catch((requestError) => {
-        if (active) {
-          setError(errorMessage(requestError));
-        }
-      })
-      .finally(() => {
-        if (active) {
-          setLoading(false);
-        }
-      });
-
-    return () => {
-      active = false;
-    };
-  }, []);
+  const { data: collaborations, loading, error } = useApiQuery(
+    () => api.get("/collaborations").then((data) => data.collaborations || []),
+    [],
+    [],
+  );
 
   return (
     <Page

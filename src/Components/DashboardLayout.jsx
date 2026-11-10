@@ -15,9 +15,10 @@ import {
   FiX,
 } from "react-icons/fi";
 
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/useAuth";
 import { api } from "../lib/api";
 import { initials } from "../lib/format";
+import "../Pages/WorkspaceTheme.css";
 
 const navigation = {
   creator: {
@@ -108,7 +109,7 @@ export default function DashboardLayout({ role }) {
           to={config.home}
           aria-label="FILWORK, espace de travail"
         >
-          <img src="/filwork-logo.svg" alt="" />
+          <img src="/filwork-logo.svg" alt="" width={254} height={56} />
         </Link>
         <p className="workspace__role">{config.name}</p>
         <nav className="workspace__nav" aria-label="Navigation de l’espace">

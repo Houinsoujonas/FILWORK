@@ -6,6 +6,11 @@ import { Alert, Badge, Loading, Page, Panel } from "../Components/AppUI";
 import { api, errorMessage } from "../lib/api";
 import { formatDate, formatMoney } from "../lib/format";
 
+async function fetchMyCampaigns() {
+  const data = await api.get("/campaigns/my-campaigns");
+  return data.campaigns || [];
+}
+
 export default function CompanyCampaigns() {
   const [campaigns, setCampaigns] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -14,21 +19,38 @@ export default function CompanyCampaigns() {
   const [busy, setBusy] = useState("");
 
   const load = async () => {
-    setLoading(true);
-    setError("");
-
     try {
-      const data = await api.get("/campaigns/my-campaigns");
-      setCampaigns(data.campaigns || []);
+      setCampaigns(await fetchMyCampaigns());
+      setError("");
     } catch (requestError) {
       setError(errorMessage(requestError));
-    } finally {
-      setLoading(false);
     }
   };
 
   useEffect(() => {
-    load();
+    let active = true;
+
+    fetchMyCampaigns()
+      .then((items) => {
+        if (active) {
+          setCampaigns(items);
+          setError("");
+        }
+      })
+      .catch((requestError) => {
+        if (active) {
+          setError(errorMessage(requestError));
+        }
+      })
+      .finally(() => {
+        if (active) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   const act = async (campaign, action, confirmation) => {

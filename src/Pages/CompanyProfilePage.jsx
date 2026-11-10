@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { Alert, Field, Loading, Page, Panel } from "../Components/AppUI";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/useAuth";
 import { api, errorMessage } from "../lib/api";
 import { isPlaceholderName } from "../lib/profileIdentity";
 
@@ -18,26 +18,33 @@ const EMPTY = {
   city: "",
 };
 
+function formFromProfile(profile) {
+  return {
+    ...EMPTY,
+    ...Object.fromEntries(
+      Object.keys(EMPTY).map((key) => [key, profile[key] ?? ""]),
+    ),
+  };
+}
+
 export default function CompanyProfilePage() {
-  const { profile, refreshProfile } = useAuth();
-  const [form, setForm] = useState(EMPTY);
-  const [loading, setLoading] = useState(!profile);
+  const { profile, refreshProfile, loading: authLoading } = useAuth();
+  const [form, setForm] = useState(() =>
+    profile ? formFromProfile(profile) : EMPTY,
+  );
+  const [syncedProfile, setSyncedProfile] = useState(profile ?? null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  useEffect(() => {
-    if (profile) {
-      setForm({
-        ...EMPTY,
-        ...Object.fromEntries(
-          Object.keys(EMPTY).map((key) => [key, profile[key] ?? ""]),
-        ),
-      });
-    }
+  const loading = authLoading && !profile;
 
-    setLoading(false);
-  }, [profile]);
+  // Le profil peut être rechargé après une sauvegarde : on recale le
+  // formulaire pendant le rendu plutôt que dans un effet.
+  if (profile && profile !== syncedProfile) {
+    setSyncedProfile(profile);
+    setForm(formFromProfile(profile));
+  }
 
   const handleChange = (event) => {
     const { name, value } = event.target;

@@ -1,20 +1,12 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { api, clearToken, getToken, setToken } from "../lib/api";
-
-const AuthContext = createContext(null);
+import { AuthContext } from "./useAuth";
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => Boolean(getToken()));
 
   const loadProfile = useCallback(async () => {
     try {
@@ -27,32 +19,44 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  const loadSession = useCallback(async () => {
-    if (!getToken()) {
-      setUser(null);
-      setProfile(null);
-      setLoading(false);
-      return null;
-    }
-
-    try {
-      const data = await api.get("/auth/me");
-      setUser(data.user);
-      await loadProfile();
-      return data.user;
-    } catch {
-      clearToken();
-      setUser(null);
-      setProfile(null);
-      return null;
-    } finally {
-      setLoading(false);
-    }
-  }, [loadProfile]);
-
   useEffect(() => {
+    let active = true;
+
+    async function loadSession() {
+      if (!getToken()) {
+        return;
+      }
+
+      try {
+        const data = await api.get("/auth/me");
+
+        if (!active) {
+          return;
+        }
+
+        setUser(data.user);
+        await loadProfile();
+
+        if (active) {
+          setLoading(false);
+        }
+      } catch {
+        clearToken();
+
+        if (active) {
+          setUser(null);
+          setProfile(null);
+          setLoading(false);
+        }
+      }
+    }
+
     loadSession();
-  }, [loadSession]);
+
+    return () => {
+      active = false;
+    };
+  }, [loadProfile]);
 
   useEffect(() => {
     const handleUnauthorized = () => {
@@ -139,14 +143,4 @@ export function AuthProvider({ children }) {
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}
-
-export function useAuth() {
-  const context = useContext(AuthContext);
-
-  if (!context) {
-    throw new Error("useAuth doit être utilisé dans un AuthProvider.");
-  }
-
-  return context;
 }

@@ -1,5 +1,5 @@
 .footer {
-padding: 75px 6% 25px;
+padding: 75px max(50px, calc((100% - 1240px) / 2)) 25px;
 border-top: 1px solid #242424;
 background: #080808;
 color: #f5f3ee;
@@ -104,7 +104,7 @@ align-items: center;
 gap: 10px;
 }
 
-.footer__socials a {
+.footer__socials .footer__social {
 display: grid;
   width: 44px;
   height: 44px;
@@ -114,16 +114,12 @@ border-radius: 10px;
 color: #bcb6ab;
 font-size: 16px;
 text-decoration: none;
-transition:
-color 0.25s ease,
-border-color 0.25s ease,
-background 0.25s ease;
 }
 
-.footer__socials a:hover {
-border-color: #8f6c36;
-background: rgba(214, 163, 84, 0.08);
-color: #d6a354;
+.footer__social-note {
+  margin: 10px 0 0;
+  color: #928d84;
+  font-size: 11px;
 }
 
 .footer a:focus-visible {
@@ -136,8 +132,8 @@ border-radius: 3px;
 
 @media (max-width: 1000px) {
 .footer {
-padding-right: 5%;
-padding-left: 5%;
+padding-right: clamp(26px, 5vw, 50px);
+padding-left: clamp(26px, 5vw, 50px);
 }
 
 .footer__main {

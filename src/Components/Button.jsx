@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 
 function Button({
   children,
@@ -26,11 +27,11 @@ function Button({
     .join(" ");
 
   const isLink = Boolean(to) && !disabled && !loading;
-  const Element = isLink ? "a" : "button";
+  const Element = isLink ? Link : "button";
   return (
     <Element
       type={isLink ? undefined : type}
-      href={isLink ? to : undefined}
+      to={isLink ? to : undefined}
       className={classes}
       onClick={onClick}
       {...(!isLink ? { disabled: disabled || loading } : {})}

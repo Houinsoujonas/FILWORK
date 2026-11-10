@@ -278,6 +278,10 @@ function CircularCarousel({
                 <img
                   src={item.image ?? item.src ?? item.url}
                   alt={item.alt ?? item.title ?? item.name ?? ""}
+                  width={item.imageWidth}
+                  height={item.imageHeight}
+                  loading="lazy"
+                  decoding="async"
                   draggable="false"
                 />
 

@@ -1,10 +1,13 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { FiExternalLink, FiSearch } from "react-icons/fi";
 
 import { Alert, Badge, Loading, Page, Panel } from "../Components/AppUI";
 import Pagination from "../Components/Pagination";
-import { api, errorMessage } from "../lib/api";
+import { api } from "../lib/api";
 import { formatDate } from "../lib/format";
+import { useApiQuery } from "../lib/useApiQuery";
+
+const EMPTY_DELIVERABLES = { deliverables: [], pagination: null };
 
 const STATUSES = [
   ["", "Tous les statuts"],
@@ -19,46 +22,21 @@ export default function AdminDeliverables() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
   const [page, setPage] = useState(1);
-  const [deliverables, setDeliverables] = useState([]);
-  const [pagination, setPagination] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
 
-  useEffect(() => {
-    let active = true;
-
-    setLoading(true);
-    setError("");
-
-    api
-      .get("/admin/deliverables", {
+  const { data, loading, error } = useApiQuery(
+    () =>
+      api.get("/admin/deliverables", {
         search: search || undefined,
         status: status || undefined,
         page,
         limit: 20,
-      })
-      .then((data) => {
-        if (active) {
-          setDeliverables(data.deliverables || []);
-          setPagination(data.pagination || null);
-        }
-      })
-      .catch((requestError) => {
-        if (active) {
-          setError(errorMessage(requestError));
-          setDeliverables([]);
-        }
-      })
-      .finally(() => {
-        if (active) {
-          setLoading(false);
-        }
-      });
+      }),
+    [search, status, page],
+    EMPTY_DELIVERABLES,
+  );
 
-    return () => {
-      active = false;
-    };
-  }, [search, status, page]);
+  const deliverables = data.deliverables;
+  const pagination = data.pagination;
 
   return (
     <Page

@@ -1,9 +1,12 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { FiSearch } from "react-icons/fi";
 
 import CampaignCard from "../Components/CampaignCard";
 import EmptyState from "../Components/EmptyState";
-import { api, errorMessage } from "../lib/api";
+import { api } from "../lib/api";
+import { useApiQuery } from "../lib/useApiQuery";
+
+const EMPTY_CAMPAIGNS = { campaigns: [], total: 0, totalPages: 1 };
 
 const PLATFORMS = [
   ["", "Toutes les plateformes"],
@@ -20,51 +23,27 @@ export default function Campagnes() {
   const [search, setSearch] = useState("");
   const [platform, setPlatform] = useState("");
   const [page, setPage] = useState(1);
-  const [campaigns, setCampaigns] = useState([]);
-  const [meta, setMeta] = useState({ total: 0, totalPages: 1 });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
 
-  useEffect(() => {
-    let active = true;
+  const { data, loading, error } = useApiQuery(
+    () =>
+      api
+        .get("/campaigns", {
+          search: search || undefined,
+          platform: platform || undefined,
+          page,
+          limit: 9,
+        })
+        .then((response) => ({
+          campaigns: response.campaigns || [],
+          total: response.total ?? response.count ?? 0,
+          totalPages: response.totalPages ?? 1,
+        })),
+    [search, platform, page],
+    EMPTY_CAMPAIGNS,
+  );
 
-    setLoading(true);
-    setError("");
-
-    api
-      .get("/campaigns", {
-        search: search || undefined,
-        platform: platform || undefined,
-        page,
-        limit: 9,
-      })
-      .then((data) => {
-        if (!active) {
-          return;
-        }
-
-        setCampaigns(data.campaigns || []);
-        setMeta({
-          total: data.total ?? data.count ?? 0,
-          totalPages: data.totalPages ?? 1,
-        });
-      })
-      .catch((requestError) => {
-        if (active) {
-          setError(errorMessage(requestError));
-          setCampaigns([]);
-        }
-      })
-      .finally(() => {
-        if (active) {
-          setLoading(false);
-        }
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [search, platform, page]);
+  const campaigns = data.campaigns;
+  const meta = { total: data.total, totalPages: data.totalPages };
 
   const handleSearch = (event) => {
     event.preventDefault();

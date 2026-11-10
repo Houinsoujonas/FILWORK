@@ -29,16 +29,22 @@ const creatorGallery = [
     src: creatorDesk,
     alt: "Outils et espace de travail d’une créatrice de contenu",
     label: "Développer son univers",
+    width: 1200,
+    height: 1600,
   },
   {
     src: creatorStudio,
     alt: "Mise en place d'une production créative",
     label: "Production visuelle",
+    width: 736,
+    height: 1099,
   },
   {
     src: creatorTeam,
     alt: "Équipe créative travaillant sur une campagne",
     label: "Collaboration de marque",
+    width: 736,
+    height: 1104,
   },
 ];
 
@@ -71,9 +77,16 @@ function Createur() {
           ))}
         </div>
         <div className="creator-guide__gallery">
-          {creatorGallery.map(({ src, alt, label }) => (
+          {creatorGallery.map(({ src, alt, label, width, height }) => (
             <figure className="creator-guide__photo" key={label}>
-              <img src={src} alt={alt} loading="lazy" />
+              <img
+                src={src}
+                alt={alt}
+                width={width}
+                height={height}
+                loading="lazy"
+                decoding="async"
+              />
               <figcaption>{label}</figcaption>
             </figure>
           ))}

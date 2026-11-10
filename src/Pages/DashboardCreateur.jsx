@@ -9,7 +9,7 @@ import {
 } from "react-icons/fi";
 
 import { Alert, Badge, Loading, Page, Panel, Stat } from "../Components/AppUI";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/useAuth";
 import { api } from "../lib/api";
 import { formatDate } from "../lib/format";
 import { getCreatorIdentity } from "../lib/profileIdentity";

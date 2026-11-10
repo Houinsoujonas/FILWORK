@@ -56,7 +56,10 @@ function CreateurHero() {
           <img
             src={creatorVisual}
             alt="Une créatrice prépare du contenu pour une marque"
+            width={1067}
+            height={1333}
             fetchPriority="high"
+            decoding="async"
           />
           <figcaption>
             <span aria-hidden="true" />

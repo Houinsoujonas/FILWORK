@@ -1,10 +1,13 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { FiSearch } from "react-icons/fi";
 
 import { Alert, Badge, Loading, Page, Panel } from "../Components/AppUI";
 import Pagination from "../Components/Pagination";
-import { api, errorMessage } from "../lib/api";
+import { api } from "../lib/api";
 import { formatDate, formatMoney } from "../lib/format";
+import { useApiQuery } from "../lib/useApiQuery";
+
+const EMPTY_CAMPAIGNS = { campaigns: [], pagination: null };
 
 const STATUSES = [
   ["", "Tous les statuts"],
@@ -19,46 +22,21 @@ export default function AdminCampaigns() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
   const [page, setPage] = useState(1);
-  const [campaigns, setCampaigns] = useState([]);
-  const [pagination, setPagination] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
 
-  useEffect(() => {
-    let active = true;
-
-    setLoading(true);
-    setError("");
-
-    api
-      .get("/admin/campaigns", {
+  const { data, loading, error } = useApiQuery(
+    () =>
+      api.get("/admin/campaigns", {
         search: search || undefined,
         status: status || undefined,
         page,
         limit: 20,
-      })
-      .then((data) => {
-        if (active) {
-          setCampaigns(data.campaigns || []);
-          setPagination(data.pagination || null);
-        }
-      })
-      .catch((requestError) => {
-        if (active) {
-          setError(errorMessage(requestError));
-          setCampaigns([]);
-        }
-      })
-      .finally(() => {
-        if (active) {
-          setLoading(false);
-        }
-      });
+      }),
+    [search, status, page],
+    EMPTY_CAMPAIGNS,
+  );
 
-    return () => {
-      active = false;
-    };
-  }, [search, status, page]);
+  const campaigns = data.campaigns;
+  const pagination = data.pagination;
 
   return (
     <Page

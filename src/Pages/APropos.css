@@ -416,6 +416,11 @@
   font-size: .84rem;
 }
 
+/* Les panneaux empilés partagent la même gouttière pour aligner leurs textes. */
+.about-page > :is(.about-hero, .about-origin, .about-section, .about-story, .about-journey, .about-audiences, .about-team, .about-status, .about-callout) {
+  padding: clamp(24px, 4vw, 54px);
+}
+
 @media (max-width: 900px) {
   .about-page > .about-hero,
   .about-page > .about-story { grid-template-columns: minmax(0, 1fr); }

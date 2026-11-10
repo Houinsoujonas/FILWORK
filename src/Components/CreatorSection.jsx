@@ -22,6 +22,8 @@ const creatorImages = [
     id: 1,
     src: creator,
     alt: "Créateur de contenu présentant son univers créatif",
+    imageWidth: 1067,
+    imageHeight: 1333,
     title: "Exprimez votre créativité",
     description:
       "Présentez votre univers, vos réalisations et les compétences qui rendent votre profil unique.",
@@ -31,6 +33,8 @@ const creatorImages = [
     id: 2,
     src: creat2,
     alt: "Production visuelle et création de contenu",
+    imageWidth: 736,
+    imageHeight: 1099,
     title: "Trouvez des opportunités",
     description:
       "Découvrez des campagnes et des projets professionnels qui correspondent à votre talent.",
@@ -40,6 +44,8 @@ const creatorImages = [
     id: 3,
     src: creat3,
     alt: "Collaboration autour d'un projet créatif",
+    imageWidth: 736,
+    imageHeight: 1104,
     title: "Collaborez avec des marques",
     description:
       "Mettez votre créativité au service des entreprises et donnez vie à des projets concrets.",
@@ -49,6 +55,8 @@ const creatorImages = [
     id: 4,
     src: creat4,
     alt: "Créateur développant son activité professionnelle",
+    imageWidth: 1200,
+    imageHeight: 1600,
     title: "Développez votre réseau",
     description:
       "Construisez des relations professionnelles et multipliez vos possibilités de collaboration.",
@@ -284,7 +292,14 @@ function CreatorSection() {
               }}
             >
               <div className="creator-section__image-frame">
-                <img src={image.src} alt={image.alt} loading="lazy" />
+                <img
+                  src={image.src}
+                  alt={image.alt}
+                  width={image.imageWidth}
+                  height={image.imageHeight}
+                  loading="lazy"
+                  decoding="async"
+                />
 
                 <span className="creator-section__image-number">
                   {image.number}

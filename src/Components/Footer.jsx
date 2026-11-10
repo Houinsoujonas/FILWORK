@@ -1,4 +1,5 @@
 import { useLayoutEffect, useRef } from "react";
+import { Link } from "react-router-dom";
 import {
   FiInstagram,
   FiLinkedin,
@@ -79,41 +80,68 @@ function Footer() {
           {" "}
           <div className="footer__brand">
             {" "}
-            <a href="/" className="footer__logo" aria-label="Filwork, accueil">
-              <img src="/filwork-logo.svg" alt="" />
-            </a>
+            <Link to="/" className="footer__logo" aria-label="Filwork, accueil">
+              <img src="/filwork-logo.svg" alt="" width={254} height={56} />
+            </Link>
             <p className="footer__signature">IMAGINER. CONNECTER. RÉALISER.</p>
             <p className="footer__description">
               La plateforme qui rapproche les créateurs de contenu et les
               entreprises pour donner vie à de nouvelles collaborations.
             </p>
             <div className="footer__socials" aria-label="Réseaux sociaux">
-              <a href="https://www.instagram.com/" target="_blank" rel="noreferrer" aria-label="Instagram"><FiInstagram aria-hidden="true" /></a>
-              <a href="https://www.linkedin.com/" target="_blank" rel="noreferrer" aria-label="LinkedIn"><FiLinkedin aria-hidden="true" /></a>
-              <a href="https://www.whatsapp.com/" target="_blank" rel="noreferrer" aria-label="WhatsApp"><FaWhatsapp aria-hidden="true" /></a>
-              <a href="https://www.facebook.com/" target="_blank" rel="noreferrer" aria-label="Facebook"><FaFacebookF aria-hidden="true" /></a>
+              <span
+                className="footer__social"
+                aria-label="Instagram, compte officiel à confirmer"
+                title="Compte officiel à confirmer"
+              >
+                <FiInstagram aria-hidden="true" />
+              </span>
+              <span
+                className="footer__social"
+                aria-label="LinkedIn, compte officiel à confirmer"
+                title="Compte officiel à confirmer"
+              >
+                <FiLinkedin aria-hidden="true" />
+              </span>
+              <span
+                className="footer__social"
+                aria-label="WhatsApp, compte officiel à confirmer"
+                title="Compte officiel à confirmer"
+              >
+                <FaWhatsapp aria-hidden="true" />
+              </span>
+              <span
+                className="footer__social"
+                aria-label="Facebook, compte officiel à confirmer"
+                title="Compte officiel à confirmer"
+              >
+                <FaFacebookF aria-hidden="true" />
+              </span>
             </div>
+            <p className="footer__social-note">
+              Comptes officiels à confirmer.
+            </p>
           </div>
           <div className="footer__column">
             <h3>Navigation</h3>
             <ul>
               <li>
-                <a href="/">Accueil</a>
+                <Link to="/">Accueil</Link>
               </li>
               <li>
-                <a href="/a-propos">À propos</a>
+                <Link to="/a-propos">À propos</Link>
               </li>
               <li>
-                <a href="/campagnes">Campagnes</a>
+                <Link to="/campagnes">Campagnes</Link>
               </li>
               <li>
-                <a href="/annuaire-createurs">Annuaire des créateurs</a>
+                <Link to="/annuaire-createurs">Annuaire des créateurs</Link>
               </li>
               <li>
-                <a href="/inscription">Créer un compte</a>
+                <Link to="/inscription">Créer un compte</Link>
               </li>
               <li>
-                <a href="/connexion">Connexion</a>
+                <Link to="/connexion">Connexion</Link>
               </li>
             </ul>
           </div>
@@ -121,13 +149,13 @@ function Footer() {
             <h3>Pour vous</h3>
             <ul>
               <li>
-                <a href="/inscription">Je suis créateur</a>
+                <Link to="/inscription">Je suis créateur</Link>
               </li>
               <li>
-                <a href="/inscription">Je suis une entreprise</a>
+                <Link to="/inscription">Je suis une entreprise</Link>
               </li>
               <li>
-                <a href="/campagnes">Découvrir les opportunités</a>
+                <Link to="/campagnes">Découvrir les opportunités</Link>
               </li>
             </ul>
           </div>
@@ -135,13 +163,13 @@ function Footer() {
             <h3>Informations</h3>
             <ul>
               <li>
-                <a href="/confidentialite">Confidentialité</a>
+                <Link to="/confidentialite">Confidentialité</Link>
               </li>
               <li>
-                <a href="/conditions">Conditions d'utilisation</a>
+                <Link to="/conditions">Conditions d'utilisation</Link>
               </li>
               <li>
-                <a href="/contact">Contact</a>
+                <Link to="/contact">Contact</Link>
               </li>
             </ul>
           </div>

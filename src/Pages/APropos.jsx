@@ -10,9 +10,19 @@ import clemizLogo from "../assets/equipe/logo-clemiz-agency.png";
 import "./APropos.css";
 
 const developers = [
-  { name: "Comlan Alexandre Gosso", image: alexandreImage },
-  { name: "Jonas Houinsou", image: jonasImage },
-  { name: "Kouassi Maurel Togbadja", image: maurelImage },
+  {
+    name: "Comlan Alexandre Gosso",
+    image: alexandreImage,
+    width: 574,
+    height: 1280,
+  },
+  { name: "Jonas Houinsou", image: jonasImage, width: 800, height: 1000 },
+  {
+    name: "Kouassi Maurel Togbadja",
+    image: maurelImage,
+    width: 800,
+    height: 1067,
+  },
 ];
 
 const principles = [
@@ -66,7 +76,10 @@ export default function APropos() {
           <img
             src={teamImage}
             alt="Une équipe créative échange autour d’un projet"
+            width={750}
+            height={1000}
             fetchPriority="high"
+            decoding="async"
           />
           <figcaption>
             <span className="about-hero__dot" />
@@ -100,7 +113,14 @@ export default function APropos() {
             rel="noreferrer"
             aria-label="Découvrir Clemiz Agency (nouvel onglet)"
           >
-            <img src={clemizLogo} alt="Clemiz Agency" loading="lazy" />
+            <img
+              src={clemizLogo}
+              alt="Clemiz Agency"
+              width={622}
+              height={401}
+              loading="lazy"
+              decoding="async"
+            />
             <span>Découvrir Clemiz Agency <FiArrowRight aria-hidden="true" /></span>
           </a>
         </div>
@@ -141,7 +161,10 @@ export default function APropos() {
           <img
             src={studioImage}
             alt="Une équipe prépare une production de contenu"
+            width={736}
+            height={1308}
             loading="lazy"
+            decoding="async"
           />
           <figcaption>UN BESOIN · DES TALENTS · UN PROJET</figcaption>
         </figure>
@@ -221,9 +244,16 @@ export default function APropos() {
           </p>
         </div>
         <div className="about-team__grid">
-          {developers.map(({ name, image }) => (
+          {developers.map(({ name, image, width, height }) => (
             <article className="about-team__member" key={name}>
-              <img src={image} alt={`Portrait de ${name}`} loading="lazy" />
+              <img
+                src={image}
+                alt={`Portrait de ${name}`}
+                width={width}
+                height={height}
+                loading="lazy"
+                decoding="async"
+              />
               <div className="about-team__member-copy">
                 <h3>{name}</h3>
                 <p>Développement de FILWORK</p>

@@ -14,6 +14,11 @@ const STATUSES = [
   ["WITHDRAWN", "Retirées"],
 ];
 
+async function fetchSentInvitations() {
+  const data = await api.get("/invitations/sent");
+  return data.invitations || [];
+}
+
 export default function CompanyInvitations() {
   const [invitations, setInvitations] = useState([]);
   const [status, setStatus] = useState("");
@@ -23,22 +28,40 @@ export default function CompanyInvitations() {
   const [busyId, setBusyId] = useState("");
 
   const load = async () => {
-    setLoading(true);
-    setError("");
-
     try {
-      const data = await api.get("/invitations/sent");
-      setInvitations(data.invitations || []);
+      setInvitations(await fetchSentInvitations());
+      setError("");
     } catch (requestError) {
       setError(errorMessage(requestError));
       setInvitations([]);
-    } finally {
-      setLoading(false);
     }
   };
 
   useEffect(() => {
-    load();
+    let active = true;
+
+    fetchSentInvitations()
+      .then((items) => {
+        if (active) {
+          setInvitations(items);
+          setError("");
+        }
+      })
+      .catch((requestError) => {
+        if (active) {
+          setError(errorMessage(requestError));
+          setInvitations([]);
+        }
+      })
+      .finally(() => {
+        if (active) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   const withdraw = async (invitation) => {

@@ -183,7 +183,10 @@ function BusinessSection() {
                 className="business-image"
                 src={entr}
                 alt="Une équipe professionnelle préparant une collaboration créative"
+                width={736}
+                height={1308}
                 loading="lazy"
+                decoding="async"
               />
 
               <div className="business-image-overlay" />

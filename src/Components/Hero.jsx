@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { FiArrowRight, FiCheck } from "react-icons/fi";
 
@@ -8,9 +8,24 @@ const HeroScene = lazy(() => import("./HeroScene"));
 
 function Hero() {
   const shouldReduceMotion = useReducedMotion() ?? false;
+  const [sceneEnabled, setSceneEnabled] = useState(false);
   const entrance = shouldReduceMotion
     ? { opacity: 1, y: 0 }
     : { opacity: 0, y: 18 };
+
+  useEffect(() => {
+    const sceneQuery = window.matchMedia(
+      "(min-width: 761px) and (prefers-reduced-motion: no-preference)",
+    );
+    const updateSceneAvailability = () => setSceneEnabled(sceneQuery.matches);
+
+    updateSceneAvailability();
+    sceneQuery.addEventListener("change", updateSceneAvailability);
+
+    return () => {
+      sceneQuery.removeEventListener("change", updateSceneAvailability);
+    };
+  }, []);
 
   return (
     <section className="hero" aria-labelledby="hero-title">
@@ -73,7 +88,11 @@ function Hero() {
           transition={{ duration: shouldReduceMotion ? 0 : 0.8, delay: shouldReduceMotion ? 0 : 0.12 }}
         >
           <Suspense fallback={<div className="hero-scene hero-scene--fallback" />}>
-            <HeroScene />
+            {sceneEnabled ? (
+              <HeroScene />
+            ) : (
+              <div className="hero-scene hero-scene--fallback" />
+            )}
           </Suspense>
           <span className="hero__visual-caption">Les idées prennent forme</span>
         </motion.div>

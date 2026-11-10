@@ -1,10 +1,13 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { FiSearch } from "react-icons/fi";
 
 import { Alert, Loading, Page, Panel } from "../Components/AppUI";
 import Pagination from "../Components/Pagination";
-import { api, errorMessage } from "../lib/api";
+import { api } from "../lib/api";
 import { formatDate, label } from "../lib/format";
+import { useApiQuery } from "../lib/useApiQuery";
+
+const EMPTY_USERS = { users: [], pagination: null };
 
 const ROLES = [
   ["", "Tous les rôles"],
@@ -18,46 +21,21 @@ export default function AdminUsers() {
   const [search, setSearch] = useState("");
   const [role, setRole] = useState("");
   const [page, setPage] = useState(1);
-  const [users, setUsers] = useState([]);
-  const [pagination, setPagination] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
 
-  useEffect(() => {
-    let active = true;
-
-    setLoading(true);
-    setError("");
-
-    api
-      .get("/admin/users", {
+  const { data, loading, error } = useApiQuery(
+    () =>
+      api.get("/admin/users", {
         search: search || undefined,
         role: role || undefined,
         page,
         limit: 20,
-      })
-      .then((data) => {
-        if (active) {
-          setUsers(data.users || []);
-          setPagination(data.pagination || null);
-        }
-      })
-      .catch((requestError) => {
-        if (active) {
-          setError(errorMessage(requestError));
-          setUsers([]);
-        }
-      })
-      .finally(() => {
-        if (active) {
-          setLoading(false);
-        }
-      });
+      }),
+    [search, role, page],
+    EMPTY_USERS,
+  );
 
-    return () => {
-      active = false;
-    };
-  }, [search, role, page]);
+  const users = data.users;
+  const pagination = data.pagination;
 
   return (
     <Page

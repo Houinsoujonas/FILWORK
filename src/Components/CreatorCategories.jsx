@@ -2,17 +2,19 @@ import { motion, useReducedMotion } from "framer-motion";
 
 import CircularCarousel from "./CircularCarousel";
 
-import cat1 from "../assets/cat1.JPG";
-import cat2 from "../assets/cat2.JPG";
-import cat3 from "../assets/cat3.JPG";
-import cat4 from "../assets/cat4.JPG";
-import cat5 from "../assets/cat5.JPG";
-import cat6 from "../assets/cat6.JPG";
+import cat1 from "../assets/cat1.jpg";
+import cat2 from "../assets/cat2.jpg";
+import cat3 from "../assets/cat3.jpg";
+import cat4 from "../assets/cat4.jpg";
+import cat5 from "../assets/cat5.jpg";
+import cat6 from "../assets/cat6.jpg";
 
 const categories = [
   {
     id: 1,
     image: cat1,
+    imageWidth: 720,
+    imageHeight: 1280,
     category: "01 / TECHNOLOGIE",
     title: "Technologie",
     description: "Innovation, numérique et nouvelles tendances technologiques.",
@@ -20,6 +22,8 @@ const categories = [
   {
     id: 2,
     image: cat2,
+    imageWidth: 1200,
+    imageHeight: 1600,
     category: "02 / MODE & BEAUTÉ",
     title: "Mode & beauté",
     description: "Style, beauté, cosmétiques et nouvelles collections.",
@@ -27,6 +31,8 @@ const categories = [
   {
     id: 3,
     image: cat3,
+    imageWidth: 736,
+    imageHeight: 1308,
     category: "03 / LIFESTYLE",
     title: "Lifestyle",
     description: "Quotidien, inspiration et art de vivre.",
@@ -34,6 +40,8 @@ const categories = [
   {
     id: 4,
     image: cat4,
+    imageWidth: 736,
+    imageHeight: 1103,
     category: "04 / GASTRONOMIE",
     title: "Gastronomie",
     description: "Cuisine, découvertes culinaires et expériences gourmandes.",
@@ -41,6 +49,8 @@ const categories = [
   {
     id: 5,
     image: cat5,
+    imageWidth: 736,
+    imageHeight: 1308,
     category: "05 / VOYAGE",
     title: "Voyage & tourisme",
     description: "Destinations, découvertes et nouvelles aventures.",
@@ -48,6 +58,8 @@ const categories = [
   {
     id: 6,
     image: cat6,
+    imageWidth: 900,
+    imageHeight: 1200,
     category: "06 / SPORT",
     title: "Sport & fitness",
     description: "Performance, entraînement et bien-être.",

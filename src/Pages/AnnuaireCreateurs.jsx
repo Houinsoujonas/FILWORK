@@ -1,11 +1,14 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { FiSearch } from "react-icons/fi";
 
 import CreatorCard from "../Components/CreatorCard";
 import EmptyState from "../Components/EmptyState";
-import { useAuth } from "../context/AuthContext";
-import { api, errorMessage } from "../lib/api";
+import { useAuth } from "../context/useAuth";
+import { api } from "../lib/api";
+import { useApiQuery } from "../lib/useApiQuery";
+
+const EMPTY_CREATORS = { creators: [], total: 0, totalPages: 1 };
 
 const PLATFORMS = [
   ["", "Toutes les plateformes"],
@@ -31,58 +34,31 @@ export default function AnnuaireCreateurs() {
   const [platform, setPlatform] = useState("");
   const [availabilityStatus, setAvailabilityStatus] = useState("");
   const [page, setPage] = useState(1);
-  const [creators, setCreators] = useState([]);
-  const [meta, setMeta] = useState({ total: 0, totalPages: 1 });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
 
   const isCompany = user?.role === "COMPANY";
 
-  useEffect(() => {
-    if (!isCompany) {
-      return undefined;
-    }
+  const { data, loading, error } = useApiQuery(
+    () =>
+      api
+        .get("/creators", {
+          search: search || undefined,
+          platform: platform || undefined,
+          availabilityStatus: availabilityStatus || undefined,
+          page,
+          limit: 12,
+        })
+        .then((response) => ({
+          creators: response.creators || [],
+          total: response.total ?? response.count ?? 0,
+          totalPages: response.totalPages ?? 1,
+        })),
+    [search, platform, availabilityStatus, page],
+    EMPTY_CREATORS,
+    { enabled: isCompany },
+  );
 
-    let active = true;
-
-    setLoading(true);
-    setError("");
-
-    api
-      .get("/creators", {
-        search: search || undefined,
-        platform: platform || undefined,
-        availabilityStatus: availabilityStatus || undefined,
-        page,
-        limit: 12,
-      })
-      .then((data) => {
-        if (!active) {
-          return;
-        }
-
-        setCreators(data.creators || []);
-        setMeta({
-          total: data.total ?? data.count ?? 0,
-          totalPages: data.totalPages ?? 1,
-        });
-      })
-      .catch((requestError) => {
-        if (active) {
-          setError(errorMessage(requestError));
-          setCreators([]);
-        }
-      })
-      .finally(() => {
-        if (active) {
-          setLoading(false);
-        }
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [isCompany, search, platform, availabilityStatus, page]);
+  const creators = data.creators;
+  const meta = { total: data.total, totalPages: data.totalPages };
 
   const handleSearch = (event) => {
     event.preventDefault();

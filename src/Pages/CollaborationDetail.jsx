@@ -19,7 +19,7 @@ import {
   Panel,
   Stat,
 } from "../Components/AppUI";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/useAuth";
 import { api, errorMessage } from "../lib/api";
 import {
   collaborationAmount,
@@ -52,6 +52,24 @@ function Stars({ rating }) {
   );
 }
 
+async function fetchCollaborationBundle(collaborationId) {
+  const data = await api.get(`/collaborations/${collaborationId}`);
+  let reviews;
+
+  try {
+    const reviewData = await api.get(
+      "/reviews",
+      { collaborationId, limit: 10 },
+      { auth: false },
+    );
+    reviews = reviewData.reviews || [];
+  } catch {
+    reviews = [];
+  }
+
+  return { collaboration: data.collaboration, reviews };
+}
+
 export default function CollaborationDetail() {
   const { id } = useParams();
   const { pathname } = useLocation();
@@ -60,11 +78,13 @@ export default function CollaborationDetail() {
 
   const [collaboration, setCollaboration] = useState(null);
   const [reviews, setReviews] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loadedId, setLoadedId] = useState(null);
   const [error, setError] = useState("");
   const [feedback, setFeedback] = useState("");
   const [feedbackType, setFeedbackType] = useState("info");
   const [busy, setBusy] = useState("");
+
+  const loading = loadedId !== id;
 
   const [deliverableForm, setDeliverableForm] = useState({
     title: "",
@@ -91,34 +111,41 @@ export default function CollaborationDetail() {
   };
 
   const load = useCallback(async () => {
-    setLoading(true);
-    setError("");
-
     try {
-      const data = await api.get(`/collaborations/${id}`);
-      setCollaboration(data.collaboration);
-
-      try {
-        const reviewData = await api.get(
-          "/reviews",
-          { collaborationId: id, limit: 10 },
-          { auth: false },
-        );
-        setReviews(reviewData.reviews || []);
-      } catch {
-        setReviews([]);
-      }
+      const bundle = await fetchCollaborationBundle(id);
+      setCollaboration(bundle.collaboration);
+      setReviews(bundle.reviews);
+      setLoadedId(id);
     } catch (requestError) {
       setError(errorMessage(requestError));
       setCollaboration(null);
-    } finally {
-      setLoading(false);
+      setLoadedId(id);
     }
   }, [id]);
 
   useEffect(() => {
-    load();
-  }, [load]);
+    let active = true;
+
+    fetchCollaborationBundle(id)
+      .then((bundle) => {
+        if (active) {
+          setCollaboration(bundle.collaboration);
+          setReviews(bundle.reviews);
+          setLoadedId(id);
+        }
+      })
+      .catch((requestError) => {
+        if (active) {
+          setError(errorMessage(requestError));
+          setCollaboration(null);
+          setLoadedId(id);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [id]);
 
   const run = async (key, action, successMessage) => {
     setBusy(key);

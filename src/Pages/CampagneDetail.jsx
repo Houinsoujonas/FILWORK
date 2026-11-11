@@ -22,7 +22,6 @@ export default function CampagneDetail() {
   const [feedbackType, setFeedbackType] = useState("info");
   const [submitting, setSubmitting] = useState(false);
 
-<<<<<<< HEAD
   const { data: campaign, loading, error } = useApiQuery(
     () =>
       api
@@ -31,39 +30,6 @@ export default function CampagneDetail() {
     [campaignId],
     null,
   );
-=======
-  useEffect(() => {
-    let active = true;
-
-    (async () => {
-      setLoading(true);
-
-      try {
-        const data = await api.get(`/campaigns/${campaignId}`, undefined, {
-          auth: false,
-        });
-
-        if (active) {
-          setCampaign(data.campaign);
-          setError("");
-        }
-      } catch (requestError) {
-        if (active) {
-          setCampaign(null);
-          setError(errorMessage(requestError));
-        }
-      } finally {
-        if (active) {
-          setLoading(false);
-        }
-      }
-    })();
-
-    return () => {
-      active = false;
-    };
-  }, [campaignId]);
->>>>>>> 79d98d87328d46967b35c400b98945f8bc408d3b
 
   const handleApply = async (event) => {
     event.preventDefault();

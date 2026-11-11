@@ -23,7 +23,6 @@ export default function AdminCampaigns() {
   const [status, setStatus] = useState("");
   const [page, setPage] = useState(1);
 
-<<<<<<< HEAD
   const { data, loading, error } = useApiQuery(
     () =>
       api.get("/admin/campaigns", {
@@ -35,38 +34,6 @@ export default function AdminCampaigns() {
     [search, status, page],
     EMPTY_CAMPAIGNS,
   );
-=======
-  useEffect(() => {
-    let active = true;
-
-    (async () => {
-      setLoading(true);
-      setError("");
-
-      try {
-        const data = await api.get("/admin/campaigns", {
-          search: search || undefined,
-          status: status || undefined,
-          page,
-          limit: 20,
-        });
-
-        if (active) {
-          setCampaigns(data.campaigns || []);
-          setPagination(data.pagination || null);
-        }
-      } catch (requestError) {
-        if (active) {
-          setError(errorMessage(requestError));
-          setCampaigns([]);
-        }
-      } finally {
-        if (active) {
-          setLoading(false);
-        }
-      }
-    })();
->>>>>>> 79d98d87328d46967b35c400b98945f8bc408d3b
 
   const campaigns = data.campaigns;
   const pagination = data.pagination;

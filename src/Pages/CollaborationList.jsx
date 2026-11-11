@@ -14,46 +14,11 @@ import {
 export default function CollaborationList() {
   const { pathname } = useLocation();
   const basePath = pathname.replace(/\/collaborations\/?$/, "/collaborations");
-<<<<<<< HEAD
   const { data: collaborations, loading, error } = useApiQuery(
     () => api.get("/collaborations").then((data) => data.collaborations || []),
     [],
     [],
   );
-=======
-  const [collaborations, setCollaborations] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    let active = true;
-
-    (async () => {
-      setLoading(true);
-      setError("");
-
-      try {
-        const data = await api.get("/collaborations");
-
-        if (active) {
-          setCollaborations(data.collaborations || []);
-        }
-      } catch (requestError) {
-        if (active) {
-          setError(errorMessage(requestError));
-        }
-      } finally {
-        if (active) {
-          setLoading(false);
-        }
-      }
-    })();
-
-    return () => {
-      active = false;
-    };
-  }, []);
->>>>>>> 79d98d87328d46967b35c400b98945f8bc408d3b
 
   return (
     <Page

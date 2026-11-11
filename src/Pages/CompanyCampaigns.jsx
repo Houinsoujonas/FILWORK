@@ -28,7 +28,6 @@ export default function CompanyCampaigns() {
   };
 
   useEffect(() => {
-<<<<<<< HEAD
     let active = true;
 
     fetchMyCampaigns()
@@ -52,11 +51,6 @@ export default function CompanyCampaigns() {
     return () => {
       active = false;
     };
-=======
-    (async () => {
-      await load();
-    })();
->>>>>>> 79d98d87328d46967b35c400b98945f8bc408d3b
   }, []);
 
   const act = async (campaign, action, confirmation) => {

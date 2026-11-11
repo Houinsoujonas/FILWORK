@@ -1,9 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, NavLink } from "react-router-dom";
-import { FiArrowRight, FiGrid, FiMenu, FiX } from "react-icons/fi";
-
-import { useAuth } from "../context/useAuth";
-import { homeForRole } from "../lib/format";
+import { FiArrowRight, FiMenu, FiX } from "react-icons/fi";
 
 import { useAuth } from "../context/useAuth";
 import { homeForRole } from "../lib/format";
@@ -114,10 +111,6 @@ function Navbar() {
                   className="navbar__action navbar__signup"
                   onClick={closeMenu}
                 >
-<<<<<<< HEAD
-=======
-                  <FiGrid aria-hidden="true" />
->>>>>>> 79d98d87328d46967b35c400b98945f8bc408d3b
                   <span>Mon espace</span>
                 </Link>
               ) : (
@@ -135,11 +128,7 @@ function Navbar() {
                     className="navbar__action navbar__signup"
                     onClick={closeMenu}
                   >
-<<<<<<< HEAD
-                    <span>Commencer</span>
-=======
                     <span>Créer un compte</span>
->>>>>>> 79d98d87328d46967b35c400b98945f8bc408d3b
                   </Link>
                 </>
               )}

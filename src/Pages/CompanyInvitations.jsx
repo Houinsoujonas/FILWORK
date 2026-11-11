@@ -38,7 +38,6 @@ export default function CompanyInvitations() {
   };
 
   useEffect(() => {
-<<<<<<< HEAD
     let active = true;
 
     fetchSentInvitations()
@@ -63,11 +62,6 @@ export default function CompanyInvitations() {
     return () => {
       active = false;
     };
-=======
-    (async () => {
-      await load();
-    })();
->>>>>>> 79d98d87328d46967b35c400b98945f8bc408d3b
   }, []);
 
   const withdraw = async (invitation) => {

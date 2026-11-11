@@ -37,7 +37,6 @@ export default function CompanyProfilePage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-<<<<<<< HEAD
   const loading = authLoading && !profile;
 
   // Le profil peut être rechargé après une sauvegarde : on recale le
@@ -46,22 +45,6 @@ export default function CompanyProfilePage() {
     setSyncedProfile(profile);
     setForm(formFromProfile(profile));
   }
-=======
-  useEffect(() => {
-    (async () => {
-      if (profile) {
-        setForm({
-          ...EMPTY,
-          ...Object.fromEntries(
-            Object.keys(EMPTY).map((key) => [key, profile[key] ?? ""]),
-          ),
-        });
-      }
-
-      setLoading(false);
-    })();
-  }, [profile]);
->>>>>>> 79d98d87328d46967b35c400b98945f8bc408d3b
 
   const handleChange = (event) => {
     const { name, value } = event.target;

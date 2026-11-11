@@ -25,6 +25,11 @@ const PRISMA_ERROR_DEFAULTS = {
     status: 404,
     message: "La ressource demandée est introuvable.",
   },
+  // Conflit de transaction (deadlock ou échec de sérialisation).
+  P2034: {
+    status: 409,
+    message: "Opération en conflit. Veuillez réessayer dans un instant.",
+  },
 };
 
 /**

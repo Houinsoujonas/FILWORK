@@ -6,6 +6,10 @@ async function logout(req, res) {
   const token = req.authToken;
   const expiresAt = req.authTokenExpiresAt;
 
+  const body = req.body || {};
+  const refreshToken =
+    typeof body.refreshToken === "string" ? body.refreshToken.trim() : "";
+
   if (
     typeof token !== "string" ||
     !(expiresAt instanceof Date) ||
@@ -18,24 +22,41 @@ async function logout(req, res) {
   }
 
   try {
-    // Calculer le hash SHA-256 du JWT.
+    // Calculer le hash du JWT access token.
     const tokenHash = crypto
       .createHash("sha256")
       .update(token)
       .digest("hex");
 
-    // Enregistrer le hash du jeton révoqué.
-    // L'upsert évite de créer plusieurs enregistrements
-    // si plusieurs demandes de déconnexion arrivent simultanément.
-    await prisma.revokedToken.upsert({
-      where: {
-        tokenHash,
-      },
-      update: {},
-      create: {
-        tokenHash,
-        expiresAt,
-      },
+    const refreshTokenHash = refreshToken
+      ? crypto.createHash("sha256").update(refreshToken).digest("hex")
+      : null;
+
+    // Révoquer le JWT access token et le refresh token correspondant
+    // dans une transaction unique lorsque possible.
+    await prisma.$transaction(async (tx) => {
+      await tx.revokedToken.upsert({
+        where: {
+          tokenHash,
+        },
+        update: {},
+        create: {
+          tokenHash,
+          expiresAt,
+        },
+      });
+
+      if (refreshTokenHash) {
+        await tx.refreshToken.updateMany({
+          where: {
+            tokenHash: refreshTokenHash,
+            revokedAt: null,
+          },
+          data: {
+            revokedAt: new Date(),
+          },
+        });
+      }
     });
 
     return res.status(200).json({

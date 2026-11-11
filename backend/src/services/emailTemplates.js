@@ -266,10 +266,60 @@ function announcementEmail({ to, displayName, title, body, link }) {
   return { to, subject, text, html };
 }
 
+/**
+ * Modèle d'e-mail notifiant un créateur que sa candidature n'a pas été retenue
+ * suite à la clôture d'une campagne.
+ *
+ * @param {{to: string, displayName?: string, campaignTitle?: string, link?: string}} options
+ */
+function campaignClosedEmail({ to, displayName, campaignTitle, link }) {
+  const name = escapeHtml(displayName || "");
+  const campaign = escapeHtml(campaignTitle || "");
+  const url = escapeHtml(link || buildUrl("/espace/createur/campagnes"));
+
+  const subject = `FILWORK - La campagne « ${campaign} » a été clôturée`;
+
+  const text = [
+    greeting(name),
+    "",
+    `La campagne ${campaign ? `« ${campaign} »` : ""} a été clôturée par l'entreprise.`,
+    "",
+    "Votre candidature pour cette campagne n'a pas été retenue.",
+    "",
+    "Vous pouvez découvrir d'autres opportunités depuis votre espace créateur :",
+    url,
+    "",
+    "L'équipe FILWORK",
+  ].filter(Boolean).join("\n");
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #222; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <h2 style="color: #2563eb;">Campagne clôturée</h2>
+      <p>${greeting(name)}</p>
+      <p>
+        La campagne${campaign ? ` <strong>${campaign}</strong>` : ""} a été clôturée par l'entreprise.
+      </p>
+      <p>Votre candidature pour cette campagne n'a pas été retenue.</p>
+      <p>
+        Vous pouvez découvrir d'autres opportunités depuis votre espace créateur :
+      </p>
+      <p>
+        <a href="${url}" style="display: inline-block; padding: 12px 20px; background-color: #2563eb; color: #ffffff; text-decoration: none; border-radius: 6px;">
+          Voir les opportunités
+        </a>
+      </p>
+      <p>L'équipe FILWORK</p>
+    </div>
+  `;
+
+  return { to, subject, text, html };
+}
+
 module.exports = {
   welcomeEmail,
   collaborationProposalEmail,
   newApplicationEmail,
   passwordResetCodeEmail,
   announcementEmail,
+  campaignClosedEmail,
 };

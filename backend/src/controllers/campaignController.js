@@ -4,6 +4,7 @@ const { lockCampaign } = require("../services/collaborationLock");
 const {
   PUBLIC_CAMPAIGN_CONDITIONS,
 } = require("../services/profileVisibility");
+const { enqueueCampaignClosedEmail } = require("../services/emailService");
 
 const ALLOWED_FIELDS = [
   "title",
@@ -1151,6 +1152,11 @@ async function closeCampaign(req, res) {
           creatorProfile: {
             select: {
               userId: true,
+              user: {
+                select: {
+                  email: true,
+                },
+              },
             },
           },
         },
@@ -1203,6 +1209,26 @@ async function closeCampaign(req, res) {
               `${companyProfile.companyName} a clôturé la campagne ` +
               `« ${result.campaign.title} ». Votre candidature n'a pas été retenue.`,
           });
+
+          // Mettre en file l'e-mail de notification de clôture pour le créateur.
+          // L'échec de la mise en file ne doit pas faire échouer la clôture.
+          const creatorEmail =
+            application.creatorProfile.user?.email || "";
+
+          if (creatorEmail) {
+            try {
+              await enqueueCampaignClosedEmail({
+                to: creatorEmail,
+                displayName: undefined,
+                campaignTitle: result.campaign.title,
+              }, tx);
+            } catch (emailError) {
+              console.error(
+                "Erreur lors de la mise en file de l'e-mail de clôture de campagne :",
+                emailError.message,
+              );
+            }
+          }
         }
       }
 

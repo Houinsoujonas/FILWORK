@@ -1,12 +1,134 @@
+const nodemailer = require("nodemailer");
+
 const {
   claimPendingEmails,
   markEmailSent,
   markEmailFailed,
   recoverStuckProcessingEmails,
 } = require("./outboxService");
-const { sendTemplatedEmail } = require("./emailService");
 
 const DEFAULT_INTERVAL_MS = 30_000;
+
+let transporter = null;
+
+// Domaines réservés aux tests et à la documentation (jamais de vrais destinataires).
+const REFUSED_RECIPIENT_DOMAINS = new Set([
+  "filwork.local",
+  "example.com",
+  "example.org",
+  "example.net",
+  "localhost",
+]);
+
+/**
+ * Refuse explicitement tout envoi vers un destinataire de test.
+ * Appelé avant toute connexion SMTP : aucune adresse de test ne peut
+ * atteindre un serveur SMTP réel depuis le worker.
+ */
+function isRefusedRecipient(to) {
+  const domain = String(to || "").split("@")[1];
+
+  if (!domain) {
+    return true;
+  }
+
+  return REFUSED_RECIPIENT_DOMAINS.has(domain.trim().toLowerCase());
+}
+
+/**
+ * Crée le transporteur SMTP uniquement lorsque l'envoi est nécessaire.
+ * Aucune information secrète n'est journalisée.
+ */
+function getTransporter() {
+  if (transporter) {
+    return transporter;
+  }
+
+  const host = process.env.SMTP_HOST;
+  const port = Number(process.env.SMTP_PORT);
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS;
+
+  if (
+    !host ||
+    !Number.isInteger(port) ||
+    port < 1 ||
+    port > 65535 ||
+    !user ||
+    !pass
+  ) {
+    throw new Error("La configuration SMTP est incomplète.");
+  }
+
+  transporter = nodemailer.createTransport({
+    host,
+    port,
+    secure: process.env.SMTP_SECURE === "true",
+    auth: {
+      user,
+      pass,
+    },
+  });
+
+  return transporter;
+}
+
+/**
+ * Envoie un e-mail via le transporteur SMTP.
+ * Cette fonction est réservée au worker de la file d'envoi (outbox).
+ * Aucun contrôleur ne doit l'appeler directement : tous les e-mails
+ * doivent passer par la file persistante EmailOutbox.
+ *
+ * @param {{to: string, subject: string, text: string, html: string}} options
+ * @returns {Promise<object>} Résultat de l'envoi Nodemailer
+ */
+async function sendSmtpEmail({ to, subject, text, html }) {
+  if (process.env.NODE_ENV === "test") {
+    throw new Error(
+      "Envoi SMTP désactivé en environnement de test : les e-mails de test ne doivent jamais être distribués.",
+    );
+  }
+
+  if (isRefusedRecipient(to)) {
+    throw new Error(
+      "Envoi refusé : destinataire sur un domaine de test ou de documentation.",
+    );
+  }
+
+  if (
+    typeof to !== "string" ||
+    !to.trim() ||
+    typeof subject !== "string" ||
+    !subject.trim()
+  ) {
+    throw new Error("Le destinataire et le sujet de l'e-mail sont obligatoires.");
+  }
+
+  const from = process.env.MAIL_FROM || process.env.SMTP_USER;
+
+  const mailer = getTransporter();
+
+  const info = await mailer.sendMail({
+    from,
+    to,
+    subject,
+    text,
+    html,
+  });
+
+  if (process.env.NODE_ENV !== "production") {
+    const previewUrl = nodemailer.getTestMessageUrl(info);
+
+    if (previewUrl) {
+      console.log(
+        "[FILWORK] Aperçu de l'e-mail de test :",
+        previewUrl,
+      );
+    }
+  }
+
+  return info;
+}
 
 let timer = null;
 let running = false;
@@ -21,6 +143,13 @@ let running = false;
  * @returns {Promise<number>} Nombre d'e-mails traités
  */
 async function processEmailOutboxBatch() {
+  if (process.env.NODE_ENV === "test") {
+    console.log(
+      "[EmailOutbox] Envoi SMTP désactivé en environnement de test : 0 e-mail(s) traité(s).",
+    );
+    return 0;
+  }
+
   const recovered = await recoverStuckProcessingEmails();
 
   if (recovered > 0) {
@@ -39,19 +168,29 @@ async function processEmailOutboxBatch() {
 
   for (const email of emails) {
     try {
-      await sendTemplatedEmail({
+      let payload = email.payload || {};
+
+      if (typeof payload === "string") {
+        try {
+          payload = JSON.parse(payload);
+        } catch {
+          payload = {};
+        }
+      }
+
+      await sendSmtpEmail({
         to: email.to,
         subject: email.subject,
-        text: email.payload.text || "",
-        html: email.payload.html || "",
+        text: payload.text || "",
+        html: payload.html || "",
       });
 
       await markEmailSent(email.id);
-      console.log(`[EmailOutbox] E-mail envoyé : ${email.id} -> ${email.to}`);
+      console.log(`[EmailOutbox] E-mail envoyé : ${email.id}`);
     } catch (error) {
       await markEmailFailed(email.id, error);
       console.error(
-        `[EmailOutbox] Échec de l'envoi ${email.id} -> ${email.to} : ${error.message}`,
+        `[EmailOutbox] Échec de l'envoi ${email.id} : ${error.message}`,
       );
     }
   }

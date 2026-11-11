@@ -133,7 +133,7 @@ async function getMyAnnouncements(req, res) {
           publishedAt: true,
           expiresAt: true,
           createdBy: {
-            select: { id: true, email: true },
+            select: { id: true },
           },
         },
       }),
@@ -207,7 +207,7 @@ async function getAnnouncementById(req, res) {
         publishedAt: true,
         expiresAt: true,
         createdBy: {
-          select: { id: true, email: true },
+          select: { id: true },
         },
       },
     });

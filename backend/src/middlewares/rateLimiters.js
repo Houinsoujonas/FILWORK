@@ -54,9 +54,23 @@ const resetPasswordLimiter = rateLimit({
   },
 });
 
+// Limiter les renouvellements de session (refresh token).
+const refreshLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: isProduction ? 30 : 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message:
+      "Trop de renouvellements de session. Réessayez dans 15 minutes.",
+  },
+});
+
 module.exports = {
   loginLimiter,
   registerLimiter,
   forgotPasswordLimiter,
   resetPasswordLimiter,
+  refreshLimiter,
 };

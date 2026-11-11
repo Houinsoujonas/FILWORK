@@ -11,6 +11,9 @@ const {
    getAdminCollaborations,
    getAdminDeliverables,
    getAdminPayments,
+  updateAdminUser,
+  deactivateUser,
+  reactivateUser,
 } = require("../controllers/adminController");
 
 const router = express.Router();
@@ -30,6 +33,15 @@ router.get("/dashboard", getDashboardStats);
 
 // Liste et recherche des utilisateurs.
 router.get("/users", getAdminUsers);
+
+// Modifier un utilisateur (e-mail, rôle).
+router.patch("/users/:id", updateAdminUser);
+
+// Désactiver un compte utilisateur.
+router.patch("/users/:id/deactivate", deactivateUser);
+
+// Réactiver un compte utilisateur.
+router.patch("/users/:id/reactivate", reactivateUser);
 
 // Consulter et rechercher toutes les campagnes.
 router.get("/campaigns", getAdminCampaigns);

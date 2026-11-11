@@ -73,6 +73,7 @@ async function authenticateToken(req, res, next) {
         email: true,
         role: true,
         tokenVersion: true,
+        isActive: true,
         createdAt: true,
       },
     });
@@ -88,6 +89,13 @@ async function authenticateToken(req, res, next) {
       return res.status(401).json({
         success: false,
         message: "Cette session n'est plus valide. Veuillez vous reconnecter.",
+      });
+    }
+
+    if (!user.isActive) {
+      return res.status(403).json({
+        success: false,
+        message: "Ce compte est désactivé. Veuillez contacter l'administration.",
       });
     }
 

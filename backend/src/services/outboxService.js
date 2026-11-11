@@ -16,9 +16,10 @@ const BACKOFF_DELAYS_MS = [60_000, 300_000, 900_000, 1_800_000, 3_600_000];
  * @param {string} options.template - Nom du modèle d'e-mail
  * @param {object} options.payload - Données du modèle (sérialisable en JSON)
  * @param {number} [options.maxAttempts] - Nombre maximum de tentatives
+ * @param {object|null} [tx] - Contexte transactionnel Prisma (optionnel)
  * @returns {Promise<object>} L'enregistrement EmailOutbox créé
  */
-async function enqueueEmail({ to, subject, template, payload, maxAttempts }) {
+async function enqueueEmail({ to, subject, template, payload, maxAttempts }, tx = null) {
   if (typeof to !== "string" || !to.trim()) {
     throw new Error("Le destinataire de l'e-mail est obligatoire.");
   }
@@ -31,7 +32,9 @@ async function enqueueEmail({ to, subject, template, payload, maxAttempts }) {
     throw new Error("Le modèle d'e-mail est obligatoire.");
   }
 
-  return prisma.emailOutbox.create({
+  const client = tx || prisma;
+
+  return client.emailOutbox.create({
     data: {
       to: to.trim(),
       subject: subject.trim(),

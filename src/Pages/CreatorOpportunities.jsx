@@ -22,7 +22,6 @@ export default function CreatorOpportunities() {
   const [search, setSearch] = useState("");
   const [platform, setPlatform] = useState("");
 
-<<<<<<< HEAD
   const { data: campaigns, loading, error } = useApiQuery(
     () =>
       api
@@ -35,41 +34,6 @@ export default function CreatorOpportunities() {
     [search, platform],
     [],
   );
-=======
-  useEffect(() => {
-    let active = true;
-
-    (async () => {
-      setLoading(true);
-      setError("");
-
-      try {
-        const data = await api.get("/campaigns", {
-          search: search || undefined,
-          platform: platform || undefined,
-          limit: 50,
-        });
-
-        if (active) {
-          setCampaigns(data.campaigns || []);
-        }
-      } catch (requestError) {
-        if (active) {
-          setError(errorMessage(requestError));
-          setCampaigns([]);
-        }
-      } finally {
-        if (active) {
-          setLoading(false);
-        }
-      }
-    })();
-
-    return () => {
-      active = false;
-    };
-  }, [search, platform]);
->>>>>>> 79d98d87328d46967b35c400b98945f8bc408d3b
 
   return (
     <Page

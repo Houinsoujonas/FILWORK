@@ -2554,10 +2554,6 @@ body {
   .navbar__action { min-height: 48px; }
 }
 
-<<<<<<< HEAD
-=======
-
->>>>>>> 79d98d87328d46967b35c400b98945f8bc408d3b
 @media (max-width: 760px) {
   .public-page { padding: 42px 20px 56px; }
   .listing-heading { padding: 14px 0 30px; }

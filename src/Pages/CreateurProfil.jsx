@@ -10,20 +10,12 @@ import {
 
 import { Badge } from "../Components/AppUI";
 import EmptyState from "../Components/EmptyState";
-<<<<<<< HEAD
-import { useAuth } from "../context/useAuth";
-import { api, errorMessage } from "../lib/api";
-import { formatMoney, label } from "../lib/format";
-import { useApiQuery } from "../lib/useApiQuery";
-=======
-
 import PlatformIcon from "../Components/PlatformIcon";
 import { useAuth } from "../context/useAuth";
-
 import { api, errorMessage } from "../lib/api";
 import { compactNumber, creatorAudience, creatorPlace } from "../lib/creator";
-import { formatMoney, initials, label } from "../lib/format";
->>>>>>> 79d98d87328d46967b35c400b98945f8bc408d3b
+import { formatMoney, label } from "../lib/format";
+import { useApiQuery } from "../lib/useApiQuery";
 
 export default function CreateurProfil() {
   const { creatorId } = useParams();
@@ -39,7 +31,6 @@ export default function CreateurProfil() {
   const [feedbackType, setFeedbackType] = useState("info");
   const [submitting, setSubmitting] = useState(false);
 
-<<<<<<< HEAD
   const { data, loading, error } = useApiQuery(
     () =>
       Promise.all([
@@ -48,32 +39,6 @@ export default function CreateurProfil() {
       ]).then(([creatorData, campaignData]) => ({
         creator: creatorData.creator,
         campaigns: (campaignData.campaigns || []).filter(
-=======
-  useEffect(() => {
-    if (!isCompany) {
-      return undefined;
-    }
-
-    let active = true;
-
-    (async () => {
-      setLoading(true);
-      setError("");
-
-      try {
-        const [creatorData, campaignData] = await Promise.all([
-          api.get(`/creators/${creatorId}`),
-          api.get("/campaigns/my-campaigns").catch(() => ({ campaigns: [] })),
-        ]);
-
-        if (!active) {
-          return;
-        }
-
-        setCreator(creatorData.creator);
-
-        const published = (campaignData.campaigns || []).filter(
->>>>>>> 79d98d87328d46967b35c400b98945f8bc408d3b
           (campaign) => campaign.status === "PUBLISHED",
         ),
       })),
@@ -82,30 +47,8 @@ export default function CreateurProfil() {
     { enabled: isCompany },
   );
 
-<<<<<<< HEAD
   const creator = data.creator;
   const campaigns = data.campaigns;
-=======
-        setCampaigns(published);
-        setForm((current) => ({
-          ...current,
-          campaignId: current.campaignId || published[0]?.id || "",
-          proposedAmount:
-            current.proposedAmount ||
-            (published[0]?.budget ? String(published[0].budget) : ""),
-        }));
-      } catch (requestError) {
-        if (active) {
-          setError(errorMessage(requestError));
-          setCreator(null);
-        }
-      } finally {
-        if (active) {
-          setLoading(false);
-        }
-      }
-    })();
->>>>>>> 79d98d87328d46967b35c400b98945f8bc408d3b
 
   // Le formulaire reprend la première campagne publiée dès que la liste
   // arrive. L'ajustement est fait pendant le rendu, une seule fois par
@@ -224,32 +167,21 @@ export default function CreateurProfil() {
         <FiArrowLeft aria-hidden="true" /> Annuaire des créateurs
       </Link>
 
-<<<<<<< HEAD
-      <section className="public-profile-head">
-        {creator.profileImageUrl ? (
-          <img
-            className="ui-avatar"
-            src={creator.profileImageUrl}
-            alt=""
-            decoding="async"
-          />
-        ) : (
-          <span className="ui-avatar">
-            {String(creator.displayName || "C")[0]}
-          </span>
-        )}
-=======
       <section className="profile-hero">
         <div className="profile-hero__cover" aria-hidden="true" />
         <div className="profile-hero__body">
           {creator.profileImageUrl ? (
-            <img className="profile-hero__avatar" src={creator.profileImageUrl} alt="" />
+            <img
+              className="profile-hero__avatar"
+              src={creator.profileImageUrl}
+              alt=""
+              decoding="async"
+            />
           ) : (
-            <span className="profile-hero__avatar" aria-hidden="true">
-              {initials(creator.displayName)}
+            <span className="profile-hero__avatar">
+              {String(creator.displayName || "C")[0]}
             </span>
           )}
->>>>>>> 79d98d87328d46967b35c400b98945f8bc408d3b
 
           <div className="profile-hero__identity">
             <div className="profile-hero__title">

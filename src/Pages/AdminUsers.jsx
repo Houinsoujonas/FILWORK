@@ -22,7 +22,6 @@ export default function AdminUsers() {
   const [role, setRole] = useState("");
   const [page, setPage] = useState(1);
 
-<<<<<<< HEAD
   const { data, loading, error } = useApiQuery(
     () =>
       api.get("/admin/users", {
@@ -34,38 +33,6 @@ export default function AdminUsers() {
     [search, role, page],
     EMPTY_USERS,
   );
-=======
-  useEffect(() => {
-    let active = true;
-
-    (async () => {
-      setLoading(true);
-      setError("");
-
-      try {
-        const data = await api.get("/admin/users", {
-          search: search || undefined,
-          role: role || undefined,
-          page,
-          limit: 20,
-        });
-
-        if (active) {
-          setUsers(data.users || []);
-          setPagination(data.pagination || null);
-        }
-      } catch (requestError) {
-        if (active) {
-          setError(errorMessage(requestError));
-          setUsers([]);
-        }
-      } finally {
-        if (active) {
-          setLoading(false);
-        }
-      }
-    })();
->>>>>>> 79d98d87328d46967b35c400b98945f8bc408d3b
 
   const users = data.users;
   const pagination = data.pagination;

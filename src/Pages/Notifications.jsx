@@ -11,15 +11,8 @@ import {
   FiSend,
 } from "react-icons/fi";
 
-
 import { Alert, Loading, Page, Panel } from "../Components/AppUI";
 import { useAuth } from "../context/useAuth";
-
-<<<<<<< HEAD
-import { Alert, Badge, Loading, Page, Panel } from "../Components/AppUI";
-import { useAuth } from "../context/useAuth";
-=======
->>>>>>> 79d98d87328d46967b35c400b98945f8bc408d3b
 import { api, errorMessage } from "../lib/api";
 import { formatDateTime } from "../lib/format";
 
@@ -87,7 +80,6 @@ export default function Notifications() {
   useEffect(() => {
     let active = true;
 
-<<<<<<< HEAD
     api
       .get("/notifications")
       .then((data) => {
@@ -107,33 +99,6 @@ export default function Notifications() {
           setLoading(false);
         }
       });
-=======
-    (async () => {
-      setLoading(true);
-      setError("");
-
-      try {
-        const data = await api.get("/notifications");
-
-        if (!active) {
-          return;
-        }
-
-        setNotifications(data.notifications || []);
-        setUnreadCount(data.unreadCount || 0);
-      } catch (requestError) {
-        if (!active) {
-          return;
-        }
-
-        setError(errorMessage(requestError));
-      } finally {
-        if (active) {
-          setLoading(false);
-        }
-      }
-    })();
->>>>>>> 79d98d87328d46967b35c400b98945f8bc408d3b
 
     return () => {
       active = false;

@@ -4,7 +4,7 @@ import { FiArrowRight, FiMapPin } from "react-icons/fi";
 import { Badge } from "./AppUI";
 import PlatformIcon from "./PlatformIcon";
 import { compactNumber, creatorAudience, creatorPlace } from "../lib/creator";
-import { formatMoney, initials } from "../lib/format";
+import { formatMoney } from "../lib/format";
 
 export default function CreatorCard({ creator, to }) {
   const target = to || `/annuaire-createurs/${creator.id}`;
@@ -13,7 +13,6 @@ export default function CreatorCard({ creator, to }) {
   const place = creatorPlace(creator);
 
   return (
-<<<<<<< HEAD
     <Link className="public-card public-card--link" to={target}>
       <div className="public-card__top">
         <span className="public-card__company">
@@ -25,20 +24,6 @@ export default function CreatorCard({ creator, to }) {
             </span>
           )}
           {creator.niche || "Créateur"}
-=======
-    <Link className="creator-card" to={target}>
-      <div className="creator-card__head">
-        {creator.profileImageUrl ? (
-          <img className="creator-card__avatar" src={creator.profileImageUrl} alt="" />
-        ) : (
-          <span className="creator-card__avatar" aria-hidden="true">
-            {initials(creator.displayName)}
-          </span>
-        )}
-        <span className="creator-card__identity">
-          <strong>{creator.displayName}</strong>
-          <small>{creator.niche || "Créateur de contenu"}</small>
->>>>>>> 79d98d87328d46967b35c400b98945f8bc408d3b
         </span>
         <Badge value={creator.availabilityStatus} />
       </div>

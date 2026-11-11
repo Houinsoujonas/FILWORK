@@ -28,7 +28,6 @@ export default function CreatorInvitations() {
   };
 
   useEffect(() => {
-<<<<<<< HEAD
     let active = true;
 
     fetchReceivedInvitations()
@@ -52,11 +51,6 @@ export default function CreatorInvitations() {
     return () => {
       active = false;
     };
-=======
-    (async () => {
-      await load();
-    })();
->>>>>>> 79d98d87328d46967b35c400b98945f8bc408d3b
   }, []);
 
   const respond = async (invitation, status) => {

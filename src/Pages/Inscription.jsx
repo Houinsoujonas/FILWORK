@@ -115,13 +115,10 @@ function Inscription() {
         </ol>
       </aside>
       <div className="register-container">
-<<<<<<< HEAD
         <Link to="/" className="register-brand" aria-label="FILWORK, accueil">
           <img src="/filwork-logo.svg" alt="" width={254} height={56} />
         </Link>
 
-=======
->>>>>>> 79d98d87328d46967b35c400b98945f8bc408d3b
         <div className="register-heading">
           <span className="register-eyebrow">Inscription gratuite</span>
 

@@ -96,7 +96,6 @@ export default function CompanyCampaignDetail() {
   }, [applyBundle, id]);
 
   useEffect(() => {
-<<<<<<< HEAD
     let active = true;
 
     fetchCampaignBundle(id)
@@ -117,13 +116,6 @@ export default function CompanyCampaignDetail() {
       active = false;
     };
   }, [applyBundle, id]);
-=======
-    (async () => {
-      await load();
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
->>>>>>> 79d98d87328d46967b35c400b98945f8bc408d3b
 
   const notify = (type, message) => {
     setFeedbackType(type);

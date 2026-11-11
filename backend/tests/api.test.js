@@ -6640,7 +6640,7 @@ test(
 
     const returnedIds = [];
     let page = 1;
-    let total = 0;
+    let total;
 
     // Lire toutes les pages : la base de test peut contenir des notifications
     // accumulées par les exécutions précédentes, au-delà de la limite par

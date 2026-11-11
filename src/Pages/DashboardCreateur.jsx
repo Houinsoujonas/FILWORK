@@ -11,23 +11,8 @@ import {
   FiSend,
 } from "react-icons/fi";
 
-<<<<<<< HEAD
-import { Alert, Badge, Loading, Page, Panel, Stat } from "../Components/AppUI";
+import { Alert, Badge, Loading, Page, Panel, Progress, Stat } from "../Components/AppUI";
 import { useAuth } from "../context/useAuth";
-=======
-
-import {
-  Alert,
-  Badge,
-  Loading,
-  Page,
-  Panel,
-  Progress,
-  Stat,
-} from "../Components/AppUI";
-import { useAuth } from "../context/useAuth";
-
->>>>>>> 79d98d87328d46967b35c400b98945f8bc408d3b
 import { api } from "../lib/api";
 import {
   collaborationCampaign,

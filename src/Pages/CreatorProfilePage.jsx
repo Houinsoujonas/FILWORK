@@ -70,7 +70,6 @@ export default function CreatorProfilePage() {
   });
   const [portfolioBusy, setPortfolioBusy] = useState(false);
 
-<<<<<<< HEAD
   const loading = authLoading && !profile;
 
   // Le profil peut être rechargé après une sauvegarde : on recale le
@@ -79,25 +78,6 @@ export default function CreatorProfilePage() {
     setSyncedProfile(profile);
     setForm(formFromProfile(profile));
   }
-=======
-  useEffect(() => {
-    (async () => {
-      if (profile) {
-        setForm({
-          ...EMPTY_PROFILE,
-          ...Object.fromEntries(
-            Object.keys(EMPTY_PROFILE).map((key) => [
-              key,
-              profile[key] ?? (key === "startingRate" ? "" : EMPTY_PROFILE[key]),
-            ]),
-          ),
-        });
-      }
-
-      setLoading(false);
-    })();
-  }, [profile]);
->>>>>>> 79d98d87328d46967b35c400b98945f8bc408d3b
 
   const handleChange = (event) => {
     const { name, value } = event.target;

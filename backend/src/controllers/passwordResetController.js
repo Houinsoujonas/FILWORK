@@ -390,6 +390,17 @@ async function resetPassword(req, res) {
         },
       });
 
+      // Révoquer tous les refresh tokens actifs de l'utilisateur.
+      await tx.refreshToken.updateMany({
+        where: {
+          userId: resetToken.userId,
+          revokedAt: null,
+        },
+        data: {
+          revokedAt: now,
+        },
+      });
+
       // Invalider les autres demandes de réinitialisation
       // encore actives pour ce compte.
       await tx.passwordResetToken.updateMany({

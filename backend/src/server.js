@@ -211,4 +211,21 @@ function shutdown(signal) {
 process.on("SIGINT", () => shutdown("SIGINT"));
 process.on("SIGTERM", () => shutdown("SIGTERM"));
 
+// Ne jamais laisser une promesse rejetée ou une exception non interceptée
+// passer inaperçue en production.
+process.on("unhandledRejection", (reason) => {
+  console.error(
+    "[FILWORK] Rejet de promesse non géré :",
+    reason instanceof Error ? reason.message : String(reason),
+  );
+});
+
+process.on("uncaughtException", (error) => {
+  console.error(
+    "[FILWORK] Exception non interceptée :",
+    error instanceof Error ? error.message : String(error),
+  );
+  process.exit(1);
+});
+
 module.exports = server;

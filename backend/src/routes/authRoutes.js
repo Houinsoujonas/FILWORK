@@ -3,6 +3,7 @@ const express = require("express");
 const {
   register,
   login,
+  refresh,
 } = require("../controllers/authController");
 
 const {
@@ -23,6 +24,7 @@ const {
   registerLimiter,
   forgotPasswordLimiter,
   resetPasswordLimiter,
+  refreshLimiter,
 } = require("../middlewares/rateLimiters");
 
 const router = express.Router();
@@ -49,6 +51,9 @@ router.post(
 
 // Déconnexion et révocation du jeton courant.
 router.post("/logout", authenticateToken, logout);
+
+// Renouvellement de session (échange refresh token contre nouveaux tokens).
+router.post("/refresh", refreshLimiter, refresh);
 
 // Informations de l'utilisateur connecté.
 router.get("/me", authenticateToken, (req, res) => {

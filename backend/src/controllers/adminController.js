@@ -1,9 +1,26 @@
-const prisma = require("../config/prisma");
+﻿const prisma = require("../config/prisma");
 const { sendPrismaError } = require("../utils/prismaErrors");
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const ALLOWED_ROLES = ["CREATOR", "COMPANY", "ADMIN"];
+
+/**
+ * Verrouille les lignes des administrateurs actifs pour sÃ©rialiser
+ * les opÃ©rations sensibles sur les comptes administrateurs.
+ */
+async function lockActiveAdminIds(tx) {
+  const rows = await tx.$queryRaw`SELECT id FROM "User" WHERE "role" = 'ADMIN' AND "isActive" = true FOR UPDATE`;
+  return rows.map((row) => row.id);
+}
+
+async function countOtherActiveAdmins(tx, targetId) {
+  const activeAdminIds = await lockActiveAdminIds(tx);
+  return activeAdminIds.filter((id) => id !== targetId).length;
+}
 
 /**
  * Tableau de bord administratif.
- * Seul un utilisateur ADMIN peut accéder à cette fonctionnalité.
+ * Seul un utilisateur ADMIN peut accÃ©der Ã  cette fonctionnalitÃ©.
  */
 async function getDashboardStats(req, res) {
   try {
@@ -97,7 +114,7 @@ async function getDashboardStats(req, res) {
 
     return res.status(200).json({
       success: true,
-      message: "Statistiques administratives récupérées avec succès.",
+      message: "Statistiques administratives rÃ©cupÃ©rÃ©es avec succÃ¨s.",
       stats: {
         users: {
           total: totalUsers,
@@ -149,13 +166,13 @@ async function getDashboardStats(req, res) {
     }
 
     console.error(
-      "Erreur lors de la récupération des statistiques administratives :",
+      "Erreur lors de la rÃ©cupÃ©ration des statistiques administratives :",
       error,
     );
 
     return res.status(500).json({
       success: false,
-      message: "Impossible de récupérer les statistiques administratives.",
+      message: "Impossible de rÃ©cupÃ©rer les statistiques administratives.",
     });
   }
 }
@@ -163,11 +180,11 @@ async function getDashboardStats(req, res) {
 /**
  * Liste des utilisateurs de FILWORK pour l'administration.
  *
- * Fonctionnalités :
+ * FonctionnalitÃ©s :
  * - Pagination.
  * - Recherche par adresse e-mail.
- * - Filtrage par rôle.
- * - Exclusion du mot de passe haché des résultats.
+ * - Filtrage par rÃ´le.
+ * - Exclusion du mot de passe hachÃ© des rÃ©sultats.
  */
 async function getAdminUsers(req, res) {
   try {
@@ -177,14 +194,14 @@ async function getAdminUsers(req, res) {
     if (!Number.isInteger(page) || page < 1) {
       return res.status(400).json({
         success: false,
-        message: "Le numéro de page doit être un entier positif.",
+        message: "Le numÃ©ro de page doit Ãªtre un entier positif.",
       });
     }
 
     if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
       return res.status(400).json({
         success: false,
-        message: "La limite doit être comprise entre 1 et 100.",
+        message: "La limite doit Ãªtre comprise entre 1 et 100.",
       });
     }
 
@@ -196,7 +213,7 @@ async function getAdminUsers(req, res) {
       if (typeof req.query.role !== "string") {
         return res.status(400).json({
           success: false,
-          message: "Le rôle fourni est invalide.",
+          message: "Le rÃ´le fourni est invalide.",
         });
       }
 
@@ -205,7 +222,7 @@ async function getAdminUsers(req, res) {
       if (!allowedRoles.includes(role)) {
         return res.status(400).json({
           success: false,
-          message: "Le rôle doit être CREATOR, COMPANY ou ADMIN.",
+          message: "Le rÃ´le doit Ãªtre CREATOR, COMPANY ou ADMIN.",
         });
       }
     }
@@ -225,7 +242,7 @@ async function getAdminUsers(req, res) {
       if (search.length > 100) {
         return res.status(400).json({
           success: false,
-          message: "La recherche ne doit pas dépasser 100 caractères.",
+          message: "La recherche ne doit pas dÃ©passer 100 caractÃ¨res.",
         });
       }
     }
@@ -256,11 +273,12 @@ async function getAdminUsers(req, res) {
         skip: (page - 1) * limit,
         take: limit,
 
-        // Ne jamais inclure passwordHash dans la réponse.
+        // Ne jamais inclure passwordHash dans la rÃ©ponse.
         select: {
           id: true,
           email: true,
           role: true,
+          isActive: true,
           createdAt: true,
           updatedAt: true,
 
@@ -306,13 +324,13 @@ async function getAdminUsers(req, res) {
     }
 
     console.error(
-      "Erreur lors de la récupération des utilisateurs administratifs :",
+      "Erreur lors de la rÃ©cupÃ©ration des utilisateurs administratifs :",
       error,
     );
 
     return res.status(500).json({
       success: false,
-      message: "Impossible de récupérer les utilisateurs.",
+      message: "Impossible de rÃ©cupÃ©rer les utilisateurs.",
     });
   }
 }
@@ -320,11 +338,11 @@ async function getAdminUsers(req, res) {
 /**
  * Consulter les campagnes de FILWORK depuis le back-office.
  *
- * Fonctionnalités :
+ * FonctionnalitÃ©s :
  * - Pagination.
  * - Recherche par titre ou description.
  * - Filtrage par statut.
- * - Informations sur l'entreprise propriétaire.
+ * - Informations sur l'entreprise propriÃ©taire.
  * - Nombre de candidatures et d'invitations.
  */
 async function getAdminCampaigns(req, res) {
@@ -335,14 +353,14 @@ async function getAdminCampaigns(req, res) {
     if (!Number.isInteger(page) || page < 1) {
       return res.status(400).json({
         success: false,
-        message: "Le numéro de page doit être un entier positif.",
+        message: "Le numÃ©ro de page doit Ãªtre un entier positif.",
       });
     }
 
     if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
       return res.status(400).json({
         success: false,
-        message: "La limite doit être comprise entre 1 et 100.",
+        message: "La limite doit Ãªtre comprise entre 1 et 100.",
       });
     }
 
@@ -363,7 +381,7 @@ async function getAdminCampaigns(req, res) {
       if (!allowedStatuses.includes(status)) {
         return res.status(400).json({
           success: false,
-          message: "Le statut doit être DRAFT, PUBLISHED, PAUSED ou CLOSED.",
+          message: "Le statut doit Ãªtre DRAFT, PUBLISHED, PAUSED ou CLOSED.",
         });
       }
     }
@@ -383,7 +401,7 @@ async function getAdminCampaigns(req, res) {
       if (search.length > 100) {
         return res.status(400).json({
           success: false,
-          message: "La recherche ne doit pas dépasser 100 caractères.",
+          message: "La recherche ne doit pas dÃ©passer 100 caractÃ¨res.",
         });
       }
     }
@@ -481,13 +499,13 @@ async function getAdminCampaigns(req, res) {
     }
 
     console.error(
-      "Erreur lors de la récupération des campagnes administratives :",
+      "Erreur lors de la rÃ©cupÃ©ration des campagnes administratives :",
       error,
     );
 
     return res.status(500).json({
       success: false,
-      message: "Impossible de récupérer les campagnes.",
+      message: "Impossible de rÃ©cupÃ©rer les campagnes.",
     });
   }
 }
@@ -495,12 +513,12 @@ async function getAdminCampaigns(req, res) {
 /**
  * Consulter toutes les collaborations depuis le back-office.
  *
- * Fonctionnalités :
+ * FonctionnalitÃ©s :
  * - Pagination.
  * - Filtrage par statut.
  * - Filtrage par origine : candidature ou invitation.
- * - Informations sur le créateur et l'entreprise.
- * - Nombre de livrables et de paiements associés.
+ * - Informations sur le crÃ©ateur et l'entreprise.
+ * - Nombre de livrables et de paiements associÃ©s.
  */
 async function getAdminCollaborations(req, res) {
   try {
@@ -510,14 +528,14 @@ async function getAdminCollaborations(req, res) {
     if (!Number.isInteger(page) || page < 1) {
       return res.status(400).json({
         success: false,
-        message: "Le numéro de page doit être un entier positif.",
+        message: "Le numÃ©ro de page doit Ãªtre un entier positif.",
       });
     }
 
     if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
       return res.status(400).json({
         success: false,
-        message: "La limite doit être comprise entre 1 et 100.",
+        message: "La limite doit Ãªtre comprise entre 1 et 100.",
       });
     }
 
@@ -543,7 +561,7 @@ async function getAdminCollaborations(req, res) {
         return res.status(400).json({
           success: false,
           message:
-            "Le statut doit être ACTIVE, COMPLETED ou CANCELLED.",
+            "Le statut doit Ãªtre ACTIVE, COMPLETED ou CANCELLED.",
         });
       }
     }
@@ -566,7 +584,7 @@ async function getAdminCollaborations(req, res) {
         return res.status(400).json({
           success: false,
           message:
-            "L'origine doit être APPLICATION ou INVITATION.",
+            "L'origine doit Ãªtre APPLICATION ou INVITATION.",
         });
       }
     }
@@ -701,13 +719,13 @@ async function getAdminCollaborations(req, res) {
     }
 
     console.error(
-      "Erreur lors de la récupération des collaborations administratives :",
+      "Erreur lors de la rÃ©cupÃ©ration des collaborations administratives :",
       error
     );
 
     return res.status(500).json({
       success: false,
-      message: "Impossible de récupérer les collaborations.",
+      message: "Impossible de rÃ©cupÃ©rer les collaborations.",
     });
   }
 }
@@ -715,11 +733,11 @@ async function getAdminCollaborations(req, res) {
 /**
  * Consulter les livrables de FILWORK depuis le back-office.
  *
- * Fonctionnalités :
+ * FonctionnalitÃ©s :
  * - Pagination.
  * - Filtrage par statut.
  * - Recherche par titre ou description.
- * - Informations sur le créateur, la campagne et l'entreprise.
+ * - Informations sur le crÃ©ateur, la campagne et l'entreprise.
  */
 async function getAdminDeliverables(req, res) {
   try {
@@ -729,14 +747,14 @@ async function getAdminDeliverables(req, res) {
     if (!Number.isInteger(page) || page < 1) {
       return res.status(400).json({
         success: false,
-        message: "Le numéro de page doit être un entier positif.",
+        message: "Le numÃ©ro de page doit Ãªtre un entier positif.",
       });
     }
 
     if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
       return res.status(400).json({
         success: false,
-        message: "La limite doit être comprise entre 1 et 100.",
+        message: "La limite doit Ãªtre comprise entre 1 et 100.",
       });
     }
 
@@ -763,7 +781,7 @@ async function getAdminDeliverables(req, res) {
         return res.status(400).json({
           success: false,
           message:
-            "Le statut doit être PENDING, SUBMITTED, REVISION_REQUESTED ou APPROVED.",
+            "Le statut doit Ãªtre PENDING, SUBMITTED, REVISION_REQUESTED ou APPROVED.",
         });
       }
     }
@@ -783,7 +801,7 @@ async function getAdminDeliverables(req, res) {
       if (search.length > 100) {
         return res.status(400).json({
           success: false,
-          message: "La recherche ne doit pas dépasser 100 caractères.",
+          message: "La recherche ne doit pas dÃ©passer 100 caractÃ¨res.",
         });
       }
     }
@@ -922,13 +940,13 @@ async function getAdminDeliverables(req, res) {
     }
 
     console.error(
-      "Erreur lors de la récupération des livrables administratifs :",
+      "Erreur lors de la rÃ©cupÃ©ration des livrables administratifs :",
       error
     );
 
     return res.status(500).json({
       success: false,
-      message: "Impossible de récupérer les livrables.",
+      message: "Impossible de rÃ©cupÃ©rer les livrables.",
     });
   }
 }
@@ -936,14 +954,14 @@ async function getAdminDeliverables(req, res) {
 /**
  * Consulter les paiements de FILWORK depuis le back-office.
  *
- * Fonctionnalités :
+ * FonctionnalitÃ©s :
  * - Pagination.
  * - Filtrage par statut.
  * - Filtrage selon l'origine de la collaboration.
- * - Informations sur le créateur, la campagne et l'entreprise.
+ * - Informations sur le crÃ©ateur, la campagne et l'entreprise.
  *
  * Cette fonction permet de consulter les paiements.
- * Elle ne réalise aucun transfert d'argent.
+ * Elle ne rÃ©alise aucun transfert d'argent.
  */
 async function getAdminPayments(req, res) {
   try {
@@ -953,14 +971,14 @@ async function getAdminPayments(req, res) {
     if (!Number.isInteger(page) || page < 1) {
       return res.status(400).json({
         success: false,
-        message: "Le numéro de page doit être un entier positif.",
+        message: "Le numÃ©ro de page doit Ãªtre un entier positif.",
       });
     }
 
     if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
       return res.status(400).json({
         success: false,
-        message: "La limite doit être comprise entre 1 et 100.",
+        message: "La limite doit Ãªtre comprise entre 1 et 100.",
       });
     }
 
@@ -988,7 +1006,7 @@ async function getAdminPayments(req, res) {
         return res.status(400).json({
           success: false,
           message:
-            "Le statut doit être PLANNED, PENDING, PAID, FAILED ou CANCELLED.",
+            "Le statut doit Ãªtre PLANNED, PENDING, PAID, FAILED ou CANCELLED.",
         });
       }
     }
@@ -1010,7 +1028,7 @@ async function getAdminPayments(req, res) {
       if (!allowedOrigins.includes(origin)) {
         return res.status(400).json({
           success: false,
-          message: "L'origine doit être APPLICATION ou INVITATION.",
+          message: "L'origine doit Ãªtre APPLICATION ou INVITATION.",
         });
       }
     }
@@ -1155,13 +1173,404 @@ async function getAdminPayments(req, res) {
     }
 
     console.error(
-      "Erreur lors de la récupération des paiements administratifs :",
+      "Erreur lors de la rÃ©cupÃ©ration des paiements administratifs :",
       error
     );
 
     return res.status(500).json({
       success: false,
-      message: "Impossible de récupérer les paiements.",
+      message: "Impossible de rÃ©cupÃ©rer les paiements.",
+    });
+  }
+}
+
+/**
+ * Modifier un utilisateur depuis le back-office.
+ *
+ * Seuls les champs autorisÃ©s peuvent Ãªtre modifiÃ©s : adresse e-mail, rÃ´le.
+ * Un administrateur ne peut pas modifier son propre rÃ´le ni se dÃ©sactiver.
+ * Seul un ADMIN peut attribuer le rÃ´le ADMIN.
+ * Le dernier administrateur actif ne peut pas Ãªtre rÃ©trogradÃ© ni dÃ©sactivÃ©.
+ */
+async function updateAdminUser(req, res) {
+  try {
+    const { id } = req.params;
+
+    if (typeof id !== "string" || !id.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "L'identifiant utilisateur est invalide.",
+      });
+    }
+
+    const body = req.body || {};
+    const allowedFields = ["email", "role"];
+
+    const unknownFields = Object.keys(body).filter(
+      (field) => !allowedFields.includes(field),
+    );
+
+    if (unknownFields.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Champs non autorisÃ©s : ${unknownFields.join(", ")}.`,
+      });
+    }
+
+    // Validation et normalisation de l'e-mail.
+    let email;
+    if (body.email !== undefined) {
+      if (typeof body.email !== "string") {
+        return res.status(400).json({
+          success: false,
+          message: "L'adresse e-mail doit Ãªtre un texte.",
+        });
+      }
+
+      email = body.email.trim().toLowerCase();
+
+      if (!EMAIL_REGEX.test(email)) {
+        return res.status(400).json({
+          success: false,
+          message: "Veuillez fournir une adresse e-mail valide.",
+        });
+      }
+    }
+
+    // Validation et normalisation du rÃ´le.
+    let role;
+    if (body.role !== undefined) {
+      if (typeof body.role !== "string") {
+        return res.status(400).json({
+          success: false,
+          message: "Le rÃ´le doit Ãªtre un texte.",
+        });
+      }
+
+      role = body.role.trim().toUpperCase();
+
+      if (!ALLOWED_ROLES.includes(role)) {
+        return res.status(400).json({
+          success: false,
+          message: "Le rÃ´le doit Ãªtre CREATOR, COMPANY ou ADMIN.",
+        });
+      }
+    }
+
+    const targetUser = await prisma.user.findUnique({
+      where: { id: id.trim() },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        isActive: true,
+        tokenVersion: true,
+      },
+    });
+
+    if (!targetUser) {
+      return res.status(404).json({
+        success: false,
+        message: "Utilisateur introuvable.",
+      });
+    }
+
+    // Un administrateur ne peut pas modifier son propre rÃ´le.
+    if (
+      role !== undefined &&
+      req.user.id === targetUser.id
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "Vous ne pouvez pas modifier votre propre rÃ´le.",
+      });
+    }
+
+    // Seul un ADMIN peut attribuer le rÃ´le ADMIN.
+    if (
+      role === "ADMIN" &&
+      req.user.role !== "ADMIN"
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "Seul un administrateur peut attribuer le rÃ´le ADMIN.",
+      });
+    }
+
+    const wouldDemoteLastAdmin =
+      targetUser.role === "ADMIN" &&
+      targetUser.isActive &&
+      role !== undefined &&
+      role !== "ADMIN";
+
+    const outcome = await prisma.$transaction(async (tx) => {
+      // Si la modification retire le dernier administrateur actif, refuser.
+      if (wouldDemoteLastAdmin) {
+        const otherActiveAdmins = await countOtherActiveAdmins(tx, targetUser.id);
+
+        if (otherActiveAdmins === 0) {
+          return { type: "last-admin" };
+        }
+      }
+
+      // VÃ©rifier l'unicitÃ© de l'e-mail si modifiÃ©.
+      if (email && email !== targetUser.email) {
+        const existingUser = await tx.user.findUnique({
+          where: { email },
+        });
+
+        if (existingUser && existingUser.id !== targetUser.id) {
+          return { type: "duplicate-email" };
+        }
+      }
+
+      const data = {};
+
+      if (email !== undefined) {
+        data.email = email;
+      }
+
+      if (role !== undefined) {
+        data.role = role;
+      }
+
+      // Invalider les sessions existantes de l'utilisateur cible.
+      const updatedUser = await tx.user.update({
+        where: { id: targetUser.id },
+        data: {
+          ...data,
+          tokenVersion: {
+            increment: 1,
+          },
+        },
+        select: {
+          id: true,
+          email: true,
+          role: true,
+          isActive: true,
+          updatedAt: true,
+        },
+      });
+
+      return { type: "ok", user: updatedUser };
+    });
+
+    if (outcome.type === "last-admin") {
+      return res.status(403).json({
+        success: false,
+        message:
+          "OpÃ©ration refusÃ©e : le dernier administrateur actif ne peut pas Ãªtre rÃ©trogradÃ©.",
+      });
+    }
+
+    if (outcome.type === "duplicate-email") {
+      return res.status(409).json({
+        success: false,
+        message: "Cette adresse e-mail est dÃ©jÃ  utilisÃ©e.",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Utilisateur mis Ã  jour avec succÃ¨s.",
+      user: outcome.user,
+    });
+  } catch (error) {
+    if (sendPrismaError(res, error)) {
+      return;
+    }
+
+    console.error("Erreur lors de la mise Ã  jour de l'utilisateur :", error.message);
+
+    return res.status(500).json({
+      success: false,
+      message: "Impossible de mettre Ã  jour l'utilisateur.",
+    });
+  }
+}
+
+/**
+ * DÃ©sactiver un utilisateur depuis le back-office.
+ * L'utilisateur ne peut plus se connecter ni utiliser ses sessions existantes.
+ * Le dernier administrateur actif ne peut pas Ãªtre dÃ©sactivÃ©.
+ */
+async function deactivateUser(req, res) {
+  try {
+    const { id } = req.params;
+
+    if (typeof id !== "string" || !id.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "L'identifiant utilisateur est invalide.",
+      });
+    }
+
+    // Un administrateur ne peut pas se dÃ©sactiver lui-mÃªme.
+    if (req.user.id === id.trim()) {
+      return res.status(403).json({
+        success: false,
+        message: "Vous ne pouvez pas dÃ©sactiver votre propre compte.",
+      });
+    }
+
+    const targetUser = await prisma.user.findUnique({
+      where: { id: id.trim() },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        isActive: true,
+      },
+    });
+
+    if (!targetUser) {
+      return res.status(404).json({
+        success: false,
+        message: "Utilisateur introuvable.",
+      });
+    }
+
+    if (!targetUser.isActive) {
+      return res.status(409).json({
+        success: false,
+        message: "Ce compte est dÃ©jÃ  dÃ©sactivÃ©.",
+      });
+    }
+
+    const outcome = await prisma.$transaction(async (tx) => {
+      if (targetUser.role === "ADMIN") {
+        const otherActiveAdmins = await countOtherActiveAdmins(tx, targetUser.id);
+
+        if (otherActiveAdmins === 0) {
+          return { type: "last-admin" };
+        }
+      }
+
+      const updatedUser = await tx.user.update({
+        where: { id: targetUser.id },
+        data: {
+          isActive: false,
+          tokenVersion: {
+            increment: 1,
+          },
+        },
+        select: {
+          id: true,
+          email: true,
+          role: true,
+          isActive: true,
+          updatedAt: true,
+        },
+      });
+
+      return { type: "ok", user: updatedUser };
+    });
+
+    if (outcome.type === "last-admin") {
+      return res.status(403).json({
+        success: false,
+        message:
+          "OpÃ©ration refusÃ©e : le dernier administrateur actif ne peut pas Ãªtre dÃ©sactivÃ©.",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Compte dÃ©sactivÃ© avec succÃ¨s.",
+      user: outcome.user,
+    });
+  } catch (error) {
+    if (sendPrismaError(res, error)) {
+      return;
+    }
+
+    console.error("Erreur lors de la dÃ©sactivation du compte :", error.message);
+
+    return res.status(500).json({
+      success: false,
+      message: "Impossible de dÃ©sactiver le compte.",
+    });
+  }
+}
+
+/**
+ * RÃ©activer un utilisateur depuis le back-office.
+ */
+async function reactivateUser(req, res) {
+  try {
+    const { id } = req.params;
+
+    if (typeof id !== "string" || !id.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "L'identifiant utilisateur est invalide.",
+      });
+    }
+
+    const targetUser = await prisma.user.findUnique({
+      where: { id: id.trim() },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        isActive: true,
+      },
+    });
+
+    if (!targetUser) {
+      return res.status(404).json({
+        success: false,
+        message: "Utilisateur introuvable.",
+      });
+    }
+
+    if (targetUser.isActive) {
+      return res.status(409).json({
+        success: false,
+        message: "Ce compte est dÃ©jÃ  actif.",
+      });
+    }
+
+    const updatedUser = await prisma.$transaction(async (tx) => {
+      // Verrouiller les admins actifs avant toute rÃ©activation pour Ã©viter
+      // des Ã©tats intermÃ©diaires pendant les opÃ©rations concurrentes.
+      if (targetUser.role === "ADMIN") {
+        await lockActiveAdminIds(tx);
+      }
+
+      return tx.user.update({
+        where: { id: targetUser.id },
+        data: {
+          isActive: true,
+          tokenVersion: {
+            increment: 1,
+          },
+        },
+        select: {
+          id: true,
+          email: true,
+          role: true,
+          isActive: true,
+          updatedAt: true,
+        },
+      });
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Compte rÃ©activÃ© avec succÃ¨s.",
+      user: updatedUser,
+    });
+  } catch (error) {
+    if (sendPrismaError(res, error)) {
+      return;
+    }
+
+    console.error("Erreur lors de la rÃ©activation du compte :", error.message);
+
+    return res.status(500).json({
+      success: false,
+      message: "Impossible de rÃ©activer le compte.",
     });
   }
 }
@@ -1173,4 +1582,7 @@ module.exports = {
   getAdminCollaborations,
   getAdminDeliverables,
   getAdminPayments,
+  updateAdminUser,
+  deactivateUser,
+  reactivateUser,
 };

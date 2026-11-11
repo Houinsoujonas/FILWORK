@@ -315,6 +315,101 @@ function campaignClosedEmail({ to, displayName, campaignTitle, link }) {
   return { to, subject, text, html };
 }
 
+/**
+ * Modèle d'e-mail notifiant une entreprise que son paiement a bien été reçu.
+ *
+ * @param {{to: string, displayName?: string, amount?: string, currency?: string, campaignTitle?: string, link?: string}} options
+ */
+function paymentReceivedEmail({ to, displayName, amount, currency, campaignTitle, link }) {
+  const name = escapeHtml(displayName || "");
+  const safeAmount = amount ? escapeHtml(String(amount)) : "";
+  const safeCurrency = currency ? escapeHtml(String(currency)) : "XOF";
+  const campaign = escapeHtml(campaignTitle || "");
+  const url = escapeHtml(link || buildUrl("/espace/entreprise/collaborations"));
+
+  const amountLabel = safeAmount
+    ? `${safeAmount} ${safeCurrency}`
+    : "";
+
+  const subject = `FILWORK - Paiement reçu${campaign ? ` - ${campaign}` : ""}`;
+
+  const text = [
+    greeting(name),
+    "",
+    `Votre paiement${amountLabel ? ` de ${amountLabel}` : ""}${campaign ? ` pour la campagne « ${campaign} »` : ""} a bien été reçu et confirmé.`,
+    "",
+    "La collaboration peut se poursuivre normalement.",
+    "",
+    "Consulter vos collaborations : " + url,
+    "",
+    "L'équipe FILWORK",
+  ].filter(Boolean).join("\n");
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #222; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <h2 style="color: #2563eb;">Paiement confirmé</h2>
+      <p>${greeting(name)}</p>
+      <p>
+        Votre paiement${amountLabel ? ` de <strong>${amountLabel}</strong>` : ""}${campaign ? ` pour <strong>${campaign}</strong>` : ""} a bien été reçu et confirmé.
+      </p>
+      <p>
+        <a href="${url}" style="display: inline-block; padding: 12px 20px; background-color: #2563eb; color: #ffffff; text-decoration: none; border-radius: 6px;">
+          Voir mes collaborations
+        </a>
+      </p>
+      <p>L'équipe FILWORK</p>
+    </div>
+  `;
+
+  return { to, subject, text, html };
+}
+
+/**
+ * Modèle d'e-mail notifiant un créateur que son reversement a été initié.
+ *
+ * @param {{to: string, displayName?: string, amount?: string, currency?: string, link?: string}} options
+ */
+function payoutSentEmail({ to, displayName, amount, currency, link }) {
+  const name = escapeHtml(displayName || "");
+  const safeAmount = amount ? escapeHtml(String(amount)) : "";
+  const safeCurrency = currency ? escapeHtml(String(currency)) : "XOF";
+  const url = escapeHtml(link || buildUrl("/espace/createur/collaborations"));
+
+  const amountLabel = safeAmount ? `${safeAmount} ${safeCurrency}` : "";
+
+  const subject = `FILWORK - Reversement${amountLabel ? ` de ${amountLabel}` : ""} initié`;
+
+  const text = [
+    greeting(name),
+    "",
+    `La rémunération${amountLabel ? ` de ${amountLabel}` : ""} de votre collaboration a été initiée par FILWORK.`,
+    "",
+    "Vous recevrez une notification lorsque le reversement sera confirmé.",
+    "",
+    "Consulter vos collaborations : " + url,
+    "",
+    "L'équipe FILWORK",
+  ].filter(Boolean).join("\n");
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #222; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <h2 style="color: #2563eb;">Reversement initié</h2>
+      <p>${greeting(name)}</p>
+      <p>
+        La rémunération${amountLabel ? ` de <strong>${amountLabel}</strong>` : ""} de votre collaboration a été initiée par FILWORK.
+      </p>
+      <p>
+        <a href="${url}" style="display: inline-block; padding: 12px 20px; background-color: #2563eb; color: #ffffff; text-decoration: none; border-radius: 6px;">
+          Voir mes collaborations
+        </a>
+      </p>
+      <p>L'équipe FILWORK</p>
+    </div>
+  `;
+
+  return { to, subject, text, html };
+}
+
 module.exports = {
   welcomeEmail,
   collaborationProposalEmail,
@@ -322,4 +417,6 @@ module.exports = {
   passwordResetCodeEmail,
   announcementEmail,
   campaignClosedEmail,
+  paymentReceivedEmail,
+  payoutSentEmail,
 };

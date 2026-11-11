@@ -25,6 +25,8 @@ const invitationRoutes = require("./routes/invitationRoutes");
 const adminRoutes = require("./routes/adminRoutes");
 const adminAnnouncementRoutes = require("./routes/adminAnnouncementRoutes");
 const reviewRoutes = require("./routes/reviewRoutes");
+const sasPayRoutes = require("./routes/sasPayRoutes");
+const internalRoutes = require("./routes/internalRoutes");
 
 const app = express();
 
@@ -66,6 +68,16 @@ app.use(
 
     maxAge: 86400,
   }),
+);
+
+// Le webhook SasPay reçoit un corps BRUT (signature vérifiée sur les octets reçus).
+// Ce montage doit précéder express.json().
+const sasPayWebhookRoutes = require("./routes/sasPayWebhookRoutes");
+
+app.use(
+  "/api/webhooks/saspay",
+  express.raw({ type: "*/*", limit: "512kb" }),
+  sasPayWebhookRoutes,
 );
 
 // Limiter la taille des corps JSON reçus.
@@ -115,6 +127,12 @@ app.use("/api/creators", creatorRoutes);
 
 // Routes des avis et réponses.
 app.use("/api/reviews", reviewRoutes);
+
+// Routes SasPay (paiement entreprise → FILWORK → créateur).
+app.use("/api", sasPayRoutes);
+
+// Routes internes réservées aux tâches planifiées (Bearer CRON_SECRET).
+app.use("/api/internal", internalRoutes);
 
 // Vérification de la disponibilité du serveur.
 app.get("/api/health", (req, res) => {

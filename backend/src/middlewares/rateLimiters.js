@@ -67,10 +67,23 @@ const refreshLimiter = rateLimit({
   },
 });
 
+// Limiter les appels au webhook SasPay (public, mais signature vérifiée).
+const webhookLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  limit: isProduction ? 120 : 1000,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message: "Trop de requêtes sur le webhook. Réessayez dans une minute.",
+  },
+});
+
 module.exports = {
   loginLimiter,
   registerLimiter,
   forgotPasswordLimiter,
   resetPasswordLimiter,
   refreshLimiter,
+  webhookLimiter,
 };

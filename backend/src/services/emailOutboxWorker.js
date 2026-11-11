@@ -68,6 +68,10 @@ function getTransporter() {
       user,
       pass,
     },
+    // Borner les délais pour ne pas dépasser le budget d'exécution de Vercel.
+    connectionTimeout: 8_000,
+    greetingTimeout: 8_000,
+    socketTimeout: 8_000,
   });
 
   return transporter;

@@ -1,11 +1,16 @@
 const prisma = require("../config/prisma");
 
-const EMAIL_BATCH_SIZE = Number(process.env.EMAIL_OUTBOX_BATCH_SIZE) || 50;
+// Taille par défaut bornée pour rester compatible avec les contraintes
+// d'exécution de Vercel (fonction unique, 30 s maximum par appel).
+// Sur une offre supérieure, définir EMAIL_OUTBOX_BATCH_SIZE plus grand.
+const EMAIL_BATCH_SIZE = Number(process.env.EMAIL_OUTBOX_BATCH_SIZE) || 3;
 
 const DEFAULT_MAX_ATTEMPTS =
   Number(process.env.EMAIL_OUTBOX_MAX_ATTEMPTS) || 5;
 
 const BACKOFF_DELAYS_MS = [60_000, 300_000, 900_000, 1_800_000, 3_600_000];
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /**
  * Ajoute un e-mail à la file d'envoi persistante.
@@ -20,8 +25,8 @@ const BACKOFF_DELAYS_MS = [60_000, 300_000, 900_000, 1_800_000, 3_600_000];
  * @returns {Promise<object>} L'enregistrement EmailOutbox créé
  */
 async function enqueueEmail({ to, subject, template, payload, maxAttempts }, tx = null) {
-  if (typeof to !== "string" || !to.trim()) {
-    throw new Error("Le destinataire de l'e-mail est obligatoire.");
+  if (typeof to !== "string" || !to.trim() || !EMAIL_REGEX.test(to.trim()) || to.length > 254) {
+    throw new Error("Le destinataire de l'e-mail est invalide.");
   }
 
   if (typeof subject !== "string" || !subject.trim()) {

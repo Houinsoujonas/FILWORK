@@ -1,5 +1,9 @@
 # Déploiement du backend FILWORK sur Render
 
+> **Document historique — ancienne préparation de déploiement.**
+> La cible de déploiement actuelle est **Vercel** (voir `docs/vercel-deployment.md`).
+> Ce document est conservé comme référence utile ; il ne correspond plus au plan de démarrage retenu et ne doit pas être utilisé sans réévaluation préalable. Il ne contredit pas la cible Vercel : les deux plateformes exécutent le même backend, mais les variables et la commande de démarrage diffèrent.
+
 Ce document décrit la procédure de mise en production du backend FILWORK sur Render.
 Il ne contient aucun secret. Les valeurs des variables d'environnement sont à renseigner
 directement dans l'interface Render.
@@ -60,7 +64,7 @@ Node.js 24.x (voir `package.json` -> `engines`).
 | `SMTP_PASS` | Oui* | Mot de passe SMTP | Aucun |
 | `MAIL_FROM` | Non | Expéditeur des e-mails | `SMTP_USER` |
 | `EMAIL_OUTBOX_ENABLED` | Non | Activer/désactiver le worker outbox | `true` |
-| `EMAIL_OUTBOX_BATCH_SIZE` | Non | Taille des lots traités | `50` |
+| `EMAIL_OUTBOX_BATCH_SIZE` | Non | Taille des lots traités | `3` |
 | `EMAIL_OUTBOX_MAX_ATTEMPTS` | Non | Nombre maximum de tentatives par e-mail | `5` |
 | `EMAIL_OUTBOX_POLL_INTERVAL` | Non | Fréquence de traitement de la file (ms) | `30000` |
 
@@ -127,6 +131,8 @@ Protections en place (dans le code, pas seulement en configuration) :
 - `processEmailOutboxBatch` refuse de traiter quoi que ce soit lorsque `NODE_ENV=test`.
 - `sendSmtpEmail` refuse tout envoi lorsque `NODE_ENV=test`.
 - Tout destinataire dont le domaine est `filwork.local`, `example.com`, `example.org`, `example.net` ou `localhost` est refusé par le worker, même hors environnement de test.
+
+En production sur Render, le worker (`EMAIL_OUTBOX_ENABLED=true`, cadence 30 s) assure la livraison des e-mails en quasi-temps réel. Sur la cible actuelle **Vercel**, ce worker n'est pas actif : un **déclencheur externe toutes les 5 minutes est obligatoire** avant la mise en production — voir `docs/vercel-deployment.md`.
 
 En production, le worker ne doit être démarré que si la configuration SMTP est validée et si les e-mails destinés à des utilisateurs réels doivent effectivement être envoyés.
 
@@ -212,3 +218,4 @@ Les logs applicatifs ne doivent pas contenir :
 
 En cas d'erreur non interceptée, le processus logue le message d'erreur sans détail secret et sort en code 1,
 permettant à Render de redémarrer le service.
+

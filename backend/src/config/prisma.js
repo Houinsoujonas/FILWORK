@@ -44,12 +44,25 @@ if (isTest) {
   });
 }
 
-const adapter = new PrismaPg({
-  connectionString,
-});
+// En environnement serverless (Vercel), le module peut être ré-évalué à
+// plusieurs reprises dans des instances distinctes. On met en cache le
+// client et l'adaptateur sur globalThis afin d'éviter une nouvelle connexion
+// à Neon à chaque invocation. Le couple est recréé ensemble pour éviter
+// toute incohérence (adaptateur périmé avec un nouveau client, ou inversement).
+const globalForPrisma = globalThis;
 
-const prisma = new PrismaClient({
-  adapter,
-});
+if (
+  !globalForPrisma.__filworkPrisma ||
+  !globalForPrisma.__filworkAdapter
+) {
+  globalForPrisma.__filworkAdapter = new PrismaPg({
+    connectionString,
+  });
+  globalForPrisma.__filworkPrisma = new PrismaClient({
+    adapter: globalForPrisma.__filworkAdapter,
+  });
+}
+
+const prisma = globalForPrisma.__filworkPrisma;
 
 module.exports = prisma;

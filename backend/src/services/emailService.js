@@ -18,6 +18,8 @@ function escapeHtml(value) {
 
 const outboxService = require("./outboxService");
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 /**
  * Ajoute un e-mail de bienvenue à la file d'envoi.
  * L'échec de l'ajout à la file ne fait pas échouer l'appelant.
@@ -195,6 +197,77 @@ async function enqueueCampaignClosedEmail({ to, displayName, campaignTitle, link
   }
 }
 
+/**
+ * Ajoute un e-mail de confirmation de paiement reçu (entreprise) à la file d'envoi.
+ *
+ * @param {{to: string, displayName?: string, amount?: string, currency?: string, campaignTitle?: string, link?: string}} options
+ * @returns {Promise<object|null>}
+ */
+async function enqueuePaymentReceivedEmail({ to, displayName, amount, currency, campaignTitle, link }, tx = null) {
+  try {
+    if (!EMAIL_REGEX.test(String(to || "").trim())) {
+      console.error("Email de paiement reçu non mis en file : adresse invalide.");
+      return null;
+    }
+
+    const { paymentReceivedEmail } = require("./emailTemplates");
+    const email = paymentReceivedEmail({ to, displayName, amount, currency, campaignTitle, link });
+
+    return outboxService.enqueueEmail({
+      to: email.to,
+      subject: email.subject,
+      template: "payment_received",
+      payload: {
+        text: email.text,
+        html: email.html,
+        displayName,
+        amount,
+        currency,
+        campaignTitle,
+        link,
+      },
+    }, tx);
+  } catch (error) {
+    console.error("Erreur lors de la mise en file de l'e-mail de paiement reçu :", error.message);
+    return null;
+  }
+}
+
+/**
+ * Ajoute un e-mail de notification de reversement initié (créateur) à la file d'envoi.
+ *
+ * @param {{to: string, displayName?: string, amount?: string, currency?: string, link?: string}} options
+ * @returns {Promise<object|null>}
+ */
+async function enqueuePayoutSentEmail({ to, displayName, amount, currency, link }, tx = null) {
+  try {
+    if (!EMAIL_REGEX.test(String(to || "").trim())) {
+      console.error("Email de reversement non mis en file : adresse invalide.");
+      return null;
+    }
+
+    const { payoutSentEmail } = require("./emailTemplates");
+    const email = payoutSentEmail({ to, displayName, amount, currency, link });
+
+    return outboxService.enqueueEmail({
+      to: email.to,
+      subject: email.subject,
+      template: "payout_sent",
+      payload: {
+        text: email.text,
+        html: email.html,
+        displayName,
+        amount,
+        currency,
+        link,
+      },
+    }, tx);
+  } catch (error) {
+    console.error("Erreur lors de la mise en file de l'e-mail de reversement :", error.message);
+    return null;
+  }
+}
+
 module.exports = {
   escapeHtml,
   enqueueWelcomeEmail,
@@ -203,4 +276,6 @@ module.exports = {
   enqueuePasswordResetCodeEmail,
   enqueueAnnouncementEmail,
   enqueueCampaignClosedEmail,
+  enqueuePaymentReceivedEmail,
+  enqueuePayoutSentEmail,
 };

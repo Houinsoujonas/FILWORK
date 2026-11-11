@@ -7,6 +7,8 @@ const {
   maskTarget,
 } = require("./config/databaseTarget");
 
+const { validateProductionEnvironment } = require("./config/productionEnv");
+
 const isTest = process.env.NODE_ENV === "test";
 
 // En mode test, charger exclusivement .env.test pour ne jamais
@@ -36,64 +38,12 @@ if (!isTest && process.env.NODE_ENV === "test") {
   process.exit(1);
 }
 
-// Le mode production est évalué après le chargement de l'environnement.
-const isProduction = process.env.NODE_ENV === "production";
-
-// Vérifier la configuration indispensable à l'authentification JWT.
-if (
-  typeof process.env.JWT_SECRET !== "string" ||
-  !process.env.JWT_SECRET.trim()
-) {
-  console.error(
-    "[FILWORK] Erreur de configuration : JWT_SECRET doit être défini dans le fichier .env.",
-  );
-
+// Validation de la configuration de production (identique au démarrage serverless).
+try {
+  validateProductionEnvironment();
+} catch (error) {
+  console.error(`[FILWORK] Configuration refusée : ${error.message}`);
   process.exit(1);
-}
-
-// En production, refuser une configuration CORS qui ne contiendrait que des
-// origines locales : le frontend déployé ne pourrait pas appeler l'API.
-if (isProduction) {
-  const origins = (process.env.CORS_ORIGINS || "")
-    .split(",")
-    .map((origin) => origin.trim())
-    .filter(Boolean);
-
-  const hasNonLocalOrigin = origins.some((origin) => {
-    try {
-      const { hostname } = new URL(origin);
-
-      return !["localhost", "127.0.0.1", "::1", "[::1]"].includes(
-        hostname.toLowerCase(),
-      );
-    } catch {
-      return false;
-    }
-  });
-
-  if (!hasNonLocalOrigin) {
-    console.error(
-      "[FILWORK] Configuration refusée : CORS_ORIGINS doit contenir au moins une origine non locale en production.",
-    );
-
-    process.exit(1);
-  }
-
-  let frontendUrl;
-
-  try {
-    frontendUrl = new URL(process.env.FRONTEND_URL);
-  } catch {
-    frontendUrl = null;
-  }
-
-  if (!frontendUrl || frontendUrl.protocol !== "https:") {
-    console.error(
-      "[FILWORK] Configuration refusée : FRONTEND_URL doit être une URL HTTPS en production.",
-    );
-
-    process.exit(1);
-  }
 }
 
 const PORT = Number(process.env.PORT) || (isTest ? 5051 : 5000);

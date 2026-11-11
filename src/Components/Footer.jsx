@@ -1,86 +1,183 @@
+import { useLayoutEffect, useRef } from "react";
 import { Link } from "react-router-dom";
-import { FaFacebookF, FaWhatsapp } from "react-icons/fa";
-import { FiInstagram, FiLinkedin } from "react-icons/fi";
+import {
+  FiInstagram,
+  FiLinkedin,
+} from "react-icons/fi";
+import { FaWhatsapp, FaFacebookF } from "react-icons/fa";
+import { gsap } from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 
-const COLUMNS = [
-  {
-    title: "Plateforme",
-    links: [
-      ["Campagnes", "/campagnes"],
-      ["Annuaire des créateurs", "/annuaire-createurs"],
-      ["Espace créateurs", "/createurs"],
-      ["À propos", "/a-propos"],
-    ],
-  },
-  {
-    title: "Commencer",
-    links: [
-      ["Créer un compte", "/inscription"],
-      ["Se connecter", "/connexion"],
-      ["Mot de passe oublié", "/mot-de-passe-oublie"],
-    ],
-  },
-  {
-    title: "Informations",
-    links: [
-      ["Contact", "/contact"],
-      ["Conditions d’utilisation", "/conditions"],
-      ["Confidentialité", "/confidentialite"],
-    ],
-  },
-];
+import "./Footer.css";
 
-const SOCIALS = [
-  ["Instagram", FiInstagram],
-  ["LinkedIn", FiLinkedin],
-  ["WhatsApp", FaWhatsapp],
-  ["Facebook", FaFacebookF],
-];
+gsap.registerPlugin(ScrollTrigger);
 
 function Footer() {
+  const currentYear = new Date().getFullYear();
+  const footerRef = useRef(null);
+
+  useLayoutEffect(() => {
+    const footer = footerRef.current;
+
+    if (
+      !footer ||
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    ) {
+      return undefined;
+    }
+
+    const ctx = gsap.context(() => {
+      const brand = footer.querySelector(".footer__brand");
+      const columns = footer.querySelectorAll(".footer__column");
+      const bottom = footer.querySelector(".footer__bottom");
+
+      const timeline = gsap.timeline({
+        scrollTrigger: {
+          trigger: footer,
+          start: "top 90%",
+          toggleActions: "play none none none",
+          once: true,
+        },
+      });
+
+      timeline
+        .from(brand, {
+          x: -35,
+          autoAlpha: 0,
+          duration: 0.7,
+          ease: "power3.out",
+        })
+        .from(
+          columns,
+          {
+            y: 25,
+            autoAlpha: 0,
+            duration: 0.6,
+            stagger: 0.12,
+            ease: "power2.out",
+          },
+          "-=0.35",
+        )
+        .from(
+          bottom,
+          {
+            y: 20,
+            autoAlpha: 0,
+            duration: 0.6,
+            ease: "power2.out",
+          },
+          "-=0.2",
+        );
+    }, footer);
+
+    return () => ctx.revert();
+  }, []);
+
   return (
-    <footer className="site-footer">
-      <div className="site-footer__container">
-        <div className="site-footer__top">
-          <div className="site-footer__brand">
-            <Link to="/" className="site-footer__logo" aria-label="FILWORK, accueil">
-              <img src="/filwork-logo-light.svg" alt="" width={254} height={56} />
+    <footer className="footer" ref={footerRef}>
+      {" "}
+      <div className="footer__container">
+        {" "}
+        <div className="footer__main">
+          {" "}
+          <div className="footer__brand">
+            {" "}
+            <Link to="/" className="footer__logo" aria-label="Filwork, accueil">
+              <img src="/filwork-logo.svg" alt="" width={254} height={56} />
             </Link>
-            <p className="site-footer__signature">Imaginer. Connecter. Réaliser.</p>
-            <p className="site-footer__description">
+            <p className="footer__signature">IMAGINER. CONNECTER. RÉALISER.</p>
+            <p className="footer__description">
               La plateforme qui rapproche les créateurs de contenu et les
               entreprises pour donner vie à de nouvelles collaborations.
             </p>
-            <Link className="site-footer__cta" to="/inscription">
-              Rejoindre FILWORK <span aria-hidden="true">↗</span>
-            </Link>
-          </div>
-
-          <nav className="site-footer__columns" aria-label="Liens du pied de page">
-            {COLUMNS.map((column) => (
-              <div className="site-footer__column" key={column.title}>
-                <h2>{column.title}</h2>
-                <ul>
-                  {column.links.map(([label, to]) => (
-                    <li key={to}>
-                      <Link to={to}>{label}</Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </nav>
-        </div>
-
-        <div className="site-footer__bottom">
-          <p>© {new Date().getFullYear()} FILWORK. Tous droits réservés.</p>
-          <div className="site-footer__socials" aria-label="Réseaux sociaux">
-            {SOCIALS.map(([name, Icon]) => (
-              <span key={name} title={`${name} : compte officiel à confirmer`}>
-                <Icon aria-hidden="true" />
+            <div className="footer__socials" aria-label="Réseaux sociaux">
+              <span
+                className="footer__social"
+                aria-label="Instagram, compte officiel à confirmer"
+                title="Compte officiel à confirmer"
+              >
+                <FiInstagram aria-hidden="true" />
               </span>
-            ))}
+              <span
+                className="footer__social"
+                aria-label="LinkedIn, compte officiel à confirmer"
+                title="Compte officiel à confirmer"
+              >
+                <FiLinkedin aria-hidden="true" />
+              </span>
+              <span
+                className="footer__social"
+                aria-label="WhatsApp, compte officiel à confirmer"
+                title="Compte officiel à confirmer"
+              >
+                <FaWhatsapp aria-hidden="true" />
+              </span>
+              <span
+                className="footer__social"
+                aria-label="Facebook, compte officiel à confirmer"
+                title="Compte officiel à confirmer"
+              >
+                <FaFacebookF aria-hidden="true" />
+              </span>
+            </div>
+            <p className="footer__social-note">
+              Comptes officiels à confirmer.
+            </p>
           </div>
+          <div className="footer__column">
+            <h3>Navigation</h3>
+            <ul>
+              <li>
+                <Link to="/">Accueil</Link>
+              </li>
+              <li>
+                <Link to="/a-propos">À propos</Link>
+              </li>
+              <li>
+                <Link to="/campagnes">Campagnes</Link>
+              </li>
+              <li>
+                <Link to="/annuaire-createurs">Annuaire des créateurs</Link>
+              </li>
+              <li>
+                <Link to="/inscription">Créer un compte</Link>
+              </li>
+              <li>
+                <Link to="/connexion">Connexion</Link>
+              </li>
+            </ul>
+          </div>
+          <div className="footer__column">
+            <h3>Pour vous</h3>
+            <ul>
+              <li>
+                <Link to="/inscription">Je suis créateur</Link>
+              </li>
+              <li>
+                <Link to="/inscription">Je suis une entreprise</Link>
+              </li>
+              <li>
+                <Link to="/campagnes">Découvrir les opportunités</Link>
+              </li>
+            </ul>
+          </div>
+          <div className="footer__column">
+            <h3>Informations</h3>
+            <ul>
+              <li>
+                <Link to="/confidentialite">Confidentialité</Link>
+              </li>
+              <li>
+                <Link to="/conditions">Conditions d'utilisation</Link>
+              </li>
+              <li>
+                <Link to="/contact">Contact</Link>
+              </li>
+            </ul>
+          </div>
+        </div>
+        <div className="footer__bottom">
+          <p>© {currentYear} Filwork. Tous droits réservés.</p>
         </div>
       </div>
     </footer>

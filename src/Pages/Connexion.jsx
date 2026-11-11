@@ -17,6 +17,10 @@ import { errorMessage } from "../lib/api";
 import { homeForRole } from "../lib/format";
 
 function Connexion() {
+  // Le choix Créateur / Entreprise oriente la présentation du formulaire.
+  // L'authentification et la redirection restent pilotées par le rôle réel
+  // du compte (un ADMIN arrive donc toujours sur son tableau de bord).
+  const [accountType, setAccountType] = useState("creator");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [submitMessage, setSubmitMessage] = useState("");
@@ -175,11 +179,67 @@ function Connexion() {
               )}
 
               <fieldset className="login-account">
-                <legend>Votre compte FILWORK</legend>
+                <legend>Vous êtes sur FILWORK en tant que...</legend>
+
+                <div className="login-account__options">
+                  <button
+                    type="button"
+                    className={`login-account__option ${
+                      accountType === "creator"
+                        ? "login-account__option--active"
+                        : ""
+                    }`}
+                    aria-pressed={accountType === "creator"}
+                    onClick={() => setAccountType("creator")}
+                  >
+                    <span className="login-account__icon">
+                      <FiCamera aria-hidden="true" />
+                    </span>
+
+                    <span className="login-account__text">
+                      <strong>Créateur</strong>
+                      <small>Je crée du contenu</small>
+                    </span>
+
+                    <span className="login-account__check">
+                      {accountType === "creator" && (
+                        <FiCheck aria-hidden="true" />
+                      )}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className={`login-account__option ${
+                      accountType === "business"
+                        ? "login-account__option--active"
+                        : ""
+                    }`}
+                    aria-pressed={accountType === "business"}
+                    onClick={() => setAccountType("business")}
+                  >
+                    <span className="login-account__icon">
+                      <FiBriefcase aria-hidden="true" />
+                    </span>
+
+                    <span className="login-account__text">
+                      <strong>Entreprise</strong>
+                      <small>Je cherche des talents</small>
+                    </span>
+
+                    <span className="login-account__check">
+                      {accountType === "business" && (
+                        <FiCheck aria-hidden="true" />
+                      )}
+                    </span>
+                  </button>
+                </div>
 
                 <p className="login-account__hint">
-                  Le type de compte est déterminé par vos identifiants. Utilisez
-                  l’adresse liée à votre espace créateur ou entreprise.
+                  {accountType === "creator"
+                    ? "Espace créateur : connectez-vous avec votre compte créateur."
+                    : "Espace entreprise : connectez-vous avec votre compte entreprise."}{" "}
+                  Votre accès final dépend du rôle lié à votre compte.
                 </p>
               </fieldset>
 

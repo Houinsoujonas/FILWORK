@@ -1,39 +1,11 @@
-import { useEffect, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import { Link } from "react-router-dom";
-import { FiArrowUpRight, FiBriefcase, FiMapPin } from "react-icons/fi";
+import { FiBriefcase } from "react-icons/fi";
 
 import Button from "./Button";
 import campImage from "../assets/camp.jpg";
-import { api } from "../lib/api";
-import { formatMoney, label } from "../lib/format";
 
 function FeaturedCampaigns() {
   const shouldReduceMotion = useReducedMotion() ?? false;
-  const [campaigns, setCampaigns] = useState([]);
-
-  // Les dernières campagnes publiées remplacent le message d’attente
-  // dès que l’API en renvoie ; sinon le bloc de présentation reste affiché.
-  useEffect(() => {
-    let active = true;
-
-    api
-      .get("/campaigns", { limit: 3 }, { auth: false })
-      .then((data) => {
-        if (active) {
-          setCampaigns((data.campaigns || []).slice(0, 3));
-        }
-      })
-      .catch(() => {
-        if (active) {
-          setCampaigns([]);
-        }
-      });
-
-    return () => {
-      active = false;
-    };
-  }, []);
 
   const fadeUp = {
     hidden: {
@@ -211,113 +183,58 @@ function FeaturedCampaigns() {
             </motion.span>
           </motion.div>
 
-          {campaigns.length > 0 ? (
+          <motion.div
+            className="featured-campaigns__empty"
+            variants={fadeRight}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.2 }}
+          >
             <motion.div
-              className="featured-campaigns__live"
-              variants={fadeRight}
+              className="featured-campaigns__empty-top"
+              variants={staggerContainer}
               initial="hidden"
               whileInView="visible"
-              viewport={{ once: true, amount: 0.2 }}
+              viewport={{ once: true }}
             >
-              <div className="featured-campaigns__live-head">
-                <span className="featured-campaigns__empty-icon">
-                  <FiBriefcase aria-hidden="true" />
-                </span>
-                <span className="featured-campaigns__empty-label">
-                  DERNIÈRES CAMPAGNES PUBLIÉES
-                </span>
-              </div>
+              <span className="featured-campaigns__empty-icon">
+                <FiBriefcase aria-hidden="true" />
+              </span>
 
-              <ul className="featured-campaigns__list">
-                {campaigns.map((campaign) => (
-                  <li key={campaign.id}>
-                    <Link
-                      className="featured-campaigns__item"
-                      to={`/campagnes/${campaign.id}`}
-                    >
-                      <span className="featured-campaigns__item-main">
-                        <small>
-                          {campaign.companyProfile?.companyName || "Entreprise FILWORK"}
-                        </small>
-                        <strong>{campaign.title}</strong>
-                        <span className="featured-campaigns__item-meta">
-                          <b>{formatMoney(campaign.budget, campaign.currency)}</b>
-                          {campaign.location && (
-                            <span>
-                              <FiMapPin aria-hidden="true" /> {campaign.location}
-                            </span>
-                          )}
-                          {campaign.platforms?.length > 0 && (
-                            <span>
-                              {campaign.platforms.map((platform) => label(platform)).join(" · ")}
-                            </span>
-                          )}
-                        </span>
-                      </span>
-                      <FiArrowUpRight aria-hidden="true" />
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-
-              <Link className="featured-campaigns__all" to="/campagnes">
-                Voir toutes les campagnes <FiArrowUpRight aria-hidden="true" />
-              </Link>
-            </motion.div>
-          ) : (
-            <motion.div
-              className="featured-campaigns__empty"
-              variants={fadeRight}
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true, amount: 0.2 }}
-            >
-              <motion.div
-                className="featured-campaigns__empty-top"
-                variants={staggerContainer}
-                initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true }}
-              >
-                <span className="featured-campaigns__empty-icon">
-                  <FiBriefcase aria-hidden="true" />
-                </span>
-  
-                <motion.span
-                  className="featured-campaigns__empty-label"
-                  variants={fadeUp}
-                >
-                  CAMPAGNES FILWORK
-                </motion.span>
-              </motion.div>
-  
-              <motion.h3 variants={fadeUp}>
-                Les campagnes seront affichées ici.
-              </motion.h3>
-  
-              <motion.p variants={fadeUp}>
-                Les campagnes publiées par les entreprises seront affichées ici
-                dès que leurs données seront accessibles.
-              </motion.p>
-  
-              <motion.div variants={fadeUp}>
-                <Button
-                  variant="primary"
-                  to="/inscription"
-                >
-                  Rejoindre Filwork
-                </Button>
-              </motion.div>
-  
-              <motion.div
-                className="featured-campaigns__empty-footer"
+              <motion.span
+                className="featured-campaigns__empty-label"
                 variants={fadeUp}
               >
-                <span />
-                <p>CRÉATIVITÉ · CONNEXION · COLLABORATION</p>
-              </motion.div>
+                CAMPAGNES FILWORK
+              </motion.span>
             </motion.div>
-          )}
+
+            <motion.h3 variants={fadeUp}>
+              Les campagnes seront affichées ici.
+            </motion.h3>
+
+            <motion.p variants={fadeUp}>
+              Les campagnes publiées par les entreprises seront affichées ici
+              dès que leurs données seront accessibles.
+            </motion.p>
+
+            <motion.div variants={fadeUp}>
+              <Button
+                variant="primary"
+                to="/inscription"
+              >
+                Rejoindre Filwork
+              </Button>
+            </motion.div>
+
+            <motion.div
+              className="featured-campaigns__empty-footer"
+              variants={fadeUp}
+            >
+              <span />
+              <p>CRÉATIVITÉ · CONNEXION · COLLABORATION</p>
+            </motion.div>
+          </motion.div>
         </div>
       </div>
     </section>

@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { FiArrowUpRight, FiCalendar, FiMapPin, FiSmartphone } from "react-icons/fi";
+import { FiArrowUpRight, FiCalendar, FiMapPin, FiUsers } from "react-icons/fi";
 
 import { formatDate, formatMoney, label } from "../lib/format";
 
@@ -26,9 +26,7 @@ export default function CampaignCard({ campaign, to }) {
       <p className="public-card__excerpt">{campaign.description}</p>
 
       <div className="public-card__meta">
-        <span className="public-card__budget">
-          {formatMoney(campaign.budget, campaign.currency)}
-        </span>
+        <span>{formatMoney(campaign.budget, campaign.currency)}</span>
         {campaign.location && (
           <span className="ui-row">
             <FiMapPin aria-hidden="true" /> {campaign.location}
@@ -36,7 +34,7 @@ export default function CampaignCard({ campaign, to }) {
         )}
         {campaign.platforms?.length > 0 && (
           <span className="ui-row">
-            <FiSmartphone aria-hidden="true" />{" "}
+            <FiUsers aria-hidden="true" />{" "}
             {campaign.platforms.map((platform) => label(platform)).join(", ")}
           </span>
         )}

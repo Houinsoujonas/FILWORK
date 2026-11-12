@@ -5,8 +5,6 @@ import { BrowserRouter } from "react-router-dom";
 import App from "./App.jsx";
 import { AuthProvider } from "./context/AuthContext.jsx";
 import "./index.css";
-// Finitions chargées en dernier : elles priment sur les couches de index.css.
-import "./styles/finitions.css";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>

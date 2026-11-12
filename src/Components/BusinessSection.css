@@ -30,7 +30,7 @@ display: inline-flex;
 align-items: center;
 gap: 12px;
 margin-bottom: 28px;
-color: #405331;
+color: #d6a354;
 font-family: "Manrope", sans-serif;
 font-size: 11px;
 font-weight: 700;
@@ -42,7 +42,7 @@ text-transform: uppercase;
 display: inline-block;
 width: 30px;
 height: 1px;
-background: #405331;
+background: #d6a354;
 }
 
 .business-title {
@@ -56,7 +56,7 @@ letter-spacing: 0.3px;
 }
 
 .business-title span {
-color: #405331;
+color: #d6a354;
 }
 
 .business-description {
@@ -84,7 +84,7 @@ grid-template-columns: 46px minmax(0, 1fr) 18px;
 align-items: center;
 gap: 16px;
 padding: 17px 18px;
-border: 1px solid rgba(64, 83, 49, 0.14);
+border: 1px solid rgba(214, 163, 84, 0.14);
 border-radius: 14px;
 background: #101010;
 transition:
@@ -95,7 +95,7 @@ transform 0.3s ease;
 
 .business-benefit:hover {
 transform: translateX(5px);
-border-color: rgba(64, 83, 49, 0.48);
+border-color: rgba(214, 163, 84, 0.48);
 background: #14120f;
 }
 
@@ -105,10 +105,10 @@ align-items: center;
 justify-content: center;
 width: 46px;
 height: 46px;
-border: 1px solid rgba(64, 83, 49, 0.25);
+border: 1px solid rgba(214, 163, 84, 0.25);
 border-radius: 12px;
-background: rgba(64, 83, 49, 0.08);
-color: #405331;
+background: rgba(214, 163, 84, 0.08);
+color: #d6a354;
 font-size: 20px;
 }
 
@@ -134,7 +134,7 @@ line-height: 1.75;
 }
 
 .business-benefit-check {
-color: #405331;
+color: #d6a354;
 font-size: 17px;
 }
 
@@ -156,7 +156,7 @@ flex-shrink: 0;
 width: 6px;
 height: 6px;
 border-radius: 50%;
-background: #405331;
+background: #d6a354;
 content: "";
 }
 
@@ -174,7 +174,7 @@ isolation: isolate;
 width: 100%;
 height: 570px;
 overflow: hidden;
-border: 1px solid rgba(64, 83, 49, 0.25);
+border: 1px solid rgba(214, 163, 84, 0.25);
 border-radius: 24px;
 background: #15130f;
 }
@@ -233,13 +233,13 @@ position: relative;
 width: 7px;
 height: 7px;
 border-radius: 50%;
-background: #405331;
+background: #d6a354;
 }
 
 .business-image-indicator::after {
 position: absolute;
 inset: -4px;
-border: 1px solid rgba(64, 83, 49, 0.55);
+border: 1px solid rgba(214, 163, 84, 0.55);
 border-radius: 50%;
 animation: business-pulse 2s ease-out infinite;
 content: "";
@@ -255,7 +255,7 @@ left: 30px;
 .business-image-kicker {
 display: inline-block;
 margin-bottom: 17px;
-color: #405331;
+color: #d6a354;
 font-family: "Manrope", sans-serif;
 font-size: 9px;
 font-weight: 700;
@@ -290,8 +290,8 @@ top: 0;
 right: 0;
 width: 105px;
 height: 105px;
-border-top: 1px solid rgba(64, 83, 49, 0.7);
-border-right: 1px solid rgba(64, 83, 49, 0.7);
+border-top: 1px solid rgba(214, 163, 84, 0.7);
+border-right: 1px solid rgba(214, 163, 84, 0.7);
 border-top-right-radius: 24px;
 }
 
@@ -300,8 +300,8 @@ right: 0;
 bottom: 0;
 width: 105px;
 height: 105px;
-border-right: 1px solid rgba(64, 83, 49, 0.55);
-border-bottom: 1px solid rgba(64, 83, 49, 0.55);
+border-right: 1px solid rgba(214, 163, 84, 0.55);
+border-bottom: 1px solid rgba(214, 163, 84, 0.55);
 border-bottom-right-radius: 24px;
 }
 
@@ -320,7 +320,7 @@ opacity: 0.75;
 width: 5px;
 height: 5px;
 border-radius: 50%;
-background: #405331;
+background: #d6a354;
 }
 
 
@@ -340,9 +340,9 @@ align-items: center;
 gap: 20px;
 min-height: 54px;
 padding: 0 25px;
-border: 1px solid #405331;
+border: 1px solid #d6a354;
 border-radius: 8px;
-background: #405331;
+background: #d6a354;
 color: #080808;
 text-decoration: none;
 font-family: "Manrope", sans-serif;
@@ -366,7 +366,7 @@ transition: transform 0.3s ease;
 transform: translateY(-3px);
 border-color: #e7bd79;
 background: #e7bd79;
-box-shadow: 0 10px 30px rgba(64, 83, 49, 0.14);
+box-shadow: 0 10px 30px rgba(214, 163, 84, 0.14);
 }
 
 .business-cta:hover svg {

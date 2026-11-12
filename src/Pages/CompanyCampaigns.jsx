@@ -185,7 +185,7 @@ export default function CompanyCampaigns() {
                   </button>
                 )}
 
-                {campaign.status === "PAUSED" && (
+                {["PUBLISHED", "PAUSED"].includes(campaign.status) && (
                   <button
                     type="button"
                     className="ui-button ui-button--small"
@@ -193,12 +193,12 @@ export default function CompanyCampaigns() {
                       act(
                         campaign,
                         "publish",
-                        "Réactiver cette campagne ? Elle redeviendra visible et ouverte aux candidatures.",
+                        "Republier cette campagne ?",
                       )
                     }
                     disabled={busy === `${campaign.id}-publish`}
                   >
-                    <FiPlay aria-hidden="true" /> Réactiver
+                    <FiPlay aria-hidden="true" /> Republier
                   </button>
                 )}
 

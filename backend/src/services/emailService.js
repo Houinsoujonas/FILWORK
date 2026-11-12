@@ -268,6 +268,45 @@ async function enqueuePayoutSentEmail({ to, displayName, amount, currency, link 
   }
 }
 
+/**
+ * Ajoute un e-mail de « nouvelle campagne publiée » à la file d'envoi.
+ * L'échec ne fait pas échouer l'appelant.
+ *
+ * @param {{to: string, displayName?: string, companyName?: string, campaignTitle?: string, campaignDescription?: string, link?: string}} options
+ * @param {object|null} [tx]
+ */
+async function enqueueCampaignPublishedEmail({ to, displayName, companyName, campaignTitle, campaignDescription, link }, tx = null) {
+  try {
+    const to_trim = String(to || "").trim();
+
+    if (!to_trim || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to_trim)) {
+      console.error("Email de campagne publiée non mis en file : adresse invalide.");
+      return null;
+    }
+
+    const { campaignPublishedEmail } = require("./emailTemplates");
+    const email = campaignPublishedEmail({ to: to_trim, displayName, companyName, campaignTitle, campaignDescription, link });
+
+    return outboxService.enqueueEmail({
+      to: email.to,
+      subject: email.subject,
+      template: "campaign_published",
+      payload: {
+        text: email.text,
+        html: email.html,
+        displayName,
+        companyName,
+        campaignTitle,
+        campaignDescription,
+        link,
+      },
+    }, tx);
+  } catch (error) {
+    console.error("Erreur lors de la mise en file de l'e-mail de campagne publiée :", error.message);
+    return null;
+  }
+}
+
 module.exports = {
   escapeHtml,
   enqueueWelcomeEmail,
@@ -278,4 +317,5 @@ module.exports = {
   enqueueCampaignClosedEmail,
   enqueuePaymentReceivedEmail,
   enqueuePayoutSentEmail,
+  enqueueCampaignPublishedEmail,
 };

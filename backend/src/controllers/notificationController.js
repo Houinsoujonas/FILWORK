@@ -51,6 +51,7 @@ async function getMyNotifications(req, res) {
           readAt: true,
           createdAt: true,
           announcementId: true,
+          campaignId: true,
           applicationId: true,
           invitationId: true,
           collaborationId: true,

@@ -7,6 +7,21 @@
 - **Neon ne doit être utilisée qu'avec votre autorisation expresse.** Ni `filwork_dev` ni une branche Neon ne doivent recevoir de dump ou de `prisma db push` sans feu vert.
 - Le backend contrôle explicitement, à chaque démarrage, que la base applicative n'est pas la base de test (`src/config/databaseTarget.js`). Toute incohérence bloque le démarrage.
 
+## État des branches Neon (vérifié)
+
+- `migration-test` (migration `br-jolly-dew-b4ggr9n4`) : a reçu les **21 migrations** (registres : 22 enregistrements physiques dans `_prisma_migrations` dont 1 ancienne tentative annulée de `add_communication_system` ; 21 migrations réussies distinctes, 21 tables applicatives, 5 utilisateurs conservés). C'est la référence de validation.
+- `production` (`br-wandering-meadow-b4vnko5f`) : **0 table applicative**, **aucune entrée Prisma** — **pas encore migrée**.
+- `production-backup-before-migrations` (`br-crimson-morning-b4jxxg4x`, parent `production`, créée 2026-11-11) : **0 table applicative** — c'est un point de restauration structurel, pas une sauvegarde de données.
+
+## Ordre de travail
+
+1. Vérification lecture seule `migration-test` (référence de validation).
+2. Vérification lecture seule `production` et `production-backup-before-migrations`.
+3. Configuration Vercel (variables d'environnement) et premier déploiement technique.
+4. Migration production (uniquement après autorisation séparée explicite).
+5. Vérifications post-migration (status, diff, SQL).
+6. Déclencheur externe 5 minutes et vérification e-mails réels.
+
 ## Pooling
 
 - `DATABASE_URL` : utiliser le pooler Neon (`pgbouncer=true` sur le host `-pooler`). Exemple : `postgresql://USER:PASSWORD@HOST-pooler.REGION.aws.neon.tech/DB?sslmode=require&pgbouncer=true&connection_limit=5`.

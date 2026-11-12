@@ -1,6 +1,6 @@
 ﻿# FILWORK — État de préparation production
 
-> Établi le 2026-11-11. Le backend n'est **pas déployé** et n'a **jamais été connecté à une production réelle**.
+> Établi le 2026-11-12 (révisé). Le backend n'est **pas déployé** et n'a **jamais été connecté à une production réelle**.
 > Toute affirmation ci-dessous est vérifiée sur le code, la base de test (`filwork_test`) et les tests automatisés.
 
 ## Légende
@@ -9,6 +9,15 @@
 - **PRÉPARÉ, NON TESTÉ EN CONDITIONS RÉELLES** — code écrit et testé unitairement/avec mocks ; jamais exercé contre un prestataire réel.
 - **BLOQUÉ PAR DÉCISION/AUTORISATION** — attend un choix métier, un compte externe ou une autorisation.
 - **NON IMPLÉMENTÉ** — absent du code.
+
+## État du dépôt et des migrations
+
+- Le dépôt `main` est à `125bcd08daf229b6b44bbb6d2cfd3b922633fdc5`, identique à `origin/main`.
+- Les 21 migrations sont versionnées dans `backend/prisma/migrations/`.
+- `migration-test` (`br-jolly-dew-b4ggr9n4`) a reçu les 21 migrations : registre physique = **22 enregistrements** dans `_prisma_migrations`, dont 1 ancienne tentative annulée de `add_communication_system` conservée dans l'historique, soit **21 migrations réussies distinctes**. Le schéma obtenu correspond au schéma Prisma (`migrate diff --exit-code` → *No difference detected.*).
+- `production` (`br-wandering-meadow-b4vnko5f`) : **0 table applicative**, **aucune entrée Prisma** — **pas encore migrée**.
+- `production-backup-before-migrations` (`br-crimson-morning-b4jxxg4x`, parent `production`, créée 2026-11-11) : **0 table applicative** ; c'est un point de restauration structurel, **pas une sauvegarde de données**.
+- Les tests (176) sont dirigés **exclusivement** vers `filwork_test` ; aucun test n'utilise une base Neon.
 
 ## Fonctionnalités opérationnelles et testées
 
@@ -20,10 +29,11 @@
 - Collaborations : consultation, clôture (idempotente), annulation (entreprise avec motif ; créateur si sans engagement).
 - Livrables : création, soumission, examen (validation / demande de révision), notifications.
 - Paiements (suivi manuel, temporaire) : création, consultation, transitions strictes contrôlant la propriété de la collaboration, notifications — historique conservé, aucune suppression possible. Voir `docs/payment-manual.md`. **SasPay est reporté à une mission distincte.**
-- Notifications, Annonces administratives, Préférences (booléens e-mails).
+- Notifications, Annonces administratives, Préférences (booléens e-mails, désactivables via l'API).
+- **Notifications de publication de campagne** : à la publication, chaque créateur éligible (`role=CREATOR`, `isActive=true`, profil existant) reçoit une notification in-app `CAMPAIGN_PUBLISHED` et un e-mail (si `campaignEmails=true` dans ses préférences). Déduplication par contrainte unique partielle. Voir `docs/campaign-notifications.md`.
 - EmailOutbox : file persistante, backoff, reprise des tâches bloquées, protection anti-envoi accidentel en test.
 - Administration : dashboard, listes utilisateurs/campagnes/collaborations/livrables/paiements, modification/désactivation/réactivation de comptes, protection du dernier ADMIN actif (verrou `FOR UPDATE`).
-- Tests : **176/176 OK** sur `filwork_test` (unitaires 22, saspay 10, saspay-disabled 6, outbox 4, cron 4, production-env 12, prisma-cache 3, integration 86, reviews 7, communication 13, refresh-admin 6, payment-permissions 1, payment-notifications 2). Voir `npm run test:all`.
+- Tests : **177/177 OK** sur `filwork_test` (unitaires 22, saspay 10, saspay-disabled 6, outbox 4, cron 4, production-env 12, prisma-cache 3, integration 86, reviews 7, communication 13, refresh-admin 6, payment-permissions 1, payment-notifications 2, campaign-notifications 1). Voir `npm run test:all`.
   - Le nombre de messages en attente dans `filwork_test` varie selon les exécutions : toute citation d'un nombre exact serait obsolète dès la prochaine exécution. La file y contient exclusivement des adresses de test (`@filwork.local`/`@example.com`) protégées contre l'envoi réel par `NODE_ENV=test`.
 
 ## Préparé, non testé en conditions réelles

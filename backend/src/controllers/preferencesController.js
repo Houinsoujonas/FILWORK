@@ -25,6 +25,7 @@ async function getMyPreferences(req, res) {
         collaborationEmails: preferences.collaborationEmails,
         announcementEmails: preferences.announcementEmails,
         notificationEmails: preferences.notificationEmails,
+        campaignEmails: preferences.campaignEmails,
         updatedAt: preferences.updatedAt,
       },
     });
@@ -55,7 +56,7 @@ async function updateMyPreferences(req, res) {
     const userId = req.user.id;
     const body = req.body || {};
 
-    const { collaborationEmails, announcementEmails, notificationEmails } = body;
+    const { collaborationEmails, announcementEmails, notificationEmails, campaignEmails } = body;
 
     const updateData = {};
 
@@ -69,6 +70,10 @@ async function updateMyPreferences(req, res) {
 
     if (typeof notificationEmails === "boolean") {
       updateData.notificationEmails = notificationEmails;
+    }
+
+    if (typeof campaignEmails === "boolean") {
+      updateData.campaignEmails = campaignEmails;
     }
 
     if (Object.keys(updateData).length === 0) {
@@ -100,6 +105,7 @@ async function updateMyPreferences(req, res) {
         collaborationEmails: preferences.collaborationEmails,
         announcementEmails: preferences.announcementEmails,
         notificationEmails: preferences.notificationEmails,
+        campaignEmails: preferences.campaignEmails,
         updatedAt: preferences.updatedAt,
       },
     });

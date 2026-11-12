@@ -37,13 +37,14 @@ Mode développement : `npm run dev` (auto-recharge, via `node --watch`).
 | `npm run test:refresh-admin` | Tests refresh tokens + administration |
 | `npm run test:payment-permissions` | Permissions et transitions de paiement (`filwork_test`) |
 | `npm run test:payment-notifications` | Notifications livrées/ignorées selon l'issue des transitions |
+| `npm run test:campaign-notifications` | Notifications de publication de campagne |
 | `npm run test:saspay` | Tests unitaires du service SasPay (mocks, aucun réseau) |
 | `npm run test:saspay-disabled` | Isolation SasPay (désactivé même avec une clé présente) |
 | `npm run test:outbox` | Tests EmailOutbox (sans envoi réel) |
 | `npm run test:cron` | Tests des routes internes cron (protégées) |
 | `npm run test:production-env` | Validation des variables d'environnement de production |
 | `npm run test:prisma-cache` | Cohérence du cache client/adaptateur Prisma |
-| `npm run test:all` | Toutes les suites (176 tests) |
+| `npm run test:all` | Toutes les suites (177 tests) |
 
 `test:all` et les suites d'intégration sont dirigés exclusivement vers `filwork_test` via `.env.test` ; les garde-fous refusent de démarrer sur toute autre base.
 
@@ -55,6 +56,8 @@ Mode développement : `npm run dev` (auto-recharge, via `node --watch`).
 
 Flux financier actuel : **déclaration manuelle**. L'entreprise paie le créateur hors plateforme puis déclare le paiement (PLANNED → PENDING → PAID). FILWORK n'intervient dans aucun transfert. Voir `docs/payment-manual.md`. SasPay est préparé mais reporté (`SASPAY_ENABLED=false`).
 
+Flux de publication de campagne : **notifications automatiques**. Lorsqu'une entreprise publie une campagne, tous les créateurs actifs et éligibles sont notifiés dans leur tableau de bord **et** reçoivent un e-mail (si `campaignEmails=true` dans leurs préférences). La notification est dédupliquée (aucune création en double lors d'une republication) et respecte les préférences utilisateurs. Voir `docs/campaign-notifications.md`.
+
 ## Environnements
 
 - `.env` : application (jamais commité, ignoré par `backend/.gitignore`).
@@ -63,6 +66,10 @@ Flux financier actuel : **déclaration manuelle**. L'entreprise paie le créateu
 
 ## Documentation
 
+- `docs/production-deployment.md` — déploiement Vercel, variables d'environnement, health checks.
+- `docs/production-migration-runbook.md` — procédure de migration de production, vérifications et rollback.
+- `docs/production-operations.md` — opérations quotidiennes (e-mails, cron, SasPay, paiements manuels, stockage, surveillance).
+- `docs/campaign-notifications.md` — notifications de publication de campagne, ciblage, préférences, déduplication.
 - `docs/vercel-deployment.md` — architecture et limites Vercel.
 - `docs/neon-production.md` — Neon + pooling + migrations.
 - `docs/brevo-setup.md` — e-mails via Brevo SMTP.

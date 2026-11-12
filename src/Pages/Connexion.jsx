@@ -264,7 +264,7 @@ function Connexion() {
                 <div className="login-field__header">
                   <label htmlFor="login-password">Mot de passe</label>
 
-                  <Link to="/mot-de-passe-oublie">Mot de passe oublié&nbsp;?</Link>
+                  <Link to="/mot-de-passe-oublie">Mot de passe oublié ?</Link>
                 </div>
 
                 <div className="login-input-wrapper login-password">

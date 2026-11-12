@@ -5,7 +5,7 @@
 - Aucune valeur réelle n'est commitée. Les exemples ci-dessous sont des valeurs fictives.
 - `.env` (application) et `.env.test` (tests) sont **ignorés par Git** (`backend/.gitignore`).
 - Les variables de test (`TEST_DATABASE_URL`) n'appartiennent qu'à `.env.test`.
-- Les secrets se configurent dans l'interface Vercel / Render, jamais dans le dépôt.
+- Les secrets se configurent dans l'interface Vercel (ou Render pour l'ancienne cible), jamais dans le dépôt.
 - `JWT_SECRET` : au moins 32 caractères aléatoires.
 
 ## Variables obligatoires

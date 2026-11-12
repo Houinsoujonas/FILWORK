@@ -410,6 +410,54 @@ function payoutSentEmail({ to, displayName, amount, currency, link }) {
   return { to, subject, text, html };
 }
 
+/**
+ * Modèle d'e-mail annonçant à un créateur qu'une entreprise a publié une campagne.
+ *
+ * @param {{to: string, displayName?: string, companyName?: string, campaignTitle?: string, campaignDescription?: string, link?: string}} options
+ */
+function campaignPublishedEmail({ to, displayName, companyName, campaignTitle, campaignDescription, link }) {
+  const name = escapeHtml(displayName || "");
+  const company = escapeHtml(companyName || "");
+  const campaign = escapeHtml(campaignTitle || "");
+  const description = escapeHtml(campaignDescription || "");
+  const url = escapeHtml(link || buildUrl("/campagnes"));
+
+  const subject = `Nouvelle campagne sur FILWORK${campaign ? ` - ${campaign}` : ""}`;
+
+  const text = [
+    greeting(name),
+    "",
+    company ? `${company} vient de publier une campagne :` : "Une campagne vient d'être publiée :",
+    campaign ? `Titre : ${campaign}` : "",
+    description ? `Description : ${description}` : "",
+    "",
+    "Consultez la campagne pour voir tous les détails et postuler :",
+    url,
+    "",
+    "L'équipe FILWORK",
+  ].filter(Boolean).join("\n");
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #222; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <h2 style="color: #2563eb;">Nouvelle opportunité sur FILWORK</h2>
+      <p>${greeting(name)}</p>
+      <p>
+        ${company ? `<strong>${company}</strong> ` : "Une entreprise "} vient de publier une campagne${campaign ? ` : <strong>${campaign}</strong>` : ""}.
+      </p>
+      ${description ? `<p>${description}</p>` : ""}
+      <p>
+        <a href="${url}" style="display: inline-block; padding: 12px 20px; background-color: #2563eb; color: #ffffff; text-decoration: none; border-radius: 6px;">
+          Voir la campagne
+        </a>
+      </p>
+      <p><small>Pour postuler, vous devrez vous connecter.</small></p>
+      <p>L'équipe FILWORK</p>
+    </div>
+  `;
+
+  return { to, subject, text, html };
+}
+
 module.exports = {
   welcomeEmail,
   collaborationProposalEmail,
@@ -419,4 +467,5 @@ module.exports = {
   campaignClosedEmail,
   paymentReceivedEmail,
   payoutSentEmail,
+  campaignPublishedEmail,
 };

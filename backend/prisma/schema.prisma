@@ -51,6 +51,7 @@ enum NotificationType {
 
   ANNOUNCEMENT
   COLLABORATION_PROPOSED
+  CAMPAIGN_PUBLISHED
 }
 
 enum CollaborationStatus {
@@ -198,6 +199,7 @@ model Campaign {
   companyProfile CompanyProfile @relation(fields: [companyProfileId], references: [id], onDelete: Cascade)
   applications   Application[]
   invitations Invitation[]
+  notifications Notification[]
 
   @@index([companyProfileId])
   @@index([status, createdAt])
@@ -258,6 +260,7 @@ model Notification {
   invitationId    String?
   collaborationId String?
   announcementId  String?
+  campaignId      String?
 
   type    NotificationType
   title   String
@@ -274,12 +277,15 @@ model Notification {
   invitation    Invitation?   @relation(fields: [invitationId], references: [id], onDelete: SetNull)
   collaboration Collaboration? @relation(fields: [collaborationId], references: [id], onDelete: SetNull)
   announcement  Announcement? @relation(fields: [announcementId], references: [id], onDelete: SetNull)
+  campaign      Campaign?     @relation(fields: [campaignId], references: [id], onDelete: SetNull)
 
   @@index([userId, isRead, createdAt])
   @@index([applicationId])
   @@index([invitationId])
   @@index([collaborationId])
   @@index([announcementId])
+  @@index([campaignId])
+  @@unique([userId, type, campaignId], where: raw("(\"campaignId\" IS NOT NULL AND \"type\" = 'CAMPAIGN_PUBLISHED')"), map: "Notification_campaign_published_unique")
 }
 
 model Collaboration {
@@ -532,6 +538,7 @@ model NotificationPreference {
   collaborationEmails Boolean @default(true)
   announcementEmails  Boolean @default(true)
   notificationEmails  Boolean @default(true)
+  campaignEmails      Boolean @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

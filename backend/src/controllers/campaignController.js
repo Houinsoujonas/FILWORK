@@ -5,6 +5,7 @@ const {
   PUBLIC_CAMPAIGN_CONDITIONS,
 } = require("../services/profileVisibility");
 const { enqueueCampaignClosedEmail } = require("../services/emailService");
+const { notifyEligibleCreators } = require("../services/campaignNotificationService");
 
 const ALLOWED_FIELDS = [
   "title",
@@ -955,6 +956,19 @@ async function publishCampaign(req, res) {
         },
       },
     });
+
+    // Déclencher la notification aux créateurs uniquement lors d'une
+    // transition réelle vers PUBLISHED (pas si déjà publiée).
+    if (outcome.type === "ok") {
+      try {
+        await notifyEligibleCreators({ campaign, companyName: campaign?.companyProfile?.companyName || "Une entreprise" });
+      } catch (notifyError) {
+        console.error(
+          "Erreur lors de la notification de publication :",
+          notifyError.message,
+        );
+      }
+    }
 
     return res.status(200).json({
       success: true,

@@ -266,8 +266,8 @@ function Inscription() {
 
             <span>
               J'accepte les{" "}
-              <Link to="/conditions">conditions d'utilisation</Link> et la
-              politique de confidentialité.
+              <Link to="/conditions">conditions d'utilisation</Link> et la{" "}
+              <Link to="/confidentialite">politique de confidentialité</Link>.
             </span>
           </label>
 

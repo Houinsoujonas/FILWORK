@@ -234,7 +234,11 @@ export default function APropos() {
         </div>
       </section>
 
-      <section className="about-team" aria-labelledby="about-team-title">
+      <section
+        id="about-team"
+        className="about-team"
+        aria-labelledby="about-team-title"
+      >
         <div className="about-section__heading">
           <span className="section-label">L’ÉQUIPE DE DÉVELOPPEMENT</span>
           <h2 id="about-team-title">Les personnes qui donnent forme à FILWORK.</h2>
@@ -282,14 +286,11 @@ export default function APropos() {
       <section className="about-status" aria-labelledby="about-status-title">
         <span className="section-label">OÙ EN EST FILWORK ?</span>
         <div>
-          <h2 id="about-status-title">Les parcours sont présentés. Les services doivent encore être raccordés.</h2>
+          <h2 id="about-status-title">Les parcours dépendent des services connectés.</h2>
           <p>
-            Vous pouvez parcourir l’interface, choisir un type de compte et
-            préparer un brief de campagne. Aujourd’hui, ces formulaires ne
-            créent pas encore de compte et ne publient pas de campagne ; les
-            profils et les espaces personnels ne sont pas alimentés. Leur
-            activation dépend du raccordement des services de compte et de
-            données.
+            L’interface comprend les formulaires d’inscription et de campagne,
+            ainsi que des espaces personnels. Leur utilisation et l’affichage
+            des données dépendent de la disponibilité des services connectés.
           </p>
         </div>
       </section>

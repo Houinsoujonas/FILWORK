@@ -23,6 +23,7 @@ export default function Campagnes() {
   const [search, setSearch] = useState("");
   const [platform, setPlatform] = useState("");
   const [page, setPage] = useState(1);
+  const [retryCount, setRetryCount] = useState(0);
 
   const { data, loading, error } = useApiQuery(
     () =>
@@ -38,7 +39,7 @@ export default function Campagnes() {
           total: response.total ?? response.count ?? 0,
           totalPages: response.totalPages ?? 1,
         })),
-    [search, platform, page],
+    [search, platform, page, retryCount],
     EMPTY_CAMPAIGNS,
   );
 
@@ -99,16 +100,21 @@ export default function Campagnes() {
         </button>
       </form>
 
-      {error && (
-        <p className="form-notice form-notice--error" role="alert">
-          {error}
-        </p>
-      )}
-
       {loading ? (
         <p className="public-search-status" role="status">
           Chargement des campagnes…
         </p>
+      ) : error ? (
+        <div className="form-notice form-notice--error" role="alert">
+          <p>Les campagnes n’ont pas pu être chargées. {error}</p>
+          <button
+            type="button"
+            className="filter-button"
+            onClick={() => setRetryCount((current) => current + 1)}
+          >
+            Réessayer
+          </button>
+        </div>
       ) : campaigns.length === 0 ? (
         <EmptyState
           title={

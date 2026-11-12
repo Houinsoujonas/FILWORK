@@ -55,7 +55,7 @@ export default function MotDePasseOublie() {
           <FiMail aria-hidden="true" />
         </span>
         <span className="section-label">RÉCUPÉRATION DU COMPTE</span>
-        <h1>Mot de passe oublié&nbsp;?</h1>
+        <h1>Mot de passe oublié ?</h1>
         <p>
           Indiquez votre adresse e-mail. Vous recevrez un code de vérification
           à 6 chiffres pour définir un nouveau mot de passe.

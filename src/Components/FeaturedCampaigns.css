@@ -188,6 +188,47 @@ justify-content: center;
 padding: 48px;
 }
 
+.featured-campaigns__empty--results {
+  justify-content: flex-start;
+}
+
+.featured-campaigns__status {
+  max-width: 38ch;
+  margin: 0;
+  color: var(--brand-muted, #62645d);
+  font-size: .95rem;
+  line-height: 1.65;
+}
+
+.featured-campaigns__results {
+  display: grid;
+  width: 100%;
+  gap: 12px;
+}
+
+.featured-campaigns__results .public-card {
+  min-height: 0;
+  padding: 20px;
+  border-color: var(--brand-border, #e7e5dd);
+  border-radius: 14px;
+  background: #fff;
+  color: var(--brand-ink, #171814);
+}
+
+.featured-campaigns__results .public-card__company,
+.featured-campaigns__results .public-card h3 {
+  color: var(--brand-ink, #171814);
+}
+
+.featured-campaigns__results .public-card__excerpt,
+.featured-campaigns__results .public-card__meta {
+  color: var(--brand-muted, #62645d);
+}
+
+.featured-campaigns__results .public-card__meta {
+  border-color: var(--brand-border, #e7e5dd);
+}
+
 .featured-campaigns__empty-top {
 display: flex;
 align-items: center;

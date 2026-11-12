@@ -1,11 +1,19 @@
 import { motion, useReducedMotion } from "framer-motion";
 import { FiBriefcase } from "react-icons/fi";
 
+import { api } from "../lib/api";
+import { useApiQuery } from "../lib/useApiQuery";
 import Button from "./Button";
+import CampaignCard from "./CampaignCard";
 import campImage from "../assets/camp.jpg";
 
 function FeaturedCampaigns() {
   const shouldReduceMotion = useReducedMotion() ?? false;
+  const { data: campaigns, loading, error } = useApiQuery(
+    () => api.get("/campaigns", { page: 1, limit: 2 }).then((response) => response.campaigns || []),
+    [],
+    [],
+  );
 
   const fadeUp = {
     hidden: {
@@ -210,13 +218,20 @@ function FeaturedCampaigns() {
             </motion.div>
 
             <motion.h3 variants={fadeUp}>
-              Les campagnes seront affichées ici.
+              {loading ? "Chargement des campagnes…" : error ? "Les campagnes ne sont pas disponibles pour le moment." : campaigns.length ? "Campagnes publiées" : "Aucune campagne publiée pour le moment."}
             </motion.h3>
 
             <motion.p variants={fadeUp}>
-              Les campagnes publiées par les entreprises seront affichées ici
-              dès que leurs données seront accessibles.
+              {error ? "Réessayez plus tard." : campaigns.length ? "Découvrez les campagnes proposées par les entreprises." : "Les nouvelles opportunités apparaîtront ici."}
             </motion.p>
+
+            {campaigns.length > 0 && (
+              <div className="featured-campaigns__results">
+                {campaigns.map((campaign) => (
+                  <CampaignCard key={campaign.id} campaign={campaign} />
+                ))}
+              </div>
+            )}
 
             <motion.div variants={fadeUp}>
               <Button

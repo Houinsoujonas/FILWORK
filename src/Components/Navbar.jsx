@@ -4,15 +4,15 @@ import { FiArrowRight, FiMenu, FiX } from "react-icons/fi";
 
 const navLinks = [
   { label: "Accueil", path: "/" },
-  { label: "Créateur", path: "/createurs" },
-  { label: "Annuaire", path: "/annuaire-createurs" },
-  { label: "Campagne", path: "/campagnes" },
+  { label: "Créateurs", path: "/createurs" },
+  { label: "Annuaire des créateurs", path: "/annuaire-createurs" },
+  { label: "Campagnes", path: "/campagnes" },
   { label: "À propos", path: "/a-propos" },
 ];
 
 function FilworkLogo() {
   return (
-    <Link to="/" className="filwork-logo" aria-label="Filwork, accueil">
+    <Link to="/" className="filwork-logo" aria-label="FILWORK, accueil">
       <img src="/filwork-logo.svg" alt="" />
     </Link>
   );
@@ -101,21 +101,21 @@ function Navbar() {
             </div>
 
             <div className="navbar__actions">
-              <a
-                href="/connexion"
+              <Link
+                to="/connexion"
                 className="navbar__action navbar__login"
                 onClick={closeMenu}
               >
                 Se connecter
-              </a>
+              </Link>
 
-              <a
-                href="/inscription"
+              <Link
+                to="/inscription"
                 className="navbar__action navbar__signup"
                 onClick={closeMenu}
               >
                 <span>Commencer</span>
-              </a>
+              </Link>
             </div>
           </nav>
         </div>

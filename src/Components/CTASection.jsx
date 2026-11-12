@@ -6,7 +6,7 @@ import Button from "./Button";
 import collaborationVideo from "../assets/collaboration.mp4";
 
 function CTASection() {
-  const shouldReduceMotion = useReducedMotion();
+  const shouldReduceMotion = useReducedMotion() ?? true;
 
   const contentVariants = {
     hidden: {
@@ -41,17 +41,20 @@ function CTASection() {
 
   return (
     <section className="cta-section">
+      {!shouldReduceMotion && (
       <video
         className="cta-section__video"
         autoPlay
         muted
         loop
         playsInline
+        preload="none"
         aria-hidden="true"
         tabIndex={-1}
       >
         <source src={collaborationVideo} type="video/mp4" />
       </video>
+      )}
 
       <div className="cta-section__overlay" />
 

@@ -15,6 +15,10 @@
   max-width: 100%;
 }
 
+.about-page > section {
+  scroll-margin-block-start: calc(var(--navbar-height, 80px) + 1.5rem);
+}
+
 .about-page > .about-hero {
   --section-accent: #426a4a;
   display: grid;

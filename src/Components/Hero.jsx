@@ -1,8 +1,8 @@
 import { lazy, Suspense, useEffect, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { FiArrowRight, FiCheck } from "react-icons/fi";
-import { Link } from "react-router-dom";
 
+import Button from "./Button";
 const HeroScene = lazy(() => import("./HeroScene"));
 
 function Hero() {
@@ -51,14 +51,17 @@ function Hero() {
             vos projets dans un même espace.
           </p>
 
-          <div className="hero-actions">
-            <Link className="hero-actions__primary" to="/inscription">
+          <div className="hero__actions">
+            <Button
+              variant="primary"
+              to="/inscription"
+              icon={<FiArrowRight />}
+            >
               Créer mon compte
-              <FiArrowRight aria-hidden="true" />
-            </Link>
-            <Link className="hero-actions__secondary" to="/campagnes">
+            </Button>
+            <Button variant="outline" to="/campagnes">
               Voir les campagnes
-            </Link>
+            </Button>
           </div>
 
           <ul className="hero__proof-list" aria-label="FILWORK en bref">
@@ -74,7 +77,7 @@ function Hero() {
           </ul>
         </motion.div>
         <motion.div
-          className="hero__preview"
+          className="hero__visual"
           aria-hidden="true"
           initial={entrance}
           animate={{ opacity: 1, y: 0 }}

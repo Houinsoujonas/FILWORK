@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { FiPlus, FiMinus } from "react-icons/fi";
+import { Link } from "react-router-dom";
 
 const questions = [
   {
@@ -168,8 +169,8 @@ function FAQ() {
         </motion.div>
 
         <motion.div className="faq-bottom" variants={itemVariants}>
-          <span>Tu as encore des questions ?</span>
-          <a href="#contact">Contacte-nous</a>
+          <span>Vous avez encore des questions ?</span>
+          <Link to="/contact">Nous contacter</Link>
         </motion.div>
       </div>
     </motion.section>

@@ -44,7 +44,7 @@ Mode développement : `npm run dev` (auto-recharge, via `node --watch`).
 | `npm run test:cron` | Tests des routes internes cron (protégées) |
 | `npm run test:production-env` | Validation des variables d'environnement de production |
 | `npm run test:prisma-cache` | Cohérence du cache client/adaptateur Prisma |
-| `npm run test:all` | Toutes les suites (177 tests) |
+| `npm run test:all` | Toutes les suites (186 tests) |
 
 `test:all` et les suites d'intégration sont dirigés exclusivement vers `filwork_test` via `.env.test` ; les garde-fous refusent de démarrer sur toute autre base.
 

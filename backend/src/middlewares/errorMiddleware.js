@@ -1,8 +1,7 @@
 const crypto = require("node:crypto");
 
+const logger = require("../utils/logger");
 const { mapPrismaError } = require("../utils/prismaErrors");
-
-const isProduction = process.env.NODE_ENV === "production";
 
 /**
  * Associe un identifiant de requête à chaque appel.
@@ -38,30 +37,28 @@ function notFoundHandler(req, res) {
 
 /**
  * Journalisation structurée : aucune donnée sensible ni corps de requête.
+ * Pour les 4xx authentification/opération, avertissement ; pour les 5xx, erreur.
  */
 function logError(req, status, error) {
-  const entry = {
-    level: status >= 500 ? "error" : "warn",
-    timestamp: new Date().toISOString(),
-    requestId: req.id,
-    method: req.method,
-    path: req.originalUrl,
-    status,
-    errorName: error?.name || "Error",
-    errorCode: error?.code,
-    message: error?.message,
-  };
-
-  if (!isProduction && status >= 500 && error?.stack) {
-    entry.stack = error.stack;
-  }
-
-  const serialized = JSON.stringify(entry);
-
+  // Utiliser le logger structuré :
   if (status >= 500) {
-    console.error(serialized);
+    logger.error("unhandled error", {
+      code: "UNHANDLED_ERROR",
+      method: req.method,
+      path: req.originalUrl,
+      status,
+      errorCode: error?.code,
+      name: error?.name,
+    });
   } else {
-    console.warn(serialized);
+    logger.warn("request error", {
+      code: "REQUEST_ERROR",
+      method: req.method,
+      path: req.originalUrl,
+      status,
+      errorCode: error?.code,
+      name: error?.name,
+    });
   }
 }
 

@@ -3,6 +3,7 @@ const express = require("express");
 
 const { processEmailOutboxBatch } = require("../services/emailOutboxWorker");
 const { cleanupExpiredTokens } = require("../services/maintenanceService");
+const logger = require("../utils/logger");
 
 const router = express.Router();
 
@@ -17,6 +18,10 @@ function assertCronSecret(req, res) {
   const expected = process.env.CRON_SECRET;
 
   if (!expected || expected.length < 16) {
+    logger.error("internal cron access denied: CRON_SECRET missing or too short", {
+      code: "CRON_SECRET_MISSING",
+    });
+
     res.status(503).json({
       success: false,
       message: "Contrôle d'accès aux tâches internes non configuré (CRON_SECRET manquant).",
@@ -31,11 +36,17 @@ function assertCronSecret(req, res) {
   const b = Buffer.from(expected);
 
   if (a.length !== b.length) {
+    logger.warn("internal cron access denied: missing or invalid bearer token", {
+      code: "CRON_TOKEN_INVALID",
+    });
     res.status(401).json({ success: false, message: "Accès refusé." });
     return false;
   }
 
   if (!crypto.timingSafeEqual(a, b)) {
+    logger.warn("internal cron access denied: invalid bearer token", {
+      code: "CRON_TOKEN_INVALID",
+    });
     res.status(401).json({ success: false, message: "Accès refusé." });
     return false;
   }

@@ -527,7 +527,20 @@ Public. Réponse `{ success, review }`.
 
 ---
 
-## 13. Annonces, préférences et file d'e-mails
+## 13. Annonces, préférences, file d'e-mails et uploads
+
+### Uploads d'images
+
+Authentifié. accepte `POST /api/uploads` avec
+`{ filename, data }` où `data` est une data URL `data:image/jpeg;base64,<base64>` ou base64 pur.
+
+- `201` : `{ success, url, pathname }` si le fournisseur configuré (`STORAGE_PROVIDER`) accepte le fichier.
+- `401` : jeton absent/invalide.
+- `400` : champ manquant.
+- `413` : image trop grande.
+- `503` : `STORAGE_PROVIDER=none` ou fournisseur non installé (`STORAGE_NOT_CONFIGURED` / `STORAGE_SDK_MISSING`).
+
+Voir `docs/storage-provider.md`.
 
 ### Annonces utilisateur
 
@@ -577,7 +590,7 @@ Les e-mails sont persistés dans `EmailOutbox` (`PENDING`, `PROCESSING`,
 - le serveur démarre le processeur automatiquement hors mode test ;
 - `EMAIL_OUTBOX_ENABLED=false` le désactive ;
 - `npm run emails:process` lance le processeur en continu ;
-- `npm run emails:process:once` traite un seul lot (cron/Render) ;
+- `npm run emails:process:once` traite un seul lot (cron/process-emails) ;
 - la réservation est atomique (`FOR UPDATE SKIP LOCKED`) ;
 - les tentatives échouées sont replanifiées avec backoff exponentiel ;
 - les tâches `PROCESSING` bloquées depuis plus de 10 minutes sont reprises.

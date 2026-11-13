@@ -27,6 +27,10 @@ const adminAnnouncementRoutes = require("./routes/adminAnnouncementRoutes");
 const reviewRoutes = require("./routes/reviewRoutes");
 const sasPayRoutes = require("./routes/sasPayRoutes");
 const internalRoutes = require("./routes/internalRoutes");
+const uploadRoutes = require("./routes/uploadRoutes");
+
+const { publicReadLimiter, generalLimiter } = require("./middlewares/rateLimiters");
+const { checkDatabaseHealth } = require("./services/healthCheck");
 
 const app = express();
 
@@ -40,6 +44,9 @@ app.use(requestIdMiddleware);
 
 // En-têtes HTTP de sécurité.
 app.use(helmet());
+
+// Limiteur générique : protection de base contre les abus sur toutes les routes API.
+app.use("/api", generalLimiter);
 
 // Configuration des origines autorisées.
 const allowedOrigins = (
@@ -69,6 +76,11 @@ app.use(
     maxAge: 86400,
   }),
 );
+
+// Routes d'upload montées AVANT le parser JSON global de 100 Ko afin que le
+// handler puisse utiliser la limite plus large déclarée ci-dessous sans être rejeté trop tôt.
+// Limite globale API (100 Ko) reste en place pour toutes les autres routes.
+app.use("/api/uploads", express.json({ limit: "8mb" }), uploadRoutes);
 
 // Le webhook SasPay reçoit un corps BRUT (signature vérifiée sur les octets reçus).
 // Ce montage doit précéder express.json().
@@ -128,6 +140,9 @@ app.use("/api/creators", creatorRoutes);
 // Routes des avis et réponses.
 app.use("/api/reviews", reviewRoutes);
 
+// Route d'upload d'images (authentifié, stockage paramétrable, 503 si non configuré).
+// Montée avant l'express.json global ; voir montage plus haut dans ce fichier.
+
 // Routes SasPay (paiement entreprise → FILWORK → créateur).
 app.use("/api", sasPayRoutes);
 
@@ -143,24 +158,36 @@ app.get("/api/health", (req, res) => {
   });
 });
 
-// Vérification de la connexion à PostgreSQL.
+// Vérification de la connexion à PostgreSQL et du schéma applicatif.
 app.get("/api/health/database", async (req, res) => {
-  try {
-    await prisma.$queryRaw`SELECT 1`;
+  const result = await checkDatabaseHealth(prisma);
 
+  if (result.schemaReady) {
     return res.status(200).json({
       success: true,
-      message: "Le backend communique correctement avec PostgreSQL.",
+      message: "Le backend communique correctement avec PostgreSQL et le schéma est initialisé.",
       database: "connected",
-    });
-  } catch (error) {
-    console.error("Erreur de connexion à PostgreSQL :", error.message);
-
-    return res.status(503).json({
-      success: false,
-      message: "La base de données est temporairement indisponible.",
+      schema: "ready",
     });
   }
+
+  if (result.reachable) {
+    return res.status(503).json({
+      success: false,
+      message: "Le schéma de la base n'est pas encore initialisé.",
+      database: "connected",
+      schema: "not_ready",
+      code: "SCHEMA_MISSING",
+    });
+  }
+
+  return res.status(503).json({
+    success: false,
+    message: "La base de données est temporairement indisponible.",
+    database: "unavailable",
+    schema: "unknown",
+    code: "DATABASE_UNAVAILABLE",
+  });
 });
 
 // Routes inconnues : réponse JSON cohérente avec le reste de l'API.

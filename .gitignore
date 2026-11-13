@@ -27,3 +27,6 @@ FILWORK-Sprint5-backup-*/
 
 # Extraits de différences générés pendant l'audit
 *-diff.txt
+
+# Artefacts Vercel locaux (ne jamais versionner)
+.vercel/

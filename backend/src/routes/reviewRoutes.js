@@ -16,11 +16,14 @@ const {
 
 const router = express.Router();
 
+// Limiter la consultation publique des avis.
+const { publicReadLimiter } = require("../middlewares/rateLimiters");
+
 // Consulter publiquement les avis.
-router.get("/", getReviews);
+router.get("/", publicReadLimiter, getReviews);
 
 // Consulter publiquement un avis.
-router.get("/:id", getReviewById);
+router.get("/:id", publicReadLimiter, getReviewById);
 
 // Toutes les routes suivantes nécessitent une authentification.
 router.use(authenticateToken);

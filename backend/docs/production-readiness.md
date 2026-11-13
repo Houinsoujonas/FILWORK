@@ -12,14 +12,25 @@
 
 ## État du dépôt et des migrations
 
-- Le dépôt `main` est à `125bcd08daf229b6b44bbb6d2cfd3b922633fdc5`, identique à `origin/main`.
-- Les 21 migrations sont versionnées dans `backend/prisma/migrations/`.
-- `migration-test` (`br-jolly-dew-b4ggr9n4`) a reçu les 21 migrations : registre physique = **22 enregistrements** dans `_prisma_migrations`, dont 1 ancienne tentative annulée de `add_communication_system` conservée dans l'historique, soit **21 migrations réussies distinctes**. Le schéma obtenu correspond au schéma Prisma (`migrate diff --exit-code` → *No difference detected.*).
-- `production` (`br-wandering-meadow-b4vnko5f`) : **0 table applicative**, **aucune entrée Prisma** — **pas encore migrée**.
-- `production-backup-before-migrations` (`br-crimson-morning-b4jxxg4x`, parent `production`, créée 2026-11-11) : **0 table applicative** ; c'est un point de restauration structurel, **pas une sauvegarde de données**.
-- Les tests (176) sont dirigés **exclusivement** vers `filwork_test` ; aucun test n'utilise une base Neon.
+- Le dépôt `main` est à `38d3c14f6e4be478a685ca6289a9517f667ffdd8`, identique à `origin/main`.
+- Les 22 migrations sont versionnées dans `backend/prisma/migrations/`.
+
+### État documenté par base de données (ne pas mélanger)
+
+| Base de données | Migrations réussies distinctes | Tentatives annulées | Non appliquées | Tables applicatives |
+|---|---|---|---|---|
+| **filwork_test** (local, `127.0.0.1:55432/filwork_test`) | **22** (`2000-20261111230000_add_saspay_integration`, `300-20261111233000_fix_saspaytransaction_updatedat_default`, `220-20261112220000_add_campaign_published_notifications` inclus) | **0** | **0** | 22 tables physiques (21 métier + `_prisma_migrations`) |
+| **Neon `migration-test`** (`br-jolly-dew-b4ggr9n4`) | **21** (jusqu'à `20261111233000_fix_saspaytransaction_updatedat_default`) | **1** (`20261109000000_add_communication_system`, tentative annulée conservée) | `20261112220000_add_campaign_published_notifications` **n'est pas appliquée** — total physique attendu : 21 réussies distinctes + 1 annulée = 22 lignes | construite mais `add_campaign_published_notifications` absente |
+| **Neon `production`** (`br-wandering-meadow-b4vnko5f`) | **0** | 0 | 22 | **0** |
+| **Neon `production-backup-before-migrations`** (`br-crimson-morning-b4jxxg4x`) | **0** | 0 | 22 | **0** (point de restauration structurel, pas une sauvegarde de données) |
+
+- Les tests (186) sont dirigés **exclusivement** vers `filwork_test` ; aucun test n'utilise une base Neon.
 
 ## Fonctionnalités opérationnelles et testées
+
+- Sécurité : rate limiting global (`generalLimiter`) + rate limiting lecture publique (`publicReadLimiter` sur `/api/campaigns` et `/api/reviews`) + rate limiting auth + webhook SasPay. Journalisation structurée (JSON Lines) des événements sensibles sans PII/tokens.
+- Health checks : `/api/health` (liveness 200), `/api/health/database` (distingue connected vs schema-not-ready vs unavailable).
+
 
 - Authentification : inscription (CREATOR/COMPANY), connexion, déconnexion, rotation des refresh tokens (rejeu détecté, révocation globale), réinitialisation de mot de passe (code 6 chiffres, TTL 15 min, anti-énumération), invalidation après changement de rôle/e-mail/désactivation (`tokenVersion`).
 - Profils : Créateur (bio, niche, disponibilité, note de profil) et Entreprise (logo, secteur, contact, taux) avec visibilité sélective (profils incomplets/démonstration non découvrables).
@@ -33,7 +44,7 @@
 - **Notifications de publication de campagne** : à la publication, chaque créateur éligible (`role=CREATOR`, `isActive=true`, profil existant) reçoit une notification in-app `CAMPAIGN_PUBLISHED` et un e-mail (si `campaignEmails=true` dans ses préférences). Déduplication par contrainte unique partielle. Voir `docs/campaign-notifications.md`.
 - EmailOutbox : file persistante, backoff, reprise des tâches bloquées, protection anti-envoi accidentel en test.
 - Administration : dashboard, listes utilisateurs/campagnes/collaborations/livrables/paiements, modification/désactivation/réactivation de comptes, protection du dernier ADMIN actif (verrou `FOR UPDATE`).
-- Tests : **177/177 OK** sur `filwork_test` (unitaires 22, saspay 10, saspay-disabled 6, outbox 4, cron 4, production-env 12, prisma-cache 3, integration 86, reviews 7, communication 13, refresh-admin 6, payment-permissions 1, payment-notifications 2, campaign-notifications 1). Voir `npm run test:all`.
+- Tests : **186/186 OK** sur `filwork_test` (unitaires 22, saspay 10, saspay-disabled 6, outbox 4, cron 4, production-env 12, prisma-cache 3, health-check 4, rate-limit 3, upload 2, integration 86, reviews 7, communication 13, refresh-admin 6, payment-permissions 1, payment-notifications 2, campaign-notifications 1). Voir `npm run test:all`.
   - Le nombre de messages en attente dans `filwork_test` varie selon les exécutions : toute citation d'un nombre exact serait obsolète dès la prochaine exécution. La file y contient exclusivement des adresses de test (`@filwork.local`/`@example.com`) protégées contre l'envoi réel par `NODE_ENV=test`.
 
 ## Préparé, non testé en conditions réelles
@@ -42,21 +53,21 @@
 - **EmailOutbox worker** — testé en file ; envoi réel non testé (pas de SMTP de production configuré). Batch par défaut borné à 3 (`EMAIL_OUTBOX_BATCH_SIZE`) pour rester sous le budget d'exécution serverless.
 - **Vercel Functions** — `api/index.js`, `vercel.json` (fonction, réécritures, cron quotidien 06:00), client Prisma mis en cache (`globalThis`, couple client/adaptateur recréé ensemble), routes internes `/api/internal/cron/*` protégées par `CRON_SECRET`. Non déployé. **Sur Vercel Hobby, le cron quotidien seul est insuffisant pour les e-mails transactionnels : un déclencheur externe à 5 minutes est obligatoire avant la mise en production** (voir `docs/vercel-deployment.md`), sinon les e-mails de bienvenue, de collaboration et surtout de réinitialisation de mot de passe (TTL 15 min) seront systématiquement expirés ou retardés de plusieurs heures/jours.
 - **Cron `process-emails` & `cleanup-tokens`** — endpoints prêts, verrouillés par secret, jamais exécutés hors tests.
-- **Stockage abstrait** — `src/services/storage/index.js` : interface prête, aucune intégration fournisseur (aucun SDK installé).
+- **Stockage abstrait** - `src/services/storage/index.js` : interface prête, route `/api/uploads` (JSON base64) avec validation MIME et taille ; fournisseur `STORAGE_PROVIDER=none` par défaut, 12 SDK non installé tant qu'un provider sûr et compatible n'est pas disponible (`@vercel/blob` dépend de versions vulnérables de `zod` <4.6.6 / `@vercel/oidc`).
 
 ## Bloqué par décision ou autorisation
 
 - **Paiements automatisés SasPay** — **reportés** à une mission distincte. Nécessitent un compte marchand actif (KYC, clé `sk_live_`), webhook créé depuis le dashboard, IP whitelistée, et décision métier sur la mécanique de reversement.
-- **Taux de commission FILWORK** : non fixé — `FILWORK_COMMISSION_BPS=0` tant que le métier ne décide pas.
+- **Taux de commission FILWORK** : non fixé - `FILWORK_COMMISSION_BPS=0` tant que le métier ne décide pas.
 - **Fournisseur SMTP (Brevo)** : nécessite compte + identifiants SMTP Brevo.
-- **Fournisseur de stockage** : nécessite choix (Vercel Blob recommandé) + compte + SDK installé.
-- **Migrations en production** : nécessite dump + `prisma migrate deploy` manuel.
+- **Fournisseur de stockage** : `STORAGE_PROVIDER=none` par défaut. Un SDK Vercel Blob sûr (zero vulnerabilities sur `npm audit`) n'est pas disponible à ce stade (`@vercel/blob@2.9.0` → `@vercel/oidc → @vercel/cli-config → zod <4.6.6` — **High severity**). Aucun upload actif n'est revendiqué.
+- **Migrations en production** : nécessite autorisation explicite + `prisma migrate deploy` (voir `docs/production-migration-runbook.md`).
 - **Déploiement Vercel** : nécessite autorisation explicite + variables de production configurées (`FRONTEND_URL` HTTPS réel, `CORS_ORIGINS` de production, `JWT_SECRET` 32+ caractères).
 - **`filwork_dev`** : registre des migrations vide — nécessite une procédure de baseline dédiée si des migrations doivent y tourner ultérieurement (voir `docs/dev-baseline.md`).
 
 ## Non implémenté
 
-- Upload de fichiers binaires (le modèle actuel n'utilise que des URL).
+- Upload de fichiers binaires (route `/api/uploads` active, mais `STORAGE_PROVIDER=none` par défaut — aucun stockage actif par absence de fournisseur sûr et configuré).
 - Intégration de paiement dans le frontend (hors périmètre backend).
 - Envoi réel d'e-mails en production (aucun fournisseur validé).
 - Paiement automatisé SasPay opérationnel (code préparé et gelé, activation reportée).

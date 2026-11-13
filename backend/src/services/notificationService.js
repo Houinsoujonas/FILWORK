@@ -25,6 +25,30 @@ function buildLink(path) {
  * @param {string} userId
  * @returns {Promise<object>}
  */
+/**
+ * Charge les préférences d'un utilisateur SANS créer automatiquement de
+ * défaut. Utilisé par les envois en lots : évite la charge de creation-on-
+ * first-notification pour les annonces qui touchent de nombreux utilisateurs.
+ */
+async function getPreferences(userId) {
+  return prisma.notificationPreference.findUnique({
+    where: { userId },
+    select: {
+      collaborationEmails: true,
+      announcementEmails: true,
+      notificationEmails: true,
+      campaignEmails: true,
+    },
+  });
+}
+
+/**
+ * Récupère les préférences de communication d'un utilisateur, en créant les
+ * préférences par défaut à la première consultation.
+ *
+ * @param {string} userId
+ * @returns {Promise<object>}
+ */
 async function getOrCreatePreferences(userId) {
   let preferences = await prisma.notificationPreference.findUnique({
     where: { userId },
@@ -36,18 +60,30 @@ async function getOrCreatePreferences(userId) {
     });
   }
 
-  return preferences;
+  // Restitution alignée sur les autres lectures : booléens uniquement.
+  return {
+    collaborationEmails: preferences.collaborationEmails,
+    announcementEmails: preferences.announcementEmails,
+    notificationEmails: preferences.notificationEmails,
+    campaignEmails: preferences.campaignEmails,
+  };
 }
 
 /**
  * Vérifie si un type de notification par email est autorisé pour l'utilisateur.
+ * Un utilisateur sans préférence enregistrée est considéré comme abonné par défaut.
  *
  * @param {string} userId
- * @param {string} category - "collaborationEmails", "announcementEmails", "notificationEmails"
+ * @param {string} category - "collaborationEmails", "announcementEmails", "notificationEmails", "campaignEmails"
  * @returns {Promise<boolean>}
  */
 async function isEmailEnabled(userId, category) {
-  const preferences = await getOrCreatePreferences(userId);
+  const preferences = await getPreferences(userId);
+
+  if (!preferences) {
+    return true;
+  }
+
   return preferences[category] !== false;
 }
 
@@ -207,6 +243,7 @@ async function createManyNotifications(prismaClient, notifications) {
 module.exports = {
   createNotification,
   createManyNotifications,
+  getPreferences,
   getOrCreatePreferences,
   isEmailEnabled,
   buildLink,

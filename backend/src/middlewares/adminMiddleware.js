@@ -1,3 +1,5 @@
+const logger = require("../utils/logger");
+
 /**
  * Vérifie que l'utilisateur connecté est un administrateur.
  *
@@ -12,6 +14,11 @@ function requireAdmin(req, res, next) {
   }
 
   if (req.user.role !== "ADMIN") {
+    logger.warn("admin route access denied: non-admin role", {
+      code: "ADMIN_ACCESS_DENIED",
+      role: req.user.role,
+    });
+
     return res.status(403).json({
       success: false,
       message: "Accès réservé aux administrateurs.",

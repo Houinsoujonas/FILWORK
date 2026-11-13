@@ -1,6 +1,7 @@
 const jwt = require("jsonwebtoken");
 const crypto = require("node:crypto");
 const prisma = require("../config/prisma");
+const logger = require("../utils/logger");
 
 async function authenticateToken(req, res, next) {
   const authorization = req.headers.authorization;
@@ -57,6 +58,10 @@ async function authenticateToken(req, res, next) {
     });
 
     if (revokedToken) {
+      logger.warn("authentication denied: token has been revoked", {
+        code: "AUTH_TOKEN_REVOKED",
+      });
+
       return res.status(401).json({
         success: false,
         message: "Cette session a été révoquée. Veuillez vous reconnecter.",
@@ -93,6 +98,10 @@ async function authenticateToken(req, res, next) {
     }
 
     if (!user.isActive) {
+      logger.warn("authentication denied: user account disabled", {
+        code: "AUTH_USER_DISABLED",
+      });
+
       return res.status(403).json({
         success: false,
         message: "Ce compte est désactivé. Veuillez contacter l'administration.",
@@ -117,13 +126,21 @@ async function authenticateToken(req, res, next) {
       error.name === "JsonWebTokenError" ||
       error.name === "NotBeforeError"
     ) {
+      logger.warn("authentication denied: invalid token", {
+        code: "AUTH_TOKEN_INVALID",
+        name: error.name,
+      });
+
       return res.status(401).json({
         success: false,
         message: "Jeton invalide ou expiré. Veuillez vous reconnecter.",
       });
     }
 
-    console.error("Erreur du middleware d'authentification :", error.message);
+    logger.error("authentication middleware failure", {
+      code: "AUTH_MIDDLEWARE_ERROR",
+      name: error?.name,
+    });
 
     return res.status(500).json({
       success: false,

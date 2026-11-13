@@ -18,7 +18,7 @@ Tous les e-mails passent par la table `EmailOutbox` (statuts `PENDING → PROCES
 
 ## Templates disponibles
 
-- `welcome` (inscription), `collaboration_proposal`, `new_application`, `password_reset_code`, `announcement`, `campaign_closed`, `payment_received`, `payout_sent`.
+- `welcome` (inscription), `collaboration_proposal`, `new_application`, `password_reset_code`, `announcement`, `campaign_closed`, `payment_received`, `payout_sent`, `campaign_published`.
 
 Les templates sont dans `src/services/emailTemplates.js`. Toute modification du texte sans toucher aux points d'entrée `enqueue*` de `src/services/emailService.js` préserve les déclencheurs.
 

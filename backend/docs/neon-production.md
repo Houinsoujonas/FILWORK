@@ -3,13 +3,13 @@
 ## État du cluster
 
 - Le développement tourne sur `filwork_dev` (PostgreSQL 17.6 local, service `FilworkPostgreSQL`, `127.0.0.1:55432`).
-- La base de test est `filwork_test`.
+- La base de test est `filwork_test` (vérification en lecture seule via `scripts/checkTestDatabase.js` : `127.0.0.1:55432/filwork_test`).
 - **Neon ne doit être utilisée qu'avec votre autorisation expresse.** Ni `filwork_dev` ni une branche Neon ne doivent recevoir de dump ou de `prisma db push` sans feu vert.
 - Le backend contrôle explicitement, à chaque démarrage, que la base applicative n'est pas la base de test (`src/config/databaseTarget.js`). Toute incohérence bloque le démarrage.
 
 ## État des branches Neon (vérifié)
 
-- `migration-test` (migration `br-jolly-dew-b4ggr9n4`) : a reçu les **21 migrations** (registres : 22 enregistrements physiques dans `_prisma_migrations` dont 1 ancienne tentative annulée de `add_communication_system` ; 21 migrations réussies distinctes, 21 tables applicatives, 5 utilisateurs conservés). C'est la référence de validation.
+- `migration-test` (migration `br-jolly-dew-b4ggr9n4`) : **21 migrations réussies distinctes** jusqu'à `20261111233000_fix_saspaytransaction_updatedat_default`, plus 1 tentative annulée (`20261109000000_add_communication_system`). La migration `20261112220000_add_campaign_published_notifications` **n'est pas appliquée**. C'est la référence de validation. **Ne pas présenter ce profil comme identique à `filwork_test`.**
 - `production` (`br-wandering-meadow-b4vnko5f`) : **0 table applicative**, **aucune entrée Prisma** — **pas encore migrée**.
 - `production-backup-before-migrations` (`br-crimson-morning-b4jxxg4x`, parent `production`, créée 2026-11-11) : **0 table applicative** — c'est un point de restauration structurel, pas une sauvegarde de données.
 

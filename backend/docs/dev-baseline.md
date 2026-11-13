@@ -6,7 +6,7 @@
 
 ## Pourquoi c'est dangereux d'appliquer `prisma migrate deploy` tel quel
 
-`migrate deploy` essaierait de rejouer les 21 migrations depuis l'origine. Les premières (`20261021152421_init`, etc.) ne sont **pas rejouables** (`CREATE TABLE` sans garde-fous) : elles échoueraient sur une base qui contient déjà les objets.
+`migrate deploy` essaierait de rejouer les 22 migrations depuis l'origine. Les premières (`20261021152421_init`, etc.) ne sont **pas rejouables** (`CREATE TABLE` sans garde-fous) : elles échoueraient sur une base qui contient déjà les objets.
 
 ## Procédure sûre (NON exécutée — nécessite autorisation)
 
@@ -47,6 +47,7 @@
    npx prisma migrate resolve --applied 20261111220000_fix_refresh_token_fk_on_update_cascade --config prisma7.config.ts
    npx prisma migrate resolve --applied 20261111230000_add_saspay_integration --config prisma7.config.ts
    npx prisma migrate resolve --applied 20261111233000_fix_saspaytransaction_updatedat_default --config prisma7.config.ts
+   npx prisma migrate resolve --applied 20261112220000_add_campaign_published_notifications --config prisma7.config.ts
    ```
 
    (Les séparer en deux lots — avant et après le dump — ne change rien ; toutes doivent être marquées.)
@@ -57,7 +58,7 @@
 ## Ce qu'il faut savoir
 
 - `migrate resolve --applied` n'exécute aucune migration et n'altère aucun objet ; il écrit uniquement la ligne correspondante dans `_prisma_migrations`.
-- Cette opération est **irréversible** pour les 21 migrations listées (on ne peut pas « annuler » un marquage appliqué sans supprimer la ligne du registre).
+- Cette opération est **irréversible** pour les 22 migrations listées (on ne peut pas « annuler » un marquage appliqué sans supprimer la ligne du registre).
 - `filwork_dev` ne doit recevoir aucune migration tant que ce baseline n'a pas été effectué avec votre accord.
-- `filwork_test` est déjà baseline (21 migrations enregistrées, diff vide).
+- `filwork_test` est déjà baseline (22 migrations réussies enregistrées, diff vide).
 - La base Neon de production sera créée neuve : `migrate deploy` s'y appliquera proprement sans baseline.

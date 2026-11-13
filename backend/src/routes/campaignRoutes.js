@@ -20,8 +20,12 @@ const {
 
 const router = express.Router();
 
+// Limiter la lecture publique avant d'exposer la liste des campagnes.
+const { publicReadLimiter } = require("../middlewares/rateLimiters");
+
+
 // Consulter les campagnes publiées sans se connecter.
-router.get("/", getPublishedCampaigns);
+router.get("/", publicReadLimiter, getPublishedCampaigns);
 
 // Consulter les campagnes de l'entreprise connectée.
 // Déclarée avant /:id pour ne pas être interprétée comme un identifiant.
@@ -33,7 +37,7 @@ router.get(
 );
 
 // Consulter publiquement une campagne publiée.
-router.get("/:id", getPublishedCampaignById);
+router.get("/:id", publicReadLimiter, getPublishedCampaignById);
 
 // Toutes les routes suivantes nécessitent une authentification
 // et sont réservées aux entreprises.

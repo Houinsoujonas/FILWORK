@@ -1,6 +1,5 @@
 const prisma = require("../config/prisma");
 const { sendPrismaError } = require("../utils/prismaErrors");
-const { isEmailEnabled } = require("../services/notificationService");
 const { enqueueAnnouncementEmail } = require("../services/emailService");
 
 const EMAIL_LINK_BASE =
@@ -519,8 +518,18 @@ async function publishAnnouncement(req, res) {
     });
 
     // Mettre en file les e-mails (hors transaction).
+    // Charger les préférences en lot pour éviter une requête par destinataire.
+    const preferences = await prisma.notificationPreference.findMany({
+      where: { userId: { in: users.map((u) => u.id) } },
+      select: { userId: true, announcementEmails: true },
+    });
+
+    const preferencesByUserId = new Map(
+      preferences.map((p) => [p.userId, p.announcementEmails]),
+    );
+
     for (const user of users) {
-      const emailEnabled = await isEmailEnabled(user.id, "announcementEmails");
+      const emailEnabled = preferencesByUserId.get(user.id) ?? true;
 
       if (emailEnabled) {
         try {

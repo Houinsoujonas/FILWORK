@@ -2,7 +2,40 @@
 
 ## État actuel
 
-FILWORK n'accepte **aucun fichier binaire en upload**. Tous les médias sont des **URL** fournies par les utilisateurs/entreprises :
+FILWORK écoute une route **`POST /api/uploads`** (authentifiée) qui accepte une image encodée en base64 (`{ filename, data }`). La route :
+- valide l'authentification ;
+- valide le type MIME (jpeg/png/webp/gif) et la taille ;
+- délègue à un fournisseur via `STORAGE_PROVIDER` ;
+- retourne l'URL publique une fois uploadée.
+
+**Par défaut** : `STORAGE_PROVIDER=none` → la route renvoie `503 STORAGE_NOT_CONFIGURED`. Aucun upload n'est accepté. Les médias existants restent des URLs externes fournies côté client.
+
+Aucun SDK n'est encore installé côté backend, car **`@vercel/blob@2.9.0` dépend d'une chaîne `@vercel/oidc → @vercel/cli-config → zod <4.6.6` avec une vulnérabilité HIGH** (GHSA-mrhx-c7xc-m3w5). Voir `npm audit`.
+
+## Variables d'environnement prévues
+
+| Variable | Défaut | Rôle |
+|---|---|---|
+| `STORAGE_PROVIDER` | `none` | `none` \| `vercel-blob` \| `s3` |
+| `STORAGE_TOKEN` | — | Token du fournisseur. Obligatoire si provider != `none`. |
+| `STORAGE_BASE_URL` | — | Préfixe public éventuel des URLs |
+| `STORAGE_MAX_UPLOAD_BYTES` | `5242880` (5 Mo) | Taille maximale par image |
+
+## Roadmap d'activation
+
+1. Attendre la publication d'une version de `@vercel/blob` ne tirant pas une versions vulnérable de `zod` (<4.6.6).
+2. `npm install @vercel/blob` ; valider avec `npm audit` → 0 vulnérabilité.
+3. Définir `STORAGE_PROVIDER=vercel-blob` + `STORAGE_TOKEN=<token Vercel Blob>` dans Vercel.
+4. Tester `POST /api/uploads` avec une image jpeg ≤ 5 Mo.
+5. Documenter chaque URL publiée dans les champs `creatorProfile.mediaKitUrl`, `profileImageUrl`, `CompanyProfile.logoUrl`, `portfolioItems.url`.
+
+## Sécurité
+
+- Validation MIME uniquement image/*.
+- Taille max 5 Mo par défaut (`STORAGE_MAX_UPLOAD_BYTES`).
+- `uploadImage`/`deleteImage` sont isolées dans `src/services/storage/index.js` et paramétrables.
+- Aucun fichier n'est conservé par FILWORK ; chaque image est hébergée par le fournisseur configuré.
+- `validateImageUpload` est testée.
 
 - `CreatorProfile.profileImageUrl`, `mediaKitUrl`, `instagramUrl`, `tiktokUrl`, `youtubeUrl`
 - `CompanyProfile.logoUrl`, `websiteUrl`
@@ -13,7 +46,17 @@ FILWORK n'accepte **aucun fichier binaire en upload**. Tous les médias sont des
 
 Aucun avatar n'est reçu via `multipart/form-data`, aucun champ `File` n'existe dans le schéma, aucun endpoint d'upload n'est exposé. Le backend valide déjà les URL saisies côté client (syntaxe `https?://…`).
 
-## Limites du modèle actuel
+## Limites du modèle (avant activation du provider)
+
+- Aucun fichier n'est accepté tant que `STORAGE_PROVIDER=none`.
+- Les utilisateurs doivent fournir des URLs déjà hébergées ailleurs (CDN tiers) tant que `/api/uploads` n'est pas activée.
+- Une fois le provider activé, la route `/api/uploads` retourne 201 avec `{url, pathname}`.
+
+## Fournisseur recommandé
+
+**Vercel Blob** (natif avec Vercel Functions, aucun serveur supplémentaire) ou **Cloudinary** (transformations d'images intégrées).
+- Actuellement aucun fournisseur installé pour éviter d'injecter une version npm contenant une vulnérabilité.
+- Activation future dès publication d'une version sûre de `@vercel/blob`.
 
 - URL externes : les utilisateurs doivent héberger eux-mêmes leurs images/vidéos ou utiliser un CDN tiers.
 - Pas de contrôle du contenu réel, pas de validation de taille ou de type de fichier, pas de suppression de fichiers orphelins.

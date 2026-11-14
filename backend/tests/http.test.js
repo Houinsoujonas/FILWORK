@@ -545,6 +545,25 @@ test("les ports de l'API applicative et de l'API de test sont cloisonnés", () =
     () =>
       assertPortConfiguration({
         nodeEnv: "test",
+        port: 0,
+        host: "127.0.0.1",
+      }),
+    /PORT invalide/,
+  );
+
+  assert.doesNotThrow(() =>
+    assertPortConfiguration({
+      nodeEnv: "test",
+      port: 0,
+      host: "127.0.0.1",
+      allowTestDynamicPort: true,
+    }),
+  );
+
+  assert.throws(
+    () =>
+      assertPortConfiguration({
+        nodeEnv: "test",
         port: 5000,
         host: "127.0.0.1",
       }),

@@ -46,7 +46,11 @@ try {
   process.exit(1);
 }
 
-const PORT = Number(process.env.PORT) || (isTest ? 5051 : 5000);
+const defaultPort = isTest ? 5051 : 5000;
+const PORT =
+  process.env.PORT === undefined || process.env.PORT === ""
+    ? defaultPort
+    : Number(process.env.PORT);
 const HOST = process.env.HOST || (isTest ? "127.0.0.1" : "0.0.0.0");
 
 // Refuser une cible de base incohérente avant d'exposer le serveur HTTP.
@@ -73,6 +77,7 @@ try {
     port: PORT,
     host: HOST,
     allowTestNonStandardPort: process.env.TEST_ALLOW_OTHER_PORT === "true",
+    allowTestDynamicPort: process.env.TEST_ALLOW_DYNAMIC_PORT === "true",
     allowRemoteTestHost: process.env.TEST_ALLOW_REMOTE_API === "true",
   });
 } catch (error) {
@@ -88,10 +93,17 @@ const {
 } = require("./services/emailOutboxWorker");
 
 const server = app.listen(PORT, HOST, () => {
+  const address = server.address();
+  const activePort = typeof address === "object" && address ? address.port : PORT;
+
   console.log(`[FILWORK] Environnement : ${process.env.NODE_ENV || "development"}`);
   console.log(`[FILWORK] Base de données : ${maskTarget(databaseTarget)}`);
-  console.log(`Serveur FILWORK démarré sur le port ${PORT}`);
-  console.log(`Vérification : http://localhost:${PORT}/api/health`);
+  console.log(`Serveur FILWORK démarré sur le port ${activePort}`);
+  console.log(`Vérification : http://localhost:${activePort}/api/health`);
+
+  if (isTest && typeof process.send === "function") {
+    process.send({ type: "filwork-test-server-ready", port: activePort });
+  }
 
   // Le traitement de la file d'envoi est désactivé en mode test pour ne pas
   // interférer avec les assertions (aucun SMTP réel n'y est configuré).

@@ -88,6 +88,48 @@ async function waitForHealth(apiBaseUrl, serverProcess) {
   );
 }
 
+function waitForTestServerAddress(serverProcess) {
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      cleanup();
+      reject(new Error("Le serveur de test n'a pas communiqué son port d'écoute."));
+    }, HEALTH_TIMEOUT_MS);
+
+    const onMessage = (message) => {
+      if (
+        !message ||
+        message.type !== "filwork-test-server-ready" ||
+        !Number.isInteger(message.port) ||
+        message.port < 1 ||
+        message.port > 65535
+      ) {
+        return;
+      }
+
+      cleanup();
+      resolve(message.port);
+    };
+
+    const onExit = (code, signal) => {
+      cleanup();
+      reject(
+        new Error(
+          `Le serveur de test s'est arrêté avant d'être prêt (code ${code}, signal ${signal || "aucun"}).`,
+        ),
+      );
+    };
+
+    const cleanup = () => {
+      clearTimeout(timeout);
+      serverProcess.off("message", onMessage);
+      serverProcess.off("exit", onExit);
+    };
+
+    serverProcess.on("message", onMessage);
+    serverProcess.once("exit", onExit);
+  });
+}
+
 async function stopProcess(child) {
   if (!child || child.exitCode !== null) {
     return;
@@ -107,7 +149,6 @@ async function stopProcess(child) {
 
 async function main() {
   const { testTarget } = loadTestEnv();
-  const apiBaseUrl = process.env.API_BASE_URL.replace(/\/$/, "");
   const testFiles = process.argv.slice(2);
 
   if (testFiles.length === 0) {
@@ -118,15 +159,11 @@ async function main() {
 
   const allowRemote = process.env.TEST_ALLOW_REMOTE_API === "true";
   let serverProcess = null;
+  let apiBaseUrl = process.env.API_BASE_URL.replace(/\/$/, "");
 
   try {
     if (!allowRemote) {
-      const parsed = new URL(apiBaseUrl);
-      const port = parsed.port || "80";
-
-      console.log(
-        `[test-runner] Démarrage du serveur de test sur ${apiBaseUrl} (base ${testTarget.database}).`,
-      );
+      console.log(`[test-runner] Démarrage du serveur de test (base ${testTarget.database}).`);
 
       serverProcess = spawn(process.execPath, ["src/server.js"], {
         cwd: BACKEND_ROOT,
@@ -134,13 +171,15 @@ async function main() {
           ...process.env,
           NODE_ENV: "test",
           HOST: "127.0.0.1",
-          PORT: port,
+          PORT: "0",
+          TEST_ALLOW_DYNAMIC_PORT: "true",
         },
-        stdio: "inherit",
+        stdio: ["ignore", "inherit", "inherit", "ipc"],
       });
 
-      // Laisser au processus le temps de signaler un port déjà occupé.
-      await wait(500);
+      const port = await waitForTestServerAddress(serverProcess);
+      apiBaseUrl = `http://127.0.0.1:${port}`;
+      console.log(`[test-runner] API de test prête sur ${apiBaseUrl}.`);
       await waitForHealth(apiBaseUrl, serverProcess);
     } else {
       console.log(
@@ -153,7 +192,10 @@ async function main() {
       ["--test", ...testFiles],
       {
         cwd: BACKEND_ROOT,
-        env: process.env,
+        env: {
+          ...process.env,
+          API_BASE_URL: apiBaseUrl,
+        },
         stdio: "inherit",
       },
       TEST_TIMEOUT_MS,

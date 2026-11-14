@@ -9,7 +9,6 @@ const {
   initializePayout,
   verifyPayout,
 } = require("../services/sasPayService");
-const { enqueuePayoutSentEmail } = require("../services/emailService");
 const { loadPaymentContext, contextParts } = require("./sasPayController");
 
 const NETWORKS = {
@@ -181,12 +180,9 @@ async function initializePayoutForPayment(req, res) {
       },
     });
 
-    await enqueuePayoutSentEmail({
-      to: creatorUser?.email,
-      displayName: creator.displayName,
-      amount: amounts.creatorAmount,
-      currency: payment.currency,
-    });
+    // L'e-mail au créateur est envoyé par le webhook SasPay une fois le
+    // reversement confirmé (payout SUCCESS) — la vérification amont
+    // protège contre les faux positifs et évite un double envoi.
 
     return res.status(201).json({
       success: true,

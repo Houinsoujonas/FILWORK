@@ -44,7 +44,16 @@ Mode développement : `npm run dev` (auto-recharge, via `node --watch`).
 | `npm run test:cron` | Tests des routes internes cron (protégées) |
 | `npm run test:production-env` | Validation des variables d'environnement de production |
 | `npm run test:prisma-cache` | Cohérence du cache client/adaptateur Prisma |
-| `npm run test:all` | Toutes les suites (186 tests) |
+| `npm run test:email-worker` | EmailOutbox pipeline with simulated SMTP transport (backoff, permanent failure, dedup) |
+| `npm run test:storage-validation` | MIME/signature/size validation of uploads (17 cases) |
+| `npm run test:storage-vercel-blob` | Vercel Blob provider (simulated SDK: OIDC, token, 502) |
+| `npm run test:rate-limit-general` | `generalLimiter` test (429) |
+| `npm run test:rate-limit-public` | `publicReadLimiter` test (429) |
+| `npm run test:health-check` | Health check unit (`checkDatabaseHealth`) |
+| `npm run test:health-database-http` | HTTP health check 200 (schema=ready) |
+| `npm run test:health-database-unreachable` | HTTP health check 503 (unreachable) |
+| `npm run test:upload` | `/api/uploads` (401/400/413, 503 when storage unconfigured) |
+| `npm run test:all` | **239 tests** across 23 suites |
 
 `test:all` et les suites d'intégration sont dirigés exclusivement vers `filwork_test` via `.env.test` ; les garde-fous refusent de démarrer sur toute autre base.
 
@@ -71,6 +80,7 @@ Flux de publication de campagne : **notifications automatiques**. Lorsqu'une ent
 - `docs/production-operations.md` — opérations quotidiennes (e-mails, cron, SasPay, paiements manuels, stockage, surveillance).
 - `docs/campaign-notifications.md` — notifications de publication de campagne, ciblage, préférences, déduplication.
 - `docs/vercel-deployment.md` — architecture et limites Vercel.
+- `docs/cron-external.md` - external email trigger (5 minutes), mandatory before opening to users
 - `docs/neon-production.md` — Neon + pooling + migrations.
 - `docs/brevo-setup.md` — e-mails via Brevo SMTP.
 - `docs/environment-variables.md` — inventaire des variables.

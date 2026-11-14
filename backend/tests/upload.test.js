@@ -102,6 +102,10 @@ test("POST /api/uploads rejette un corps supérieur à la limite de la route (>8
 
   // 413 généré par express.json limit 8mb ou par le contrôle de taille dans le handler.
   assert.equal(res.status, 413);
+
+  // La réponse doit rester structurée en JSON (contrat API), même en cas de rejet par le parser.
+  const body = await res.json();
+  assert.equal(body.success, false);
 });
 
 test("POST /api/uploads rejette un filename pathologique", async () => {

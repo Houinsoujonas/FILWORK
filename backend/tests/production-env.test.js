@@ -8,6 +8,15 @@ const KEYS = [
   "JWT_SECRET",
   "FRONTEND_URL",
   "CORS_ORIGINS",
+  "DATABASE_URL",
+  "DATABASE_URL_UNPOOLED",
+  "CRON_SECRET",
+  "EMAIL_OUTBOX_ENABLED",
+  "SMTP_HOST",
+  "SMTP_PORT",
+  "SMTP_USER",
+  "SMTP_PASS",
+  "MAIL_FROM",
 ];
 
 function snapshotEnv() {
@@ -37,6 +46,17 @@ function withProdEnv(t, overrides) {
   process.env.JWT_SECRET = "x".repeat(64);
   process.env.FRONTEND_URL = "https://filwork.example.com";
   process.env.CORS_ORIGINS = "https://filwork.example.com";
+  process.env.DATABASE_URL =
+    "postgresql://user:pass@example-pooler.project.neon.tech:5432/filwork?pgbouncer=true";
+  process.env.DATABASE_URL_UNPOOLED =
+    "postgresql://user:pass@example.project.neon.tech:5432/filwork";
+  process.env.CRON_SECRET = "cron-secret-32-chars-minimum-value";
+  process.env.EMAIL_OUTBOX_ENABLED = "true";
+  process.env.SMTP_HOST = "smtp-relay.brevo.com";
+  process.env.SMTP_PORT = "587";
+  process.env.SMTP_USER = "brevo-smtp-user";
+  process.env.SMTP_PASS = "brevo-smtp-pass";
+  process.env.MAIL_FROM = "FILWORK <no-reply@example.com>";
 
   Object.assign(process.env, overrides);
 
@@ -135,5 +155,56 @@ test("production : configuration correcte acceptÃ©e", (t) => {
     CORS_ORIGINS: "https://app.filwork.example.com,https://www.filwork.example.com",
   });
 
+  assert.doesNotThrow(() => validateProductionEnvironment());
+});
+
+test("production : DATABASE_URL absente refusée", (t) => {
+  withProdEnv(t, { DATABASE_URL: "" });
+  assert.throws(() => validateProductionEnvironment(), /DATABASE_URL/);
+});
+
+test("production : DATABASE_URL non PostgreSQL refusée", (t) => {
+  withProdEnv(t, { DATABASE_URL: "mysql://user:pass@host/db" });
+  assert.throws(() => validateProductionEnvironment(), /DATABASE_URL/);
+});
+
+test("production : DATABASE_URL_UNPOOLED absente refusée", (t) => {
+  withProdEnv(t, { DATABASE_URL_UNPOOLED: "" });
+  assert.throws(() => validateProductionEnvironment(), /DATABASE_URL_UNPOOLED/);
+});
+
+test("production : CRON_SECRET manquant ou trop court refusé", (t) => {
+  withProdEnv(t, { CRON_SECRET: "" });
+  assert.throws(() => validateProductionEnvironment(), /CRON_SECRET/);
+  withProdEnv(t, { CRON_SECRET: "trop-court" });
+  assert.throws(() => validateProductionEnvironment(), /CRON_SECRET/);
+});
+
+test("production : SMTP obligatoire quand EMAIL_OUTBOX_ENABLED != false", (t) => {
+  withProdEnv(t, { SMTP_HOST: "" });
+  assert.throws(() => validateProductionEnvironment(), /SMTP_HOST/);
+  withProdEnv(t, { SMTP_PORT: "0" });
+  assert.throws(() => validateProductionEnvironment(), /SMTP_PORT/);
+  withProdEnv(t, { SMTP_PORT: "99999" });
+  assert.throws(() => validateProductionEnvironment(), /SMTP_PORT/);
+  withProdEnv(t, { SMTP_PORT: "pas-un-port" });
+  assert.throws(() => validateProductionEnvironment(), /SMTP_PORT/);
+  withProdEnv(t, { SMTP_USER: "" });
+  assert.throws(() => validateProductionEnvironment(), /SMTP_USER/);
+  withProdEnv(t, { SMTP_PASS: "" });
+  assert.throws(() => validateProductionEnvironment(), /SMTP_PASS/);
+  withProdEnv(t, { MAIL_FROM: "not-an-email" });
+  assert.throws(() => validateProductionEnvironment(), /MAIL_FROM/);
+});
+
+test("production : messagerie désactivée explicitement exempte SMTP", (t) => {
+  withProdEnv(t, {
+    EMAIL_OUTBOX_ENABLED: "false",
+    SMTP_HOST: "",
+    SMTP_PORT: "",
+    SMTP_USER: "",
+    SMTP_PASS: "",
+    MAIL_FROM: "",
+  });
   assert.doesNotThrow(() => validateProductionEnvironment());
 });

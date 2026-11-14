@@ -112,6 +112,11 @@ Migrations appliquées sur `filwork_test` (validées localement, jamais modifié
 - `20261109000000_add_communication_system`
 - `20261111000000_add_refresh_tokens_and_user_is_active`
 - `20261111220000_fix_refresh_token_fk_on_update_cascade` (correction de la contrainte `RefreshToken_userId_fkey` : `ON UPDATE CASCADE`)
+- `20261111230000_add_saspay_integration`
+- `20261111233000_fix_saspaytransaction_updatedat_default`
+- `20261112220000_add_campaign_published_notifications`
+
+> Note : la cible actuelle est Vercel (`docs/vercel-deployment.md`) ; ce document est conservé à titre historique.
 
 Règles :
 

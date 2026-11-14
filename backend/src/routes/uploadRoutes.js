@@ -10,15 +10,11 @@ const {
 
 const router = express.Router();
 
-// Permet explicitement d'augmenter la taille max pour de gros uploads
-// d'images, tout en laissant le reste de l'API protégé par 100 Ko.
-
-// Tampon express.json. Sinon, un 413 arrive tôt et le message est opaque.
-const MAX_JSON_BODY = 8 * 1024 * 1024; // 8 Mo
-
 // Toutes les routes d'upload exigent une authentification.
 router.use(authenticateToken);
 
+// Marge maximale acceptée pour le contrôle de taille dans ce handler
+// (au-delà, ou si le JSON dépasse 8 Mo, express.json montée sur /api/uploads rejette d'abord).
 const MAX_BUFFER = 20 * 1024 * 1024; // 20 Mo de marge avant validation finale
 
 /**

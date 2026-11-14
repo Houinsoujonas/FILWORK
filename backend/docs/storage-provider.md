@@ -1,96 +1,135 @@
-# Stockage de fichiers
+# Stockage de fichiers (Vercel Blob)
 
-## État actuel
+**État 2026-11-14 : fournisseur intégré et testé hors ligne. Pas encore activé en réel.**
 
-FILWORK écoute une route **`POST /api/uploads`** (authentifiée) qui accepte une image encodée en base64 (`{ filename, data }`). La route :
-- valide l'authentification ;
-- valide le type MIME (jpeg/png/webp/gif) et la taille ;
-- délègue à un fournisseur via `STORAGE_PROVIDER` ;
-- retourne l'URL publique une fois uploadée.
+FILWORK accepte des images téléchargées via **`POST /api/uploads`** (JWT requis) ou des URL
+externes saisies côté client (champs `http(s)?://…` existants). La route upload :
 
-**Par défaut** : `STORAGE_PROVIDER=none` → la route renvoie `503 STORAGE_NOT_CONFIGURED`. Aucun upload n'est accepté. Les médias existants restent des URLs externes fournies côté client.
+- exige une authentification (`authenticateToken`) ;
+- valide le type MIME déclaré (jpeg/png/webp/gif uniquement) ;
+- valide la taille (max 5 Mo par défaut, `STORAGE_MAX_UPLOAD_BYTES`) ;
+- valide la **signature binaire** (magic bytes) du contenu décodé ;
+- valide le nom de fichier (aucun chemin, aucune traversée, ≤ 180 caractères) ;
+- délègue au fournisseur configuré via `STORAGE_PROVIDER`.
 
-Aucun SDK n'est encore installé côté backend, car **`@vercel/blob@2.9.0` dépend d'une chaîne `@vercel/oidc → @vercel/cli-config → zod <4.6.6` avec une vulnérabilité HIGH** (GHSA-mrhx-c7xc-m3w5). Voir `npm audit`.
+**Défaut** : `STORAGE_PROVIDER=none` → la route répond `503 STORAGE_NOT_CONFIGURED`.
+Aucun fichier n'est accepté tant que le fournisseur n'est pas configuré.
+C'est volontaire : la fonctionnalité est prête à activer, jamais à moitié ouverte.
 
-## Variables d'environnement prévues
+## Fournisseur retenu : Vercel Blob
+
+Choix retenu après analyse des options (2026-11) :
+
+| Option | Pour | Contre |
+|---|---|---|
+| **Vercel Blob** | Natif Vercel Functions/OIDC (pas de secret à gérer), CDN intégré, aucun serveur tiers, coût d'usage faible à ce stade, delete sans frais | Compte Vercel nécessaire, URLs publiques pour médias publics |
+| S3 compatible (AWS/R2/Backblaze) | Écosystème le plus riche, contrôle fin IAM | Plus de configuration (IAM, bucket, région, CORS), pas d'OIDC natif Vercel |
+| Cloudinary | Transformations d'images intégrées (resize/crop) | Vendor lock-in, coût, complexité inutile pour des images de profil/campagne |
+
+Décision : **Vercel Blob, store public**, adapté aux avatars, logos, images de campagnes et
+médias publiés par l'application. L'authentification se fait **à l'upload** (route protégée) ;
+la consultation des URLs publiques est libre par nature (contenu déjà destiné au public).
+
+## SDK et sécurité des dépendances
+
+`@vercel/blob@^2.9.0` est installé (dépendance directe de `backend/package.json`).
+
+Chaîne résolue : `@vercel/blob@2.9.0 → @vercel/oidc@3.8.10 → @vercel/cli-config@0.3.1 → zod@4.1.11` (vulnérable, GHSA-mrhx-c7xc-m3w5).
+
+Le dépôt applique donc un **`overrides`** npm ciblé (`package.json`) :
+
+```json
+"overrides": { "@vercel/cli-config": "0.4.0" }
+```
+
+→ `@vercel/cli-config@0.4.0 → zod@4.6.7` (**corrigé**). `npm audit` : **0 vulnérabilité**.
+Le SDK charge et fonctionne (exports `put`/`del` vérifiés) ; la suite `storage-vercel-blob`
+vérifie le comportement par injection d'un faux SDK (aucune requête réseau réelle dans les tests).
+
+Si `npm audit` redevient rouge après une mise à jour future de `@vercel/blob`, ne pas déployer :
+options — réinstaller une version saine, ou revenir temporairement à `STORAGE_PROVIDER=none`.
+
+## Variables d'environnement
 
 | Variable | Défaut | Rôle |
 |---|---|---|
-| `STORAGE_PROVIDER` | `none` | `none` \| `vercel-blob` \| `s3` |
-| `STORAGE_TOKEN` | — | Token du fournisseur. Obligatoire si provider != `none`. |
-| `STORAGE_BASE_URL` | — | Préfixe public éventuel des URLs |
-| `STORAGE_MAX_UPLOAD_BYTES` | `5242880` (5 Mo) | Taille maximale par image |
+| `STORAGE_PROVIDER` | `none` | `none` \| `vercel-blob` |
+| `BLOB_READ_WRITE_TOKEN` | — | Token statique du store (env Production/Preview selon choix). Préférer OIDC quand le store est **lié** au projet Vercel |
+| `STORAGE_TOKEN` | — | Alias rétro-compatible accepté (même usage que `BLOB_READ_WRITE_TOKEN`) |
+| `STORAGE_BASE_URL` | — | Préfixe public éventuel (information, non utilisé par le SDK v2) |
+| `STORAGE_MAX_UPLOAD_BYTES` | `5242880` | Taille maximale par image |
 
-## Roadmap d'activation
+**Authentification, dans l'ordre de résolution du SDK :**
 
-1. Attendre la publication d'une version de `@vercel/blob` ne tirant pas une versions vulnérable de `zod` (<4.6.6).
-2. `npm install @vercel/blob` ; valider avec `npm audit` → 0 vulnérabilité.
-3. Définir `STORAGE_PROVIDER=vercel-blob` + `STORAGE_TOKEN=<token Vercel Blob>` dans Vercel.
-4. Tester `POST /api/uploads` avec une image jpeg ≤ 5 Mo.
-5. Documenter chaque URL publiée dans les champs `creatorProfile.mediaKitUrl`, `profileImageUrl`, `CompanyProfile.logoUrl`, `portfolioItems.url`.
+1. **OIDC automatique** — store Vercel Blob lié au projet (Vercel injecte `BLOB_STORE_ID`,
+   `VERCEL_OIDC_TOKEN`, `BLOB_WEBHOOK_PUBLIC_KEY`) : rien à configurer, rotation automatique,
+   pas de secret longue durée. **Recommandé.**
+2. **Token statique** — `BLOB_READ_WRITE_TOKEN` (ou `STORAGE_TOKEN`) ; généré depuis le store
+   (dashboard Vercel → Blob → « Add a read-write token env var to this connection »).
+   Réservé aux environnements hors-Vercel et aux besoins de client-upload.
+3. Aucune des deux → `503 STORAGE_NOT_CONFIGURED` (erreur explicite, aucune écriture).
 
-## Sécurité
+## État réel (vérifié 2026-11-14)
 
-- Validation MIME uniquement image/*.
-- Taille max 5 Mo par défaut (`STORAGE_MAX_UPLOAD_BYTES`).
-- `uploadImage`/`deleteImage` sont isolées dans `src/services/storage/index.js` et paramétrables.
-- Aucun fichier n'est conservé par FILWORK ; chaque image est hébergée par le fournisseur configuré.
-- `validateImageUpload` est testée.
+| Élément | État |
+|---|---|
+| SDK installé, audit npm propre | ✅ |
+| Route `POST /api/uploads` | ✅ implémentée, authentifiée, testée (401/400/413/503/201) |
+| Validation MIME + magic bytes + nom de fichier | ✅ testée (`tests/storage-validation.test.js`) |
+| Adaptateur Vercel Blob (`put`/`del`) | ✅ implémenté, testé avec SDK simulé (`tests/storage-vercel-blob.test.js`) |
+| Store Vercel Blob réel créé / lié au projet | ❌ **non fait — action humaine** |
+| `BLOB_READ_WRITE_TOKEN` (ou liaison OIDC) en Preview/Production Vercel | ❌ **non fait — action humaine** |
+| Test réel : upload → lecture de l'URL publique → delete → URL morte | ❌ **non fait — après liaison du store** |
 
-- `CreatorProfile.profileImageUrl`, `mediaKitUrl`, `instagramUrl`, `tiktokUrl`, `youtubeUrl`
-- `CompanyProfile.logoUrl`, `websiteUrl`
-- `Campaign` : pas de champ image
-- `Deliverable.assetUrl`
-- `CreatorSocial.profileUrl`
-- `PortfolioItem.url`
+**Tests automatisés** : `storage-vercel-blob.test.js` vérifie l'appel SDK (URL, pathname,
+`addRandomSuffix`), la traduction d'erreur upstream en 502 `STORAGE_UPSTREAM_ERROR`, le delete
+via `sdk.del`, le rejet d'URL non-HTTPS (400 `STORAGE_INVALID_URL`) et l'échec `503` en l'absence
+d'authentification. **Ces tests ne créent aucun blob réel.**
 
-Aucun avatar n'est reçu via `multipart/form-data`, aucun champ `File` n'existe dans le schéma, aucun endpoint d'upload n'est exposé. Le backend valide déjà les URL saisies côté client (syntaxe `https?://…`).
+## Activation (checklist)
 
-## Limites du modèle (avant activation du provider)
+1. Dashboard Vercel → projet `filwork-backend` → Storage → Create Database → **Blob**.
+2. Choisir un **nom** (ex. `filwork-media`) et une **région proche** des Functions (`fra1` recommandé).
+3. **Connect** le store au projet, environnements Production + Preview.
+4. Soit laisser OIDC agir (par défaut à la liaison), soit générer `BLOB_READ_WRITE_TOKEN`
+   et l'ajouter dans Settings → Environment Variables (Production + Preview).
+5. Ajouter `STORAGE_PROVIDER=vercel-blob` (Production + Preview) — **pas** en Development si
+   vous voulez garder `none` en local.
+6. Redéployer, puis exécuter le **test réel** (image JPEG ≤ 5 Mo) :
+   ```
+   POST /api/uploads
+   Authorization: Bearer <jeton d'un compte de l'environnement cible>
+   Content-Type: application/json
 
-- Aucun fichier n'est accepté tant que `STORAGE_PROVIDER=none`.
-- Les utilisateurs doivent fournir des URLs déjà hébergées ailleurs (CDN tiers) tant que `/api/uploads` n'est pas activée.
-- Une fois le provider activé, la route `/api/uploads` retourne 201 avec `{url, pathname}`.
-
-## Fournisseur recommandé
-
-**Vercel Blob** (natif avec Vercel Functions, aucun serveur supplémentaire) ou **Cloudinary** (transformations d'images intégrées).
-- Actuellement aucun fournisseur installé pour éviter d'injecter une version npm contenant une vulnérabilité.
-- Activation future dès publication d'une version sûre de `@vercel/blob`.
-
-- URL externes : les utilisateurs doivent héberger eux-mêmes leurs images/vidéos ou utiliser un CDN tiers.
-- Pas de contrôle du contenu réel, pas de validation de taille ou de type de fichier, pas de suppression de fichiers orphelins.
-- Pour des livrables professionnels, un stockage géré est recommandé.
-
-## Options comparées (sans engagement)
-
-| Critère | Vercel Blob | Cloudinary | S3 compatible |
-| - | - | - | - |
-| Coût | Offre gratuite généreuse (1 Go), puis payant | Plan gratuit généreux (25 crédits/mois) | Variable selon fournisseur |
-| Upload côté client | SDK officiel `@vercel/blob` | SDK officiel | SDK AWS ou compatible |
-| CDN/transformations | Intégrées (image optimization) | Très complètes | Via CloudFront/CDN |
-| Auth d'accès | Tokens serveur, URLs publiques signées ou publiques | Publics/privés via signature | IAM, URLs signées |
-| Adapté Vercel | Natif | Bon | Bon |
-
-Recommandation : **Vercel Blob** (natif avec Vercel Functions, aucune infrastructure à gérer) ou **Cloudinary** (transformations d'images automatiques) si le budget le permet. Les deux exigent un compte externe — aucune décision n'est imposée par le code.
-
-## Abstraction fournie
-
-`src/services/storage/index.js` expose :
-- `validateImageUpload({ contentType, sizeBytes })` — valide type (jpeg/png/webp/gif) et taille (défaut 5 Mo, `STORAGE_MAX_UPLOAD_BYTES`).
-- `isConfigured()` — `true` si `STORAGE_PROVIDER != none`.
-- `getStorageProvider()` — lève une erreur explicite tant que le fournisseur n'est pas installé (SDK ajouté au `package.json` au moment du choix).
-
-Le jour du choix :
-1. Installer le SDK (`@vercel/blob` ou `@aws-sdk/client-s3`).
-2. Renseigner `STORAGE_PROVIDER`, `STORAGE_TOKEN`, éventuellement `STORAGE_BASE_URL`.
-3. Implémenter dans `getStorageProvider()` le wrapper `upload/delete/getUrl` au contrat défini.
-4. Ajouter des routes d'upload (`POST /api/uploads` en multipart via `multer`), avec contrôle d'accès selon le rôle.
+   { "filename": "smoke.jpg", "data": "data:image/jpeg;base64,<…>" }
+   ```
+   → `201 { success: true, url, pathname }` ; ouvrir `url` dans un navigateur ;
+   → `deleteImage(url)` (script d'admin) ou test manuel ; `url` doit expirer en 404.
+7. Relever les consommations du store (operations, storage, bandwidth) après 7 jours.
 
 ## Sécurité
 
-- Validation stricte du type MIME et de la taille (déjà prête dans le service).
-- Nom de fichier généré côté serveur (UUID), jamais le nom fourni par le client.
-- URLs publiques non listables ; liens signés pour les documents privés (contrats, factures).
-- Suppression des fichiers orphelins lors de la suppression du compte.
-- Pas de stockage local éphémère : tout doit vivre dans le fournisseur choisi (Vercel Functions ne conserve rien entre invocations).
+- MIME + magic bytes + taille + nom validés **avant** tout appel réseau.
+- `addRandomSuffix: true` : noms uniques, aucun écrasement accidentel ; chemins d'origine conservés immuables.
+- Aucun accès public au bucket en listage : seules les URLs complètes sont consommables.
+- Erreurs upstream encapsulées (`502 STORAGE_UPSTREAM_ERROR`) — jamais de fuite de token/corps dans la réponse ni les logs.
+- 5 Mo max par image, 8 Mo de JSON utile, compteurs de rate limit appliqués à `/api/*`.
+- Les tokens restent hors dépôt (`.env.example` ne contient que des placeholders).
+
+## Limites connues
+
+- **Pas de endpoint public DELETE** : la suppression existe côté serveur (`deleteImage`), sans
+  exposition REST — volontairement. Retirer l'image de profil ne supprime pas encore l'objet du store.
+- **Fichiers orphelins** : si un upload réussit puis que l'utilisateur abandonne le formulaire,
+  le blob reste (pas de lien bidirectionnel DB↔blob). À traiter avant la mise en production publique
+  si le volume devient significatif (endpoint de republication / tâche de GC).
+- **Aucune image de campagne** n'existe dans le schéma Prisma (champs URL seulement pour
+  avatars/logo/socials/portfolio/deliverable). L'upload s'adresse aux images ; pas encore aux PDF.
+- Aucun chargement de documents sensibles (contrats, factures) : reviendrait à un store **privé**
+  ou à des URLs signées — non prévu dans cette itération.
+
+## Problèmes connus
+
+- Le README historique mentionnait des endpoints multipart : **supprimé** — la route est en JSON base64,
+  pas en multipart (pas de dépendance `multer`).
+- `STORAGE_BASE_URL` est documenté pour traçabilité ; le SDK v2 n'en dépend pas.

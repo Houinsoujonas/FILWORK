@@ -18,7 +18,7 @@ const developers = [
   },
   { name: "Jonas Houinsou", image: jonasImage, width: 800, height: 1000 },
   {
-    name: "Kouassi Maurel Togbadja",
+    name: "Kouassi Maurel ",
     image: maurelImage,
     width: 800,
     height: 1067,

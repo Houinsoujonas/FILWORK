@@ -3,14 +3,16 @@
 Cette procédure décrit comment appliquer les migrations préparées sur la base de test
 uniquement, sans toucher à `filwork_dev`, à Neon production, ni aux sauvegardes existantes.
 
-## État connu (vérifié le 2026-11-11, après migrations)
+## État connu (vérifié le 2026-11-14, après migrations)
 
-`filwork_test` est maintenant entièrement migrée et cohérente avec `prisma/schema.prisma` :
+`filwork_test` est entièrement migrée et cohérente avec `prisma/schema.prisma` :
 
-- 19 migrations enregistrées dans `_prisma_migrations`, dont :
+- **22 migrations** enregistrées dans `_prisma_migrations`, dont :
   - `20261109000000_add_communication_system` (appliquée le 2026-11-11),
   - `20261111000000_add_refresh_tokens_and_user_is_active` (appliquée le 2026-11-11),
-  - `20261111220000_fix_refresh_token_fk_on_update_cascade` (correction `ON UPDATE CASCADE` sur `RefreshToken_userId_fkey`, appliquée le 2026-11-11).
+  - `20261111220000_fix_refresh_token_fk_on_update_cascade` (appliquée le 2026-11-11),
+  - `20261111230000_add_saspay_integration` et `20261111233000_fix_saspaytransaction_updatedat_default` (appliquées le 2026-11-11),
+  - `20261112220000_add_campaign_published_notifications` (appliquée le 2026-11-12).
 - `prisma migrate status --config prisma.test.config.js` → `Database schema is up to date!`
 - `prisma migrate diff` → `No difference detected.`
 - Client Prisma régénéré avec succès (`npm run build`).
@@ -66,7 +68,7 @@ rejouable (`IF NOT EXISTS`, catalogues PostgreSQL vérifiés).
    npx prisma migrate status --config prisma.test.config.js
    ```
 
-   La sortie doit indiquer `Database schema is up to date!` ou 18 migrations appliquées.
+   La sortie doit indiquer `Database schema is up to date!` ou 22 migrations appliquées.
 
 5. Vérifier l'absence de différence entre le schéma et la base :
 
@@ -97,7 +99,7 @@ npm run test:refresh-admin # tests/refresh-admin.test.js (refresh tokens, révoc
 npm run test:all          # les cinq suites combinées
 ```
 
-État constaté après la migration corrective : **134 tests passés** (22 + 86 + 7 + 13 + 6).
+État constaté après les migrations récentes : **239 tests passés** (2026-11-14, 23 suites).
 
 ## Points de vigilance
 

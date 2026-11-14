@@ -7,7 +7,6 @@ const {
 } = require("../services/sasPayService");
 const {
   enqueuePayoutSentEmail,
-  enqueuePaymentReceivedEmail,
 } = require("../services/emailService");
 const { applySasPayResult } = require("./sasPayController");
 const { isConfigured } = require("../services/sasPayService");

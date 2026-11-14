@@ -1,5 +1,14 @@
 # Baseline de `filwork_dev` (registre des migrations vide)
 
+> **État 2026-11-14 : BASELINE EXÉCUTÉE.** `filwork_dev` est désormais alignée
+> sur les 22 migrations : schéma appliqué (`migrate diff` → « No difference
+> detected »), registre `_prisma_migrations` reconstruit via
+> `prisma migrate resolve --applied`, `prisma migrate status` →
+> « Database schema is up to date! ». Les 2 comptes locaux sont intacts.
+> Sauvegarde de précaution : dump JSON hors dépôt
+> (`AppData/Local/Temp/opencode/filwork_dev-backup-2026-11-14T02-02-11-555Z/`).
+> Le reste de ce document décrit la procédure suivie.
+
 ## Constat
 
 `filwork_dev` est à jour pour le schéma (19 tables, données, `prisma migrate diff` → « No difference detected ») mais `_prisma_migrations` est **vide**. Le schéma a donc été appliqué hors registre (probablement `db push` ou restauration d'un dump).
@@ -8,7 +17,15 @@
 
 `migrate deploy` essaierait de rejouer les 22 migrations depuis l'origine. Les premières (`20261021152421_init`, etc.) ne sont **pas rejouables** (`CREATE TABLE` sans garde-fous) : elles échoueraient sur une base qui contient déjà les objets.
 
-## Procédure sûre (NON exécutée — nécessite autorisation)
+## Procédure appliquée le 2026-11-14 (dump JSON de précaution effectué avant)
+
+> Note : la commande `pg_dump` ci-dessous n'était pas disponible localement ; le
+> dump a été réalisé via un export JSON des 19 tables (tous les enregistrements,
+> hors dépôt, dans `AppData/Local/Temp/opencode/`). Le schéma a d'abord été
+> aligné via `prisma migrate diff` appliqué par lots (l'enum `NotificationType`
+> ajouté hors transaction, puis le reste en une transaction, puis l'index
+> partiel dépendant du nouvelenum). Aucune donnée n'a été modifiée ; aucune
+> migration n'a été exécutée sur cette base.
 
 1. `pg_dump -Fc` de `filwork_dev` (sauvegarde obligatoire, hors dépôt), par exemple :
 

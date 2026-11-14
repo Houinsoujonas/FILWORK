@@ -43,9 +43,9 @@
 
 ## 6. Stockage
 
-- `STORAGE_PROVIDER=none` : aucune URL d'upload n'est acceptée ; aucun fournisseur actif.
-- Les livrables et médias sont uniquement des URLs externes, validées côté contrôleur (`https?://…`).
-- Aucun fichier n'est conservé par FILWORK.
+- `STORAGE_PROVIDER=none` par défaut : aucune URL d'upload n'est acceptée ; aucun fournisseur actif.
+- **`STORAGE_PROVIDER=vercel-blob`** : route `POST /api/uploads` active (JWT, MIME + magic bytes, 5 Mo max, nom validé) ; fichiers en store public Vercel Blob. SDK 2.9.0 installé avec correctif `zod@4.6.7` (`overrides` npm, 0 vulnérabilité). Activation : `docs/storage-provider.md` (checklist) — store non encore lié.
+- Les livrables et médias peuvent rester des URLs externes, validées côté contrôleur (`https?://…`).
 
 ## 7. Rôles et autorisations
 

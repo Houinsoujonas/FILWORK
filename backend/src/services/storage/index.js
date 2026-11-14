@@ -3,13 +3,20 @@
 /**
  * Abstraction de stockage de fichiers (indépendante du fournisseur).
  *
- * FILWORK accepte actuellement uniquement des URL (aucun upload n'est activé).
- * Ce module prépare le basculement vers un stockage persistant compatible
- * Vercel, sans modifier les routes existantes.
+ * Fournisseurs disponibles :
+ *   - "none" (défaut) : aucun stockage configuré, /api/uploads renvoie 503.
+ *   - "vercel-blob"   : stockage objet Vercel Blob (public, adapté aux
+ *     avatars, logos et images de campagne). Nécessite :
+ *       * soit un store connecté au projet Vercel (auth OIDC automatique,
+ *         BLOB_STORE_ID / VERCEL_OIDC_TOKEN injectés par la plateforme) ;
+ *       * soit BLOB_READ_WRITE_TOKEN (token statique, p.ex. pour les tests
+ *         et les environnements hors-Vercel). STORAGE_TOKEN est accepté pour
+ *         compatibilité arrière.
  *
  * Variables d'environnement prévues (voir docs/environment-variables.md) :
- *   - STORAGE_PROVIDER : "vercel-blob" | "s3" | "none" (défaut)
- *   - STORAGE_TOKEN    : token du fournisseur (obligatoire si provider != "none")
+ *   - STORAGE_PROVIDER : "none" (défaut) | "vercel-blob"
+ *   - BLOB_READ_WRITE_TOKEN : token du store Vercel Blob (optionnel si OIDC)
+ *   - STORAGE_TOKEN    : alias de compatibilité pour BLOB_READ_WRITE_TOKEN
  *   - STORAGE_BASE_URL : préfixe public des URLs (optionnel)
  *   - STORAGE_MAX_UPLOAD_BYTES : taille max par fichier (défaut 5 Mo)
  */
@@ -25,16 +32,12 @@ const ALLOWED_IMAGE_TYPES = new Set([
 // ---------------------------------------------------------------------------
 // Uploads d'images vers le fournisseur configuré.
 //
-// IMPORTANT (2026-11) : le SDK `@vercel/blob` n'est PAS installé par défaut
-// car la version la plus récente dépend d'une version vulnérable de `zod`
-// (<4.6.6, CVE Memory-exhaustion). Un SDK non vulnérable sera installé
-// lorsqu'il sera disponible. Les implémentations réelles sont gardées
-// isolées dans `uploadImage` et `deleteImage` et déterminent la cible
-// uniquement via l'environnement :
-//   - STORAGE_PROVIDER : "none" | "vercel-blob"
-//   - STORAGE_TOKEN    : token fournisseur (requis si provider != "none")
-//   - STORAGE_BASE_URL : préfixe public (optionnel, pour construction d'URLs)
-//   - STORAGE_MAX_UPLOAD_BYTES : taille max (défaut 5 Mo)
+// Le SDK @vercel/blob est installé (dépendance du projet, audit propre).
+// L'authentification est résolue, dans l'ordre :
+//   1. OIDC automatique lorsque le store est lié au projet Vercel (aucun
+//      token à gérer) ;
+//   2. BLOB_READ_WRITE_TOKEN (ou son alias STORAGE_TOKEN) lorsqu'il est
+//      fourni explicitement.
 // ---------------------------------------------------------------------------
 
 const DEFAULT_MAX_BYTES = 5 * 1024 * 1024;
@@ -194,8 +197,32 @@ function validateImageUpload({ contentType, sizeBytes, buffer, filename } = {}) 
   }
 }
 
+/**
+ * Token statique éventuel du fournisseur. Absent en contexte OIDC Vercel.
+ */
+function staticStorageToken() {
+  return process.env.BLOB_READ_WRITE_TOKEN || process.env.STORAGE_TOKEN || null;
+}
+
+/**
+ * Vrai lorsque l'exécution se fait dans un contexte OIDC Vercel (store lié
+ * au projet) : le SDK se charge alors de l'authentification.
+ */
+function oidcContextAvailable() {
+  return Boolean(
+    process.env.VERCEL_OIDC_TOKEN ||
+      (process.env.BLOB_STORE_ID && process.env.VERCEL_ENV),
+  );
+}
+
 function isConfigured() {
-  return Boolean(process.env.STORAGE_PROVIDER && process.env.STORAGE_PROVIDER !== "none");
+  const provider = (process.env.STORAGE_PROVIDER || "none").toLowerCase();
+
+  if (provider === "none") {
+    return false;
+  }
+
+  return Boolean(staticStorageToken() || oidcContextAvailable());
 }
 
 /**
@@ -203,11 +230,12 @@ function isConfigured() {
  * Les implémentations concrètes sont branchées ici sans réécrire les routes.
  */
 function getStorageProvider() {
-  const provider = process.env.STORAGE_PROVIDER || "none";
+  const provider = (process.env.STORAGE_PROVIDER || "none").toLowerCase();
+  const token = staticStorageToken();
 
-  if (provider === "none" || !process.env.STORAGE_TOKEN) {
+  if (provider === "none") {
     const error = new Error(
-      "Stockage non configuré. Définissez STORAGE_PROVIDER et STORAGE_TOKEN (voir docs/storage-provider.md).",
+      "Stockage non configuré. Définissez STORAGE_PROVIDER et BLOB_READ_WRITE_TOKEN (ou liez un store Vercel Blob au projet) — voir docs/storage-provider.md.",
     );
     error.statusCode = 503;
     error.code = "STORAGE_NOT_CONFIGURED";
@@ -215,23 +243,29 @@ function getStorageProvider() {
   }
 
   if (provider === "vercel-blob") {
-    // Le SDK n'est pas installé par défaut (voir en-tête du module).
-    // Lorsque un SDK non vulnérable sera disponible, ajouter @vercel/blob
-    // à package.json et retirer l'instruction ci-dessous.
+    if (!token && !oidcContextAvailable()) {
+      const error = new Error(
+        "STORAGE_PROVIDER=vercel-blob mais aucune authentification disponible : définissez BLOB_READ_WRITE_TOKEN, ou liez un store Vercel Blob au projet (OIDC).",
+      );
+      error.statusCode = 503;
+      error.code = "STORAGE_NOT_CONFIGURED";
+      throw error;
+    }
+
     let blob;
 
     try {
       blob = require("@vercel/blob");
     } catch {
       const error = new Error(
-        "STORAGE_PROVIDER=vercel-blob choisi, mais le SDK @vercel/blob n'est pas installé. Installez-le avant de l'activer, et vérifiez `npm audit` pour confirmer zéro vulnérabilité.",
+        "STORAGE_PROVIDER=vercel-blob choisi, mais le SDK @vercel/blob n'est pas installé. Installez-le avant de l'activer et vérifiez `npm audit`.",
       );
       error.statusCode = 503;
       error.code = "STORAGE_SDK_MISSING";
       throw error;
     }
 
-    return { provider, sdk: blob };
+    return { provider, sdk: blob, token };
   }
 
   const error = new Error(`STORAGE_PROVIDER inconnu : ${provider}.`);
@@ -254,24 +288,33 @@ async function uploadImage({ buffer, contentType, filename }) {
     filename: safeName,
   });
 
-  const { provider, sdk } = getStorageProvider();
+  const { provider, sdk, token } = getStorageProvider();
 
   if (provider === "vercel-blob") {
-    const pathname =
-      safeName && !safeName.includes("/")
-        ? safeName
-        : `uploads/${Date.now()}-${safeName}`;
-
-    const result = await sdk.put(pathname, buffer, {
+    const options = {
       access: "public",
       contentType,
-      token: process.env.STORAGE_TOKEN,
-    });
+      // Chemins immuables : un suffixe aléatoire évite tout écrasement
+      // accidentel entre deux uploads portant le même nom de fichier.
+      addRandomSuffix: true,
+      token: token || undefined,
+    };
 
-    return { url: result.url, pathname: result.pathname };
+    try {
+      const result = await sdk.put(`uploads/${safeName}`, buffer, options);
+
+      return { url: result.url, pathname: result.pathname };
+    } catch (error) {
+      const wrapped = new Error(
+        "Le fournisseur de stockage a refusé l'upload. Réessayez plus tard ou contactez le support FILWORK.",
+      );
+      wrapped.statusCode = 502;
+      wrapped.code = "STORAGE_UPSTREAM_ERROR";
+      wrapped.cause = error instanceof Error ? error.message : String(error);
+      throw wrapped;
+    }
   }
 
-  // Provider inconnu :
   const error = new Error(`STORAGE_PROVIDER non supporté pour upload : ${provider}`);
   error.statusCode = 503;
   error.code = "STORAGE_PROVIDER_UNSUPPORTED";
@@ -283,7 +326,14 @@ async function uploadImage({ buffer, contentType, filename }) {
  * @param {string} url URL publique retournée par `uploadImage`
  */
 async function deleteImage(url) {
-  const { provider, sdk } = getStorageProvider();
+  if (typeof url !== "string" || !/^https:\/\//i.test(url)) {
+    const error = new Error("URL de fichier invalide.");
+    error.statusCode = 400;
+    error.code = "STORAGE_INVALID_URL";
+    throw error;
+  }
+
+  const { provider, sdk, token } = getStorageProvider();
 
   if (provider === "vercel-blob") {
     if (!sdk.del) {
@@ -295,8 +345,18 @@ async function deleteImage(url) {
       throw error;
     }
 
-    await sdk.del([url], { token: process.env.STORAGE_TOKEN });
-    return { deleted: true };
+    try {
+      await sdk.del([url], { token: token || undefined });
+      return { deleted: true };
+    } catch (error) {
+      const wrapped = new Error(
+        "La suppression du fichier a échoué. Réessayez ou contactez le support FILWORK.",
+      );
+      wrapped.statusCode = 502;
+      wrapped.code = "STORAGE_UPSTREAM_ERROR";
+      wrapped.cause = error instanceof Error ? error.message : String(error);
+      throw wrapped;
+    }
   }
 
   const error = new Error(`STORAGE_PROVIDER non supporté pour delete : ${provider}`);
@@ -315,4 +375,6 @@ module.exports = {
   uploadImage,
   deleteImage,
   maxUploadBytes,
+  staticStorageToken,
+  oidcContextAvailable,
 };

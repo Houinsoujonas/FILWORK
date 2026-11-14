@@ -121,7 +121,10 @@ async function markEmailFailed(emailId, error) {
     return;
   }
 
-  const nextDelay = BACKOFF_DELAYS_MS[Math.min(email.attempts, BACKOFF_DELAYS_MS.length - 1)];
+  const nextDelay =
+    BACKOFF_DELAYS_MS[
+      Math.min(Math.max(email.attempts - 1, 0), BACKOFF_DELAYS_MS.length - 1)
+    ];
 
   if (email.attempts >= email.maxAttempts) {
     await prisma.emailOutbox.update({

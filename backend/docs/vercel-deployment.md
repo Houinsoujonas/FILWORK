@@ -1,5 +1,7 @@
 ﻿# Déploiement du backend FILWORK sur Vercel
 
+> Pour la configuration complète du déclencheur externe des e-mails (5 minutes), voir `docs/cron-external.md`. Le présent document couvre l'architecture Vercel, les routes internes et le cron quotidien Hobby.
+
 ## Architecture cible
 
 ```

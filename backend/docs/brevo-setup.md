@@ -29,6 +29,19 @@ Les templates sont dans `src/services/emailTemplates.js`. Toute modification du 
 3. Vérifiez que l'e-mail sort de la file (`EmailOutbox.status = SENT`).
 4. Sur erreur 535 : les identifiants SMTP sont refusés par Brevo (mot de passe SMTP obsolète ou mauvais). Régénérez le mot de passe SMTP Brevo.
 
+## Vérification automatisée (sans envoi réel)
+
+`npm run test:outbox` (enqueueEmail validations) et `npm run test:email-worker` couvrent le pipeline de bout en bout avec un transport SMTP simulé :
+
+- e-mail accepté → `SENT` ;
+- e-mail refusé 535 → retour en `PENDING` avec backoff exponentiel ;
+- timeout SMTP → retenté, jamais marqué `SENT` par erreur ;
+- échec après `maxAttempts` → `FAILED` définitif ;
+- blocage en `PROCESSING` > 10 min → reprise en `PENDING` ;
+- déduplication des notifications (`skipDuplicates` + index partiel unique).
+
+Aucun test n'envoie d'e-mail réel ; aucun test ne contacte Brevo.
+
 ## Sécurité
 
 - Ne jamais commiter `SMTP_PASS` ni une clé Brevo.

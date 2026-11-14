@@ -14,7 +14,6 @@ const {
 } = require("../services/sasPayService");
 const {
   enqueuePaymentReceivedEmail,
-  enqueuePayoutSentEmail,
 } = require("../services/emailService");
 
 const NETWORKS = {

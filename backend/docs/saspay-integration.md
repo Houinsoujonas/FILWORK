@@ -9,6 +9,15 @@
 >
 > Le fonctionnement de paiement actuel est la **déclaration manuelle** documentée dans `docs/payment-manual.md`.
 
+> **Vérification 2026-11-14 (docs.saspay.me, aucune transaction réelle)** : endpoints et sécurité confirmés
+> conformes à l'implémentation — `POST /payments/softpay/`, `GET /payments/{payment_id}/verify/`,
+> `POST /payouts/initialize/`, `GET /payouts/{payout_id}/verify/`, header `Authorization: Bearer sk_…`,
+> scopes `PAYIN`/`PAYOUT`/`BOTH`, webhook `X-Webhook-Signature` = HMAC-SHA256 hexadécimal de
+> `{X-Webhook-Timestamp}.{rawBody}`, comparaison `timingSafeEqual`, tolérance 300 s (5 min).
+> `POST /payouts/initialize/` exige une **IP whitelistée** au niveau marchand (sinon `403 ip_not_whitelisted`)
+> et reste `payout_not_enabled` pour tout nouveau marchand (activation par SasPay).
+> Aucun appel réel n'a été effectué ; `SASPAY_ENABLED=false` inchangé.
+
 ## Décision métier
 
 SasPay est **la** solution de paiement retenue pour FILWORK (entreprise paie FILWORK, puis FILWORK reverse au créateur), mais son **activation est reportée** à une mission distincte après vérification des informations du compte marchand et des conditions applicables. Aucune intégration FedaPay/KKiaPay/CinetPay n'est réalisée ni prévue. En attendant, l'entreprise déclare manuellement le paiement effectué hors plateforme et FILWORK enregistre ce statut (voir `docs/payment-manual.md`).

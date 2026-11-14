@@ -144,15 +144,30 @@ let running = false;
  * plusieurs workers peuvent tourner en parallèle sans envoyer deux fois
  * le même message.
  *
+ * @param {{ sendSmtpEmailForTests?: (mail: {to: string, subject: string, text: string, html: string}) => Promise<object>, batchSize?: number }} [options]
  * @returns {Promise<number>} Nombre d'e-mails traités
  */
-async function processEmailOutboxBatch() {
-  if (process.env.NODE_ENV === "test") {
+async function processEmailOutboxBatch(options = {}) {
+  const injectedSend =
+    typeof options.sendSmtpEmailForTests === "function"
+      ? options.sendSmtpEmailForTests
+      : undefined;
+
+  // Le garde-fou « pas d'envoi SMTP en test » reste actif pour le chemin
+  // d'appel réel : seul un injecteur explicite (tests automatisés) peut
+  // exécuter le pipeline complet.
+  if (process.env.NODE_ENV === "test" && !injectedSend) {
     console.log(
       "[EmailOutbox] Envoi SMTP désactivé en environnement de test : 0 e-mail(s) traité(s).",
     );
     return 0;
   }
+
+  const send = injectedSend || sendSmtpEmail;
+  const batchSize =
+    Number.isInteger(options.batchSize) && options.batchSize > 0
+      ? Math.floor(options.batchSize)
+      : undefined;
 
   const recovered = await recoverStuckProcessingEmails();
 
@@ -162,7 +177,7 @@ async function processEmailOutboxBatch() {
     );
   }
 
-  const emails = await claimPendingEmails();
+  const emails = await claimPendingEmails(batchSize);
 
   if (emails.length === 0) {
     return 0;
@@ -182,7 +197,7 @@ async function processEmailOutboxBatch() {
         }
       }
 
-      await sendSmtpEmail({
+      await send({
         to: email.to,
         subject: email.subject,
         text: payload.text || "",
@@ -264,4 +279,5 @@ module.exports = {
   processEmailOutboxBatch,
   startEmailOutboxWorker,
   stopEmailOutboxWorker,
+  isRefusedRecipient,
 };

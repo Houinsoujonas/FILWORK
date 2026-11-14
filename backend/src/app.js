@@ -28,13 +28,14 @@ const reviewRoutes = require("./routes/reviewRoutes");
 const sasPayRoutes = require("./routes/sasPayRoutes");
 const internalRoutes = require("./routes/internalRoutes");
 const uploadRoutes = require("./routes/uploadRoutes");
+const sasPayWebhookRoutes = require("./routes/sasPayWebhookRoutes");
 
-const { publicReadLimiter, generalLimiter } = require("./middlewares/rateLimiters");
+const { generalLimiter } = require("./middlewares/rateLimiters");
 const { checkDatabaseHealth } = require("./services/healthCheck");
 
 const app = express();
 
-// Render termine TLS sur son proxy et transmet l'IP du client via
+// La plateforme (Vercel) termine TLS sur son proxy edge et transmet l'IP du client via
 // X-Forwarded-For. Un seul saut de proxy est déclaré ici, afin que
 // express-rate-limit et req.ip lisent l'adresse réelle du client.
 app.set("trust proxy", 1);
@@ -84,8 +85,6 @@ app.use("/api/uploads", express.json({ limit: "8mb" }), uploadRoutes);
 
 // Le webhook SasPay reçoit un corps BRUT (signature vérifiée sur les octets reçus).
 // Ce montage doit précéder express.json().
-const sasPayWebhookRoutes = require("./routes/sasPayWebhookRoutes");
-
 app.use(
   "/api/webhooks/saspay",
   express.raw({ type: "*/*", limit: "512kb" }),

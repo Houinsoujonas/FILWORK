@@ -536,9 +536,10 @@ Authentifié. accepte `POST /api/uploads` avec
 
 - `201` : `{ success, url, pathname }` si le fournisseur configuré (`STORAGE_PROVIDER`) accepte le fichier.
 - `401` : jeton absent/invalide.
-- `400` : champ manquant.
-- `413` : image trop grande.
-- `503` : `STORAGE_PROVIDER=none` ou fournisseur non installé (`STORAGE_NOT_CONFIGURED` / `STORAGE_SDK_MISSING`).
+- `400` : champ manquant (`filename` ou `data`), nom de fichier invalide, type ou signature binaire non conforme (`STORAGE_UNSUPPORTED_TYPE`, `STORAGE_MIME_MISMATCH`, `STORAGE_INVALID_FILENAME`, `STORAGE_INVALID_BASE64`).
+- `413` : image trop grande (> 5 Mo) ou JSON trop grand (> 8 Mo) ; body JSON `{ success: false, ... }`.
+- `503` : `STORAGE_PROVIDER=none`, authentification store absente, ou fournisseur non installé (`STORAGE_NOT_CONFIGURED` / `STORAGE_SDK_MISSING`).
+- `502` : erreur upstream du fournisseur (`STORAGE_UPSTREAM_ERROR`) — aucun détail interne exposé.
 
 Voir `docs/storage-provider.md`.
 

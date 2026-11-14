@@ -184,6 +184,7 @@ function assertTestDatabase({
  *   port: number,
  *   host: string,
  *   allowTestNonStandardPort?: boolean,
+ *   allowTestDynamicPort?: boolean,
  *   allowRemoteTestHost?: boolean,
  * }} options
  */
@@ -192,9 +193,24 @@ function assertPortConfiguration({
   port,
   host,
   allowTestNonStandardPort = false,
+  allowTestDynamicPort = false,
   allowRemoteTestHost = false,
 }) {
   const numericPort = Number(port);
+
+  if (
+    nodeEnv === "test" &&
+    numericPort === 0 &&
+    allowTestDynamicPort
+  ) {
+    if (!LOCAL_HOSTS.has(String(host).toLowerCase()) && !allowRemoteTestHost) {
+      throw new Error(
+        `Refus : l'API de test doit écouter sur une interface locale (hôte reçu : ${host}).`,
+      );
+    }
+
+    return { port: numericPort, host };
+  }
 
   if (
     !Number.isInteger(numericPort) ||

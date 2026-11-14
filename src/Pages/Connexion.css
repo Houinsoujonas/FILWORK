@@ -441,8 +441,10 @@ gap 0.2s ease;
 }
 
 .login-form-panel__register a:hover {
-gap: 8px;
-color: #fff;
+gap: 4px;
+color: var(--login-gold-light);
+text-decoration: underline;
+text-underline-offset: 3px;
 }
 
 .login-form-panel__register a svg {
@@ -553,8 +555,9 @@ box-shadow 0.25s ease;
 }
 
 .login-account__option:hover {
-transform: translateY(-2px);
-border-color: rgba(214, 163, 84, 0.5);
+transform: none;
+border-color: #b9c5a6;
+background: #f4f7ed;
 }
 
 .login-account__option--active {
@@ -668,7 +671,9 @@ transition: color 0.2s ease;
 }
 
 .login-field__header > a:hover {
-color: #fff;
+color: var(--login-gold-light);
+text-decoration: underline;
+text-underline-offset: 3px;
 }
 
 .login-input-wrapper {
@@ -687,9 +692,9 @@ background 0.25s ease;
 }
 
 .login-input-wrapper:focus-within {
-border-color: rgba(214, 163, 84, 0.8);
-background: #101112;
-box-shadow: 0 0 0 3px rgba(214, 163, 84, 0.08);
+border-color: #87964b;
+background: #ffffff;
+box-shadow: 0 0 0 3px rgba(82, 102, 77, 0.12);
 }
 
 .login-input-icon {
@@ -726,7 +731,7 @@ opacity: 1;
 .login-input-wrapper input:-webkit-autofill:hover,
 .login-input-wrapper input:-webkit-autofill:focus {
 -webkit-text-fill-color: var(--login-text);
-box-shadow: 0 0 0 1000px #0d0e0f inset;
+box-shadow: 0 0 0 1000px #ffffff inset;
 transition: background-color 9999s ease-in-out 0s;
 }
 
@@ -753,7 +758,8 @@ background 0.2s ease;
 }
 
 .login-password__toggle:hover {
-background: rgba(255, 255, 255, 0.04);
+border: 1px solid #d9e2cc;
+background: #f1f5e7;
 color: var(--login-gold-light);
 }
 

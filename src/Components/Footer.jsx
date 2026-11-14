@@ -1,10 +1,5 @@
 import { useLayoutEffect, useRef } from "react";
 import { Link } from "react-router-dom";
-import {
-  FiInstagram,
-  FiLinkedin,
-} from "react-icons/fi";
-import { FaWhatsapp, FaFacebookF } from "react-icons/fa";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
@@ -83,45 +78,11 @@ function Footer() {
           <div className="footer__brand">
             {" "}
             <Link to="/" className="footer__logo" aria-label="Filwork, accueil">
-              <img src="/filwork-logo.svg" alt="" width={254} height={56} />
+              <img src="/filwork-logo-light.svg" alt="" width={254} height={56} />
             </Link>
-            <p className="footer__signature">IMAGINER. CONNECTER. RÉALISER.</p>
             <p className="footer__description">
-              La plateforme qui rapproche les créateurs de contenu et les
-              entreprises pour donner vie à de nouvelles collaborations.
-            </p>
-            <div className="footer__socials" aria-label="Réseaux sociaux">
-              <span
-                className="footer__social"
-                aria-label="Instagram, compte officiel à confirmer"
-                title="Compte officiel à confirmer"
-              >
-                <FiInstagram aria-hidden="true" />
-              </span>
-              <span
-                className="footer__social"
-                aria-label="LinkedIn, compte officiel à confirmer"
-                title="Compte officiel à confirmer"
-              >
-                <FiLinkedin aria-hidden="true" />
-              </span>
-              <span
-                className="footer__social"
-                aria-label="WhatsApp, compte officiel à confirmer"
-                title="Compte officiel à confirmer"
-              >
-                <FaWhatsapp aria-hidden="true" />
-              </span>
-              <span
-                className="footer__social"
-                aria-label="Facebook, compte officiel à confirmer"
-                title="Compte officiel à confirmer"
-              >
-                <FaFacebookF aria-hidden="true" />
-              </span>
-            </div>
-            <p className="footer__social-note">
-              Comptes officiels à confirmer.
+              Filwork met en relation les créateurs de contenu et les
+              entreprises autour de campagnes et de projets communs.
             </p>
           </div>
           <div className="footer__column">

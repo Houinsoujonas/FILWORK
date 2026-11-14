@@ -244,7 +244,7 @@ export default function APropos() {
           <h2 id="about-team-title">Les personnes qui donnent forme à FILWORK.</h2>
           <p>
             FILWORK est développée par une équipe réunie autour d’une même
-            ambition : faciliter les rencontres entre créateurs et marques.
+            ambition{"\u00a0"}: faciliter les rencontres entre créateurs et marques.
           </p>
         </div>
         <div className="about-team__grid">

@@ -26,7 +26,8 @@ export default function Announcements() {
     setLoading(true);
     try {
       const data = await api.get("/announcements", {
-        params: { page: pageNumber, limit: 10 },
+        page: pageNumber,
+        limit: 10,
       });
 
       setAnnouncements(data.announcements || []);
@@ -46,9 +47,7 @@ export default function Announcements() {
     (async () => {
       setLoading(true);
       try {
-        const data = await api.get("/announcements", {
-          params: { page: 1, limit: 10 },
-        });
+        const data = await api.get("/announcements", { page: 1, limit: 10 });
 
         if (!active) {
           return;

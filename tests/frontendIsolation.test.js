@@ -64,7 +64,13 @@ test("le frontend ne contient aucune configuration de base de données", () => {
 test("le client HTTP utilise l'API applicative par défaut", () => {
   const apiClient = fs.readFileSync(path.join(SRC, "lib", "api.js"), "utf8");
 
-  assert.match(apiClient, /import\.meta\.env\.VITE_API_BASE_URL\s*\|\|\s*["']\/api["']/);
+  assert.match(apiClient, /import\.meta\.env\.VITE_API_URL/);
+  assert.match(apiClient, /if \(import\.meta\.env\.DEV\)[\s\S]*return ["']\/api["']/);
+  assert.match(apiClient, /\/auth\/refresh/);
+  assert.match(apiClient, /filwork\.refresh-token/);
+  assert.match(apiClient, /pendingGetRequests/);
+  assert.match(apiClient, /configuredApiUrl/);
+  assert.equal(apiClient.includes("localhost"), false);
 
   for (const { file, content } of readAllSources()) {
     assert.equal(
@@ -75,11 +81,9 @@ test("le client HTTP utilise l'API applicative par défaut", () => {
   }
 });
 
-test("le proxy Vite cible l'API applicative (5000) par défaut", () => {
+test("le proxy Vite utilise VITE_API_URL comme cible", () => {
   const viteConfig = fs.readFileSync(path.join(ROOT, "vite.config.js"), "utf8");
 
-  assert.match(
-    viteConfig,
-    /VITE_API_PROXY_TARGET\s*\|\|\s*["']http:\/\/localhost:5000["']/,
-  );
+  assert.match(viteConfig, /env\.VITE_API_URL/);
+  assert.equal(viteConfig.includes("VITE_API_PROXY_TARGET"), false);
 });

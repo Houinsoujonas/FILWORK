@@ -82,7 +82,7 @@ export default function CreatorOpportunities() {
       <div className="ui-list" style={{ marginTop: 18 }}>
         {loading ? (
           <Loading label="Chargement des campagnes…" />
-        ) : campaigns.length === 0 ? (
+        ) : error ? null : campaigns.length === 0 ? (
           <p className="ui-muted ui-small">
             Aucune campagne ne correspond à ces critères pour le moment.
           </p>

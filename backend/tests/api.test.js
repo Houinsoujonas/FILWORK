@@ -3105,6 +3105,96 @@ test(
 // TESTS AUTOMATISÉS   CAMPAGNES ADMINISTRATIVES
 // =====================================================
 
+test("GET /api/admin/applications - refuse une requête sans jeton", async () => {
+  const response = await fetch(`${API_BASE_URL}/api/admin/applications`);
+  const data = await response.json();
+
+  assert.equal(response.status, 401);
+  assert.equal(data.success, false);
+});
+
+test(
+  "GET /api/admin/applications - refuse une entreprise",
+  { skip: !(process.env.TEST_COMPANY_EMAIL && process.env.TEST_COMPANY_PASSWORD) },
+  async () => {
+    const token = await getTestToken(
+      process.env.TEST_COMPANY_EMAIL,
+      process.env.TEST_COMPANY_PASSWORD,
+    );
+    const response = await fetch(`${API_BASE_URL}/api/admin/applications`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    assert.equal(response.status, 403);
+    assert.equal((await response.json()).success, false);
+  },
+);
+
+test(
+  "GET /api/admin/applications - retourne une liste paginée à un ADMIN",
+  { skip: !(process.env.TEST_ADMIN_EMAIL && process.env.TEST_ADMIN_PASSWORD) },
+  async () => {
+    const token = await getTestToken(
+      process.env.TEST_ADMIN_EMAIL,
+      process.env.TEST_ADMIN_PASSWORD,
+    );
+    const response = await fetch(
+      `${API_BASE_URL}/api/admin/applications?status=PENDING&page=1&limit=5`,
+      { headers: { Authorization: `Bearer ${token}` } },
+    );
+    const data = await response.json();
+
+    assert.equal(response.status, 200, data.message);
+    assert.equal(data.success, true);
+    assert.ok(Array.isArray(data.applications));
+    assert.equal(data.count, data.applications.length);
+    assert.deepEqual(data.pagination, {
+      page: 1,
+      limit: 5,
+      total: data.pagination.total,
+      totalPages: data.pagination.totalPages,
+    });
+    assert.ok(data.applications.length <= 5);
+
+    for (const application of data.applications) {
+      assert.equal(application.status, "PENDING");
+      assert.ok(application.creatorProfile);
+      assert.ok(application.campaign);
+      assert.ok(application.campaign.companyProfile);
+      assert.equal(Object.hasOwn(application, "passwordHash"), false);
+    }
+
+    const searchResponse = await fetch(
+      `${API_BASE_URL}/api/admin/applications?search=${encodeURIComponent(`no-application-${crypto.randomUUID()}`)}`,
+      { headers: { Authorization: `Bearer ${token}` } },
+    );
+    const searchData = await searchResponse.json();
+
+    assert.equal(searchResponse.status, 200);
+    assert.equal(searchData.success, true);
+    assert.deepEqual(searchData.applications, []);
+    assert.equal(searchData.pagination.total, 0);
+  },
+);
+
+test(
+  "GET /api/admin/applications - refuse un statut inconnu",
+  { skip: !(process.env.TEST_ADMIN_EMAIL && process.env.TEST_ADMIN_PASSWORD) },
+  async () => {
+    const token = await getTestToken(
+      process.env.TEST_ADMIN_EMAIL,
+      process.env.TEST_ADMIN_PASSWORD,
+    );
+    const response = await fetch(
+      `${API_BASE_URL}/api/admin/applications?status=INVALID`,
+      { headers: { Authorization: `Bearer ${token}` } },
+    );
+
+    assert.equal(response.status, 400);
+    assert.equal((await response.json()).success, false);
+  },
+);
+
 // 1. Une requête sans authentification doit être refusée.
 test("GET /api/admin/campaigns - refuse une requête sans jeton", async () => {
   const response = await fetch(`${API_BASE_URL}/api/admin/campaigns`);

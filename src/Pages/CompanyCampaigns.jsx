@@ -113,7 +113,7 @@ export default function CompanyCampaigns() {
 
       {loading ? (
         <Loading />
-      ) : campaigns.length === 0 ? (
+      ) : error && campaigns.length === 0 ? null : campaigns.length === 0 ? (
         <Panel title="Aucune campagne">
           <p className="ui-muted ui-small">
             Créez votre première campagne pour commencer à recevoir des

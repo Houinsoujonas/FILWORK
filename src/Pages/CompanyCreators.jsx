@@ -158,7 +158,7 @@ export default function CompanyCreators() {
 
       {loading ? (
         <Loading label="Chargement des créateurs…" />
-      ) : creators.length === 0 ? (
+      ) : error ? null : creators.length === 0 ? (
         <Panel title="Aucun créateur">
           <p className="ui-muted ui-small">
             Aucun profil ne correspond à ces critères pour le moment.

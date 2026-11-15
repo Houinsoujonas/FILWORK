@@ -32,7 +32,7 @@ export default function CreateurProfil() {
     () =>
       Promise.all([
         api.get(`/creators/${creatorId}`),
-        api.get("/campaigns/my-campaigns").catch(() => ({ campaigns: [] })),
+        api.get("/campaigns/my-campaigns"),
       ]).then(([creatorData, campaignData]) => ({
         creator: creatorData.creator,
         campaigns: (campaignData.campaigns || []).filter(

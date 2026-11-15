@@ -105,7 +105,7 @@ export default function CreatorInvitations() {
 
       {loading ? (
         <Loading />
-      ) : invitations.length === 0 ? (
+      ) : error && invitations.length === 0 ? null : invitations.length === 0 ? (
         <Panel title="Aucune invitation">
           <p className="ui-muted ui-small">
             Complétez votre profil et ajoutez vos réseaux pour être plus

@@ -92,7 +92,7 @@ export default function CreatorApplications() {
 
       {loading ? (
         <Loading />
-      ) : applications.length === 0 ? (
+      ) : error && applications.length === 0 ? null : applications.length === 0 ? (
         <Panel title="Aucune candidature">
           <p className="ui-muted ui-small">
             Vous n’avez pas encore candidaté.{" "}

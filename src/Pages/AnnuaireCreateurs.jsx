@@ -170,7 +170,7 @@ export default function AnnuaireCreateurs() {
             <p className="public-search-status" role="status">
               Chargement des profils…
             </p>
-          ) : creators.length === 0 ? (
+          ) : error ? null : creators.length === 0 ? (
             <EmptyState
               title={
                 search || platform || availabilityStatus

@@ -222,7 +222,7 @@ export default function Notifications() {
 
       {loading ? (
         <Loading />
-      ) : notifications.length === 0 ? (
+      ) : error && notifications.length === 0 ? null : notifications.length === 0 ? (
         <Panel title="Aucune notification">
           <p className="ui-muted ui-small">
             Vous serez informé ici des nouvelles invitations, candidatures,

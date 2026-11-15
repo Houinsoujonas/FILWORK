@@ -15,7 +15,7 @@ import { formatDate, formatMoney } from "../lib/format";
 import { getCompanyIdentity } from "../lib/profileIdentity";
 
 export default function DashboardEntreprise() {
-  const { profile } = useAuth();
+  const { profile, profileError } = useAuth();
   const identity = getCompanyIdentity(profile);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -24,7 +24,7 @@ export default function DashboardEntreprise() {
   useEffect(() => {
     let active = true;
 
-    Promise.allSettled([
+    Promise.all([
       api.get("/campaigns/my-campaigns"),
       api.get("/invitations/sent"),
       api.get("/collaborations"),
@@ -35,22 +35,17 @@ export default function DashboardEntreprise() {
           return;
         }
 
-        const results = [campaigns, invitations, collaborations, notifications];
-
-        if (results.some((result) => result.status === "rejected")) {
-          setError("Certaines données du tableau de bord n'ont pas pu être chargées.");
-        }
-
-        const value = (result, fallback) =>
-          result.status === "fulfilled" ? result.value : fallback;
-
         setData({
-          campaigns: value(campaigns, { campaigns: [] }).campaigns || [],
-          invitations: value(invitations, { invitations: [] }).invitations || [],
-          collaborations:
-            value(collaborations, { collaborations: [] }).collaborations || [],
-          notifications: value(notifications, { notifications: [] }),
+          campaigns: campaigns.campaigns || [],
+          invitations: invitations.invitations || [],
+          collaborations: collaborations.collaborations || [],
+          notifications,
         });
+      })
+      .catch((requestError) => {
+        if (active) {
+          setError(requestError.message || "Impossible de charger votre tableau de bord.");
+        }
       })
       .finally(() => {
         if (active) {
@@ -100,9 +95,17 @@ export default function DashboardEntreprise() {
       )}
 
       {error && <Alert type="error">{error}</Alert>}
+      <Alert type="error">{profileError}</Alert>
 
       {loading ? (
         <Loading />
+      ) : error ? (
+        <Panel title="Tableau de bord indisponible">
+          <p className="ui-muted ui-small">
+            Les données de votre espace n’ont pas pu être chargées. Réessayez dans
+            quelques instants.
+          </p>
+        </Panel>
       ) : (
         <>
           <div className="ui-grid ui-grid--4">

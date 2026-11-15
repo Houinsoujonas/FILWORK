@@ -90,7 +90,7 @@ export default function AdminDeliverables() {
 
       {loading ? (
         <Loading label="Chargement des livrables…" />
-      ) : deliverables.length === 0 ? (
+      ) : error ? null : deliverables.length === 0 ? (
         <Panel title="Aucun livrable">
           <p className="ui-muted ui-small">
             Aucun livrable ne correspond à ces critères.

@@ -89,7 +89,7 @@ export default function AdminCollaborations() {
 
       {loading ? (
         <Loading label="Chargement des collaborations…" />
-      ) : collaborations.length === 0 ? (
+      ) : error ? null : collaborations.length === 0 ? (
         <Panel title="Aucune collaboration">
           <p className="ui-muted ui-small">
             Aucune collaboration ne correspond à ces critères.

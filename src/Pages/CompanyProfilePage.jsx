@@ -1,6 +1,7 @@
 import { useState } from "react";
 
 import { Alert, Field, Loading, Page, Panel } from "../Components/AppUI";
+import ImageUploadField from "../Components/ImageUploadField";
 import { useAuth } from "../context/useAuth";
 import { api, errorMessage } from "../lib/api";
 import { isPlaceholderName } from "../lib/profileIdentity";
@@ -28,7 +29,7 @@ function formFromProfile(profile) {
 }
 
 export default function CompanyProfilePage() {
-  const { profile, refreshProfile, loading: authLoading } = useAuth();
+  const { profile, profileError, refreshProfile, loading: authLoading } = useAuth();
   const [form, setForm] = useState(() =>
     profile ? formFromProfile(profile) : EMPTY,
   );
@@ -75,6 +76,7 @@ export default function CompanyProfilePage() {
       description="Ces informations sont visibles par les créateurs sur vos campagnes publiées."
     >
       <Alert type="error">{error}</Alert>
+      <Alert type="error">{profileError}</Alert>
       <Alert type="success">{success}</Alert>
 
       {profile && isPlaceholderName(profile.companyName) && (
@@ -129,6 +131,13 @@ export default function CompanyProfilePage() {
                   placeholder="https://exemple.com/logo.png"
                 />
               </Field>
+              <ImageUploadField
+                label="Importer un logo"
+                disabled={saving}
+                onUploaded={(logoUrl) =>
+                  setForm((current) => ({ ...current, logoUrl }))
+                }
+              />
 
               <Field label="Localisation">
                 <input

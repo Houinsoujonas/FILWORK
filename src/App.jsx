@@ -43,6 +43,7 @@ const CompanyInvitations = lazy(() => import("./Pages/CompanyInvitations"));
 const DashboardAdmin = lazy(() => import("./Pages/DashboardAdmin"));
 const AdminUsers = lazy(() => import("./Pages/AdminUsers"));
 const AdminCampaigns = lazy(() => import("./Pages/AdminCampaigns"));
+const AdminApplications = lazy(() => import("./Pages/AdminApplications"));
 const AdminCollaborations = lazy(() => import("./Pages/AdminCollaborations"));
 const AdminDeliverables = lazy(() => import("./Pages/AdminDeliverables"));
 const AdminPayments = lazy(() => import("./Pages/AdminPayments"));
@@ -185,6 +186,7 @@ function App() {
             <Route index element={<DashboardAdmin />} />
             <Route path="comptes" element={<AdminUsers />} />
             <Route path="campagnes" element={<AdminCampaigns />} />
+            <Route path="candidatures" element={<AdminApplications />} />
             <Route path="collaborations" element={<AdminCollaborations />} />
             <Route path="livrables" element={<AdminDeliverables />} />
             <Route path="paiements" element={<AdminPayments />} />

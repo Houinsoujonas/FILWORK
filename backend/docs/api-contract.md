@@ -80,7 +80,8 @@ Réponse `201` :
   "success": true,
   "message": "Votre compte a été créé avec succès.",
   "user": { "id": "...", "email": "...", "role": "CREATOR", "createdAt": "..." },
-  "token": "<jwt>"
+  "token": "<jwt>",
+  "refreshToken": "<jeton opaque à usage unique>"
 }
 ```
 
@@ -96,7 +97,13 @@ Public. Limité en production.
 { "email": "vous@exemple.com", "password": "motdepasse8+" }
 ```
 
-Réponse `200` : même forme que l'inscription (`user`, `token`).
+Réponse `200` : `user`, `token` et `refreshToken`.
+
+### `POST /api/auth/refresh`
+
+Public. Corps : `{ refreshToken }`. Renouvelle la paire de jetons et révoque
+atomiquement le refresh token reçu. Le nouveau `refreshToken` doit remplacer
+l'ancien avant toute autre tentative de renouvellement.
 
 ### `GET /api/auth/me`
 
@@ -104,7 +111,8 @@ Authentifié. Réponse : `{ success, message, user }`.
 
 ### `POST /api/auth/logout`
 
-Authentifié. Révoque le jeton courant. Réponse `{ success, message }`.
+Authentifié. Corps : `{ refreshToken }`. Révoque le jeton d'accès courant et,
+si le champ est fourni, le refresh token associé. Réponse `{ success, message }`.
 
 ### `POST /api/auth/forgot-password`
 
@@ -605,6 +613,7 @@ Toutes les routes exigent `ADMIN`.
 - `GET /api/admin/dashboard` → `{ success, message, stats }`
 - `GET /api/admin/users?role=&search=&page=&limit=`
 - `GET /api/admin/campaigns?status=&search=&page=&limit=`
+- `GET /api/admin/applications?status=&search=&page=&limit=`
 - `GET /api/admin/collaborations?status=&origin=&search=&page=&limit=`
 - `GET /api/admin/deliverables?status=&search=&page=&limit=`
 - `GET /api/admin/payments?status=&origin=&search=&page=&limit=`
@@ -620,8 +629,8 @@ Les listes paginées renvoient :
 }
 ```
 
-La clé de collection varie : `users`, `campaigns`, `collaborations`,
-`deliverables`, `payments`.
+La clé de collection varie : `users`, `campaigns`, `applications`,
+`collaborations`, `deliverables`, `payments`.
 
 ---
 

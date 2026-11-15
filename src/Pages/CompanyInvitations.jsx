@@ -117,7 +117,7 @@ export default function CompanyInvitations() {
       <Alert type="error">{error}</Alert>
       <Alert type="success">{success}</Alert>
 
-      <Panel title={`${invitations.length} invitation(s)`} description={`${pendingCount} en attente de réponse.`}>
+      {!(error && invitations.length === 0) && <Panel title={`${invitations.length} invitation(s)`} description={`${pendingCount} en attente de réponse.`}>
         <label className="ui-field" style={{ maxWidth: 280 }}>
           <span>Filtrer par statut</span>
           <select
@@ -131,11 +131,11 @@ export default function CompanyInvitations() {
             ))}
           </select>
         </label>
-      </Panel>
+      </Panel>}
 
       {loading ? (
         <Loading label="Chargement des invitations…" />
-      ) : filtered.length === 0 ? (
+      ) : error && invitations.length === 0 ? null : filtered.length === 0 ? (
         <Panel title="Aucune invitation">
           <p className="ui-muted ui-small">
             Aucune invitation ne correspond à ce filtre.

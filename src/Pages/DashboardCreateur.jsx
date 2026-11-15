@@ -15,7 +15,7 @@ import { formatDate } from "../lib/format";
 import { getCreatorIdentity } from "../lib/profileIdentity";
 
 export default function DashboardCreateur() {
-  const { profile } = useAuth();
+  const { profile, profileError } = useAuth();
   const identity = getCreatorIdentity(profile);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -24,7 +24,7 @@ export default function DashboardCreateur() {
   useEffect(() => {
     let active = true;
 
-    Promise.allSettled([
+    Promise.all([
       api.get("/applications/my-applications"),
       api.get("/invitations/received"),
       api.get("/collaborations"),
@@ -35,20 +35,16 @@ export default function DashboardCreateur() {
           return;
         }
 
-        const value = (result, fallback) =>
-          result.status === "fulfilled" ? result.value : fallback;
-
         setData({
-          applications: value(applications, { applications: [] }).applications || [],
-          invitations: value(invitations, { invitations: [] }).invitations || [],
-          collaborations:
-            value(collaborations, { collaborations: [] }).collaborations || [],
-          notifications: value(notifications, { notifications: [] }),
+          applications: applications.applications || [],
+          invitations: invitations.invitations || [],
+          collaborations: collaborations.collaborations || [],
+          notifications,
         });
       })
-      .catch(() => {
+      .catch((requestError) => {
         if (active) {
-          setError("Impossible de charger votre tableau de bord.");
+          setError(requestError.message || "Impossible de charger votre tableau de bord.");
         }
       })
       .finally(() => {
@@ -85,6 +81,7 @@ export default function DashboardCreateur() {
       }
     >
       {error && <Alert type="error">{error}</Alert>}
+      <Alert type="error">{profileError}</Alert>
 
       {(identity.isPlaceholder || identity.isIncomplete) && (
         <Alert>
@@ -101,6 +98,13 @@ export default function DashboardCreateur() {
 
       {loading ? (
         <Loading />
+      ) : error ? (
+        <Panel title="Tableau de bord indisponible">
+          <p className="ui-muted ui-small">
+            Les données de votre espace n’ont pas pu être chargées. Réessayez dans
+            quelques instants.
+          </p>
+        </Panel>
       ) : (
         <>
           <div className="ui-grid ui-grid--4">

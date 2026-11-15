@@ -26,13 +26,8 @@ import { formatDate, formatMoney, label } from "../lib/format";
 async function fetchCampaignBundle(campaignId) {
   const [campaignData, applicationsData, invitationsData] = await Promise.all([
     api.get("/campaigns/my-campaigns"),
-    api.get(`/applications/campaigns/${campaignId}`).catch((requestError) => {
-      if (requestError?.status === 404) {
-        return { applications: [] };
-      }
-      throw requestError;
-    }),
-    api.get("/invitations/sent").catch(() => ({ invitations: [] })),
+    api.get(`/applications/campaigns/${campaignId}`),
+    api.get("/invitations/sent"),
   ]);
 
   const campaign = (campaignData.campaigns || []).find(

@@ -34,7 +34,7 @@ export default function AdminAnnouncements() {
         params.status = filterStatus;
       }
 
-      const data = await api.get("/admin/announcements", { params });
+      const data = await api.get("/admin/announcements", params);
 
       setAnnouncements(data.announcements || []);
       setTotalPages(data.pagination?.totalPages || 0);
@@ -58,7 +58,7 @@ export default function AdminAnnouncements() {
           params.status = filterStatus;
         }
 
-        const data = await api.get("/admin/announcements", { params });
+        const data = await api.get("/admin/announcements", params);
 
         if (!active) {
           return;
@@ -141,7 +141,7 @@ export default function AdminAnnouncements() {
         </select>
       </div>
 
-      {announcements.length === 0 ? (
+      {error && announcements.length === 0 ? null : announcements.length === 0 ? (
         <Panel>
           Aucune annonce trouvée.
         </Panel>

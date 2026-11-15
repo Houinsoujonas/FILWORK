@@ -1,5 +1,10 @@
 import { useLayoutEffect, useRef } from "react";
 import { Link } from "react-router-dom";
+import {
+  FiInstagram,
+  FiLinkedin,
+} from "react-icons/fi";
+import { FaWhatsapp, FaFacebookF } from "react-icons/fa";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
@@ -78,12 +83,51 @@ function Footer() {
           <div className="footer__brand">
             {" "}
             <Link to="/" className="footer__logo" aria-label="Filwork, accueil">
-              <img src="/filwork-logo-light.svg" alt="" width={254} height={56} />
+              <img src="/filwork-logo.svg" alt="" width={254} height={56} />
             </Link>
+            <p className="footer__signature">IMAGINER. CONNECTER. RÉALISER.</p>
             <p className="footer__description">
-              Filwork met en relation les créateurs de contenu et les
-              entreprises autour de campagnes et de projets communs.
+              La plateforme qui rapproche les créateurs de contenu et les
+              entreprises pour donner vie à de nouvelles collaborations.
             </p>
+            <div className="footer__socials">
+              <a
+                className="footer__social"
+                href="https://www.instagram.com/"
+                aria-label="Instagram"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <FiInstagram aria-hidden="true" />
+              </a>
+              <a
+                className="footer__social"
+                href="https://www.linkedin.com/"
+                aria-label="LinkedIn"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <FiLinkedin aria-hidden="true" />
+              </a>
+              <a
+                className="footer__social"
+                href="https://www.whatsapp.com/"
+                aria-label="WhatsApp"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <FaWhatsapp aria-hidden="true" />
+              </a>
+              <a
+                className="footer__social"
+                href="https://www.facebook.com/"
+                aria-label="Facebook"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <FaFacebookF aria-hidden="true" />
+              </a>
+            </div>
           </div>
           <div className="footer__column">
             <h3>Navigation</h3>

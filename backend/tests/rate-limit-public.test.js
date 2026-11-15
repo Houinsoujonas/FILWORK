@@ -8,7 +8,7 @@ process.env.NODE_ENV = "test";
 process.env.JWT_SECRET = process.env.JWT_SECRET || "x".repeat(64);
 process.env.CORS_ORIGINS = "http://localhost:5173";
 
-const BACKEND = "C:\\Users\\SYKO Electronics\\FILWORK\\backend";
+const BACKEND = path.resolve(__dirname, "..");
 require(path.join(BACKEND, "node_modules", "dotenv")).config({
   path: path.join(BACKEND, ".env.test"),
 });

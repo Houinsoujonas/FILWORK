@@ -11,8 +11,6 @@ const BACKEND = path.resolve(__dirname, "..");
 require(path.join(BACKEND, "node_modules", "dotenv")).config({
   path: path.join(BACKEND, ".env.test"),
 });
-process.env.TEST_DATABASE_URL = process.env.TEST_DATABASE_URL;
-
 const app = require("../src/app");
 
 let server;

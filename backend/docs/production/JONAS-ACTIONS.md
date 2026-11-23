@@ -1,6 +1,14 @@
 # Actions réservées à Jonas pour le déploiement Vercel
 
-Ce document répertorie uniquement les opérations qui nécessitent l'accès au compte personnel Vercel ou aux identifiants secrets Neon de Jonas.
+Ce document répertorie les opérations concrètes pour brancher le backend FILWORK sur Neon et le déployer sur Vercel.
+
+---
+
+### Branche Git de référence
+La branche complète prête pour Vercel est :
+`feature/filwork-neon-vercel-final`
+
+Elle intègre l'ensemble du code source backend, les 28 fichiers de tests (253 tests réussis), les 22 migrations Prisma et la documentation de production.
 
 ---
 
@@ -27,11 +35,11 @@ npx prisma migrate deploy --config prisma7.config.ts
 npx prisma migrate status --config prisma7.config.ts
 ```
 
-*Résultat attendu : « Database is up to date ».*
+*Résultat attendu : « Database is up to date » (22 migrations appliquées).*
 
 ---
 
-### Étape 3 : Créer le premier compte administrateur sur Neon (optionnel mais recommandé)
+### Étape 3 : Créer le premier compte administrateur sur Neon (recommandé)
 Dans le même terminal configuré avec l'accès à la base de production :
 
 ```powershell
@@ -44,12 +52,13 @@ node scripts/createAdmin.js
 ---
 
 ### Étape 4 : Configurer le projet sur Vercel
-1. Rendez-vous sur votre tableau de bord Vercel et importez le dépôt `Houinsoujonas/FILWORK`.
+1. Rendez-vous sur votre tableau de bord Vercel et importez le dépôt `Houinsoujonas/FILWORK` en sélectionnant la branche `feature/filwork-neon-vercel-final`.
 2. Configurez les paramètres généraux :
-   - **Root Directory** : cliquez sur *Edit* et sélectionnez `backend`.
+   - **Root Directory** : `backend`.
    - **Framework Preset** : `Other`.
-   - **Build Command** : `npm run build` (activé par défaut).
-   - **Install Command** : `npm ci` (ou laisser la valeur par défaut Vercel).
+   - **Node.js Version** : `24.x`.
+   - **Build Command** : `npm run build` (`prisma generate`).
+   - **Install Command** : `npm ci`.
 3. Allez dans la section **Environment Variables** et saisissez les valeurs de production :
    - `NODE_ENV` = `production`
    - `DATABASE_URL` = *l'URL poolée Neon obtenue à l'étape 1*
@@ -57,7 +66,7 @@ node scripts/createAdmin.js
    - `JWT_SECRET` = *une clé aléatoire d'au moins 32 caractères*
    - `FRONTEND_URL` = *l'adresse HTTPS de votre frontend (ex: https://filwork.fr)*
    - `CORS_ORIGINS` = *l'adresse HTTPS autorisée (ex: https://filwork.fr)*
-   - `CRON_SECRET` = *un mot de passe secret d'au moins 16 caractères pour les crons*
+   - `CRON_SECRET` = *un secret d'au moins 16 caractères pour protéger les crons*
    - `SASPAY_ENABLED` = `false`
    - `STORAGE_PROVIDER` = `none`
    - *(Optionnel si e-mails souhaités)* `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM`.
@@ -65,17 +74,18 @@ node scripts/createAdmin.js
 
 ---
 
-### Étape 5 : Vérification post-déploiement
-Une fois le déploiement terminé sur Vercel, testez les points de terminaison :
+### Étape 5 : Contrôles post-déploiement
+Une fois le déploiement terminé sur Vercel :
 
-1. **Vérification de base** :
+1. **Vérification applicative** :
    ```bash
    curl -i https://[VOTRE-DOMAINE-VERCEL]/api/health
    ```
-   *Réponse attendue : `200 OK` avec `{"status":"ok",...}`.*
+   *Réponse attendue : HTTP 200 avec `{"status":"ok",...}`.*
 
-2. **Vérification de la connectivité Neon** :
+2. **Vérification de la connectivité Neon et du schéma** :
    ```bash
    curl -i https://[VOTRE-DOMAINE-VERCEL]/api/health/database
    ```
-   *Réponse attendue : `200 OK` avec `{"status":"ok","database":"connected",...}`.*
+   *Réponse attendue : HTTP 200 avec `{"status":"ok","database":"connected","schema":"ready"}`.*
+

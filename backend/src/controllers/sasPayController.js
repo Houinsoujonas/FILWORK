@@ -4,13 +4,10 @@ const prisma = require("../config/prisma");
 const { sendPrismaError } = require("../utils/prismaErrors");
 const {
   isConfigured,
-  decimalAmount,
   commissionBps,
   calculateCommission,
   initializeSoftpayPayment,
   verifyPayment,
-  initializePayout,
-  verifyPayout,
 } = require("../services/sasPayService");
 const {
   enqueuePaymentReceivedEmail,
@@ -103,19 +100,6 @@ function contextParts(payment) {
     companyProfile: origin.campaign.companyProfile,
     campaignTitle: origin.campaign.title,
   };
-}
-
-/** Vérifie que l'utilisateur connecté est bien l'entreprise participante. */
-function assertCompanyOwner(res, companyProfile, user) {
-  if (!companyProfile || companyProfile.userId !== user.id) {
-    res.status(403).json({
-      success: false,
-      message: "Vous ne participez pas à cette collaboration.",
-    });
-    return false;
-  }
-
-  return true;
 }
 
 /** SasPay status -> statut local du paiement. */
@@ -243,7 +227,7 @@ async function initializePayment(req, res) {
       });
     }
 
-    const updated = await prisma.sasPayTransaction.update({
+    await prisma.sasPayTransaction.update({
       where: { id: transaction.id },
       data: {
         providerId: upstream.data?.id ?? null,

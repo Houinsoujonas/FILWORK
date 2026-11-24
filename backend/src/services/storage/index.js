@@ -135,6 +135,8 @@ function validateFilename(name) {
   }
 
   // Caractères interdits ou explicitement dangereux.
+  // Les caractères de contrôle sont interdits dans les noms de fichier.
+  // eslint-disable-next-line no-control-regex
   if (/[\x00-\x1f\x7f<>:"|?*]/.test(base) || /\.\./.test(base)) {
     const error = new Error("Le nom de fichier contient des caractères refusés.");
     error.statusCode = 400;

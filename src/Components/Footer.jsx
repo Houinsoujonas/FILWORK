@@ -1,80 +1,16 @@
-import { useLayoutEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import {
   FiInstagram,
   FiLinkedin,
 } from "react-icons/fi";
 import { FaWhatsapp, FaFacebookF } from "react-icons/fa";
-import { gsap } from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
-
 import "./Footer.css";
-
-gsap.registerPlugin(ScrollTrigger);
 
 function Footer() {
   const currentYear = new Date().getFullYear();
-  const footerRef = useRef(null);
-
-  useLayoutEffect(() => {
-    const footer = footerRef.current;
-
-    if (
-      !footer ||
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches
-    ) {
-      return undefined;
-    }
-
-    const ctx = gsap.context(() => {
-      const brand = footer.querySelector(".footer__brand");
-      const columns = footer.querySelectorAll(".footer__column");
-      const bottom = footer.querySelector(".footer__bottom");
-
-      const timeline = gsap.timeline({
-        scrollTrigger: {
-          trigger: footer,
-          start: "top 90%",
-          toggleActions: "play none none none",
-          once: true,
-        },
-      });
-
-      timeline
-        .from(brand, {
-          x: -35,
-          autoAlpha: 0,
-          duration: 0.7,
-          ease: "power3.out",
-        })
-        .from(
-          columns,
-          {
-            y: 25,
-            autoAlpha: 0,
-            duration: 0.6,
-            stagger: 0.12,
-            ease: "power2.out",
-          },
-          "-=0.35",
-        )
-        .from(
-          bottom,
-          {
-            y: 20,
-            autoAlpha: 0,
-            duration: 0.6,
-            ease: "power2.out",
-          },
-          "-=0.2",
-        );
-    }, footer);
-
-    return () => ctx.revert();
-  }, []);
 
   return (
-    <footer className="footer" ref={footerRef}>
+    <footer className="footer">
       {" "}
       <div className="footer__container">
         {" "}

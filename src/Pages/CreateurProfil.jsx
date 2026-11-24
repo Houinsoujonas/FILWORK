@@ -164,7 +164,7 @@ export default function CreateurProfil() {
 
       <section className="public-profile-head">
         {creator.profileImageUrl ? (
-          <img className="ui-avatar" src={creator.profileImageUrl} alt="" />
+          <img className="ui-avatar" src={creator.profileImageUrl} alt="" loading="lazy" decoding="async" />
         ) : (
           <span className="ui-avatar">{String(creator.displayName || "C")[0]}</span>
         )}

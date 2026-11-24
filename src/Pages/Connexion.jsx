@@ -235,12 +235,6 @@ function Connexion() {
                   </button>
                 </div>
 
-                <p className="login-account__hint">
-                  {accountType === "creator"
-                    ? "Espace créateur : connectez-vous avec votre compte créateur."
-                    : "Espace entreprise : connectez-vous avec votre compte entreprise."}{" "}
-                  Votre accès final dépend du rôle lié à votre compte.
-                </p>
               </fieldset>
 
               <div className="login-field">

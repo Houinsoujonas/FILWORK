@@ -186,7 +186,7 @@ export default function DashboardLayout({ role }) {
           <div className="workspace__identity">
             <span className="workspace__account-avatar" aria-hidden="true">
               {avatarUrl ? (
-                <img src={avatarUrl} alt="" />
+                <img src={avatarUrl} alt="" loading="lazy" decoding="async" />
               ) : (
                 initials(displayName || user?.email)
               )}

@@ -11,7 +11,7 @@ export default function CreatorCard({ creator, to }) {
       <div className="public-card__top">
         <span className="public-card__company">
           {creator.profileImageUrl ? (
-            <img src={creator.profileImageUrl} alt="" />
+            <img src={creator.profileImageUrl} alt="" loading="lazy" decoding="async" />
           ) : (
             <span className="ui-avatar">
               {String(creator.displayName || "C")[0]}

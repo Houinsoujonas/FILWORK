@@ -1,11 +1,7 @@
 footer.footer {
   padding: 75px 6% 25px;
   border-top: 1px solid var(--brand-border, #e6e4dc);
-  background: linear-gradient(
-    180deg,
-    #fff 0%,
-    var(--brand-paper, #f6f5f0) 180px
-  );
+  background: #fff;
   color: var(--brand-ink, #171814);
   box-shadow: 0 -12px 32px rgba(23, 24, 20, 0.025);
 }
@@ -251,5 +247,17 @@ footer.footer {
   .footer__bottom {
     animation: none !important;
     transition: none !important;
+  }
+}
+
+@media (max-width: 650px) {
+  .footer__logo,
+  .footer__column:nth-of-type(2),
+  .footer__column:nth-of-type(3) {
+    display: none;
+  }
+
+  .footer__column:nth-of-type(4) {
+    grid-column: 1 / -1;
   }
 }

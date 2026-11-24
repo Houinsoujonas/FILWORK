@@ -101,7 +101,7 @@ export default function CampagneDetail() {
 
       <div className="public-detail-company">
         {campaign.companyProfile?.logoUrl ? (
-          <img src={campaign.companyProfile.logoUrl} alt="" decoding="async" />
+          <img src={campaign.companyProfile.logoUrl} alt="" loading="lazy" decoding="async" />
         ) : (
           <span className="ui-avatar">
             {String(campaign.companyProfile?.companyName || "F")[0]}

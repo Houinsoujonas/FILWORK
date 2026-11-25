@@ -1,3 +1,6 @@
+const DEFAULT_PRODUCTION_API_URL =
+  "https://backend-production-9e5b6ed0.up.railway.app/api";
+
 const configuredApiUrl = import.meta.env.VITE_API_URL?.trim();
 
 function resolveApiBaseUrl() {
@@ -5,11 +8,8 @@ function resolveApiBaseUrl() {
     return "/api";
   }
 
-  if (!configuredApiUrl) {
-    return "";
-  }
-
-  const normalizedUrl = configuredApiUrl.replace(/\/+$/, "");
+  const rawUrl = configuredApiUrl || DEFAULT_PRODUCTION_API_URL;
+  const normalizedUrl = rawUrl.replace(/\/+$/, "");
   return normalizedUrl.endsWith("/api") ? normalizedUrl : `${normalizedUrl}/api`;
 }
 

@@ -219,3 +219,47 @@ test("le délai du renouvellement couvre aussi son corps de réponse", async () 
     }
   });
 });
+
+test("le client utilise l'adresse de secours Railway quand VITE_API_URL est absent", async () => {
+  await withApi(
+    async ({ API_BASE_URL, api }) => {
+      assert.equal(
+        API_BASE_URL,
+        "https://backend-production-9e5b6ed0.up.railway.app/api",
+      );
+
+      let requestedUrl = null;
+      globalThis.fetch = async (url) => {
+        requestedUrl = url;
+        return Response.json({ success: true, user: null });
+      };
+
+      await api.get("/auth/me");
+      assert.equal(
+        requestedUrl,
+        "https://backend-production-9e5b6ed0.up.railway.app/api/auth/me",
+      );
+      assert.equal(requestedUrl.includes("/api/api"), false);
+    },
+    { apiUrl: null, production: true },
+  );
+});
+
+test("le client donne la priorité à VITE_API_URL sans doubler /api", async () => {
+  await withApi(
+    async ({ API_BASE_URL, api }) => {
+      assert.equal(API_BASE_URL, "https://custom-api.filwork.com/api");
+
+      let requestedUrl = null;
+      globalThis.fetch = async (url) => {
+        requestedUrl = url;
+        return Response.json({ success: true, user: null });
+      };
+
+      await api.get("/health");
+      assert.equal(requestedUrl, "https://custom-api.filwork.com/api/health");
+      assert.equal(requestedUrl.includes("/api/api"), false);
+    },
+    { apiUrl: "https://custom-api.filwork.com", production: true },
+  );
+});

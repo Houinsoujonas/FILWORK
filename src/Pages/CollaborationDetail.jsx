@@ -54,7 +54,8 @@ function Stars({ rating }) {
 
 async function fetchCollaborationBundle(collaborationId) {
   const data = await api.get(`/collaborations/${collaborationId}`);
-  let reviews;
+  let reviews = [];
+  let reviewsError = "";
 
   try {
     const reviewData = await api.get(
@@ -63,11 +64,11 @@ async function fetchCollaborationBundle(collaborationId) {
       { auth: false },
     );
     reviews = reviewData.reviews || [];
-  } catch {
-    reviews = [];
+  } catch (requestError) {
+    reviewsError = errorMessage(requestError);
   }
 
-  return { collaboration: data.collaboration, reviews };
+  return { collaboration: data.collaboration, reviews, reviewsError };
 }
 
 export default function CollaborationDetail() {
@@ -78,6 +79,7 @@ export default function CollaborationDetail() {
 
   const [collaboration, setCollaboration] = useState(null);
   const [reviews, setReviews] = useState([]);
+  const [reviewsError, setReviewsError] = useState("");
   const [loadedId, setLoadedId] = useState(null);
   const [error, setError] = useState("");
   const [feedback, setFeedback] = useState("");
@@ -115,6 +117,7 @@ export default function CollaborationDetail() {
       const bundle = await fetchCollaborationBundle(id);
       setCollaboration(bundle.collaboration);
       setReviews(bundle.reviews);
+      setReviewsError(bundle.reviewsError);
       setLoadedId(id);
     } catch (requestError) {
       setError(errorMessage(requestError));
@@ -131,6 +134,7 @@ export default function CollaborationDetail() {
         if (active) {
           setCollaboration(bundle.collaboration);
           setReviews(bundle.reviews);
+          setReviewsError(bundle.reviewsError);
           setLoadedId(id);
         }
       })
@@ -396,6 +400,7 @@ export default function CollaborationDetail() {
       }
     >
       <Alert type="error">{feedbackType === "error" ? feedback : ""}</Alert>
+      <Alert type="error">{reviewsError}</Alert>
       <Alert type="success">{feedbackType === "success" ? feedback : ""}</Alert>
 
       <div className="ui-grid ui-grid--4">

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, NavLink } from "react-router-dom";
+import { Link, NavLink, useLocation } from "react-router-dom";
 import { FiArrowRight, FiMenu, FiX } from "react-icons/fi";
 
 const navLinks = [
@@ -20,6 +20,7 @@ function FilworkLogo() {
 
 function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const { pathname } = useLocation();
   const headerRef = useRef(null);
   const menuToggleRef = useRef(null);
 
@@ -109,13 +110,15 @@ function Navbar() {
                 Se connecter
               </Link>
 
-              <Link
-                to="/inscription"
-                className="navbar__action navbar__signup"
-                onClick={closeMenu}
-              >
-                <span>Commencer</span>
-              </Link>
+              {pathname !== "/inscription" && (
+                <Link
+                  to="/inscription"
+                  className="navbar__action navbar__signup"
+                  onClick={closeMenu}
+                >
+                  <span>Commencer</span>
+                </Link>
+              )}
             </div>
           </nav>
         </div>

@@ -1,75 +1,16 @@
-import { useLayoutEffect, useRef } from "react";
 import { Link } from "react-router-dom";
-import { gsap } from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
-
+import {
+  FiInstagram,
+  FiLinkedin,
+} from "react-icons/fi";
+import { FaWhatsapp, FaFacebookF } from "react-icons/fa";
 import "./Footer.css";
-
-gsap.registerPlugin(ScrollTrigger);
 
 function Footer() {
   const currentYear = new Date().getFullYear();
-  const footerRef = useRef(null);
-
-  useLayoutEffect(() => {
-    const footer = footerRef.current;
-
-    if (
-      !footer ||
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches
-    ) {
-      return undefined;
-    }
-
-    const ctx = gsap.context(() => {
-      const brand = footer.querySelector(".footer__brand");
-      const columns = footer.querySelectorAll(".footer__column");
-      const bottom = footer.querySelector(".footer__bottom");
-
-      const timeline = gsap.timeline({
-        scrollTrigger: {
-          trigger: footer,
-          start: "top 90%",
-          toggleActions: "play none none none",
-          once: true,
-        },
-      });
-
-      timeline
-        .from(brand, {
-          x: -35,
-          autoAlpha: 0,
-          duration: 0.7,
-          ease: "power3.out",
-        })
-        .from(
-          columns,
-          {
-            y: 25,
-            autoAlpha: 0,
-            duration: 0.6,
-            stagger: 0.12,
-            ease: "power2.out",
-          },
-          "-=0.35",
-        )
-        .from(
-          bottom,
-          {
-            y: 20,
-            autoAlpha: 0,
-            duration: 0.6,
-            ease: "power2.out",
-          },
-          "-=0.2",
-        );
-    }, footer);
-
-    return () => ctx.revert();
-  }, []);
 
   return (
-    <footer className="footer" ref={footerRef}>
+    <footer className="footer">
       {" "}
       <div className="footer__container">
         {" "}
@@ -78,12 +19,51 @@ function Footer() {
           <div className="footer__brand">
             {" "}
             <Link to="/" className="footer__logo" aria-label="Filwork, accueil">
-              <img src="/filwork-logo-light.svg" alt="" width={254} height={56} />
+              <img src="/filwork-logo.svg" alt="" width={254} height={56} />
             </Link>
+            <p className="footer__signature">IMAGINER. CONNECTER. RÉALISER.</p>
             <p className="footer__description">
-              Filwork met en relation les créateurs de contenu et les
-              entreprises autour de campagnes et de projets communs.
+              La plateforme qui rapproche les créateurs de contenu et les
+              entreprises pour donner vie à de nouvelles collaborations.
             </p>
+            <div className="footer__socials">
+              <a
+                className="footer__social"
+                href="https://www.instagram.com/"
+                aria-label="Instagram"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <FiInstagram aria-hidden="true" />
+              </a>
+              <a
+                className="footer__social"
+                href="https://www.linkedin.com/"
+                aria-label="LinkedIn"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <FiLinkedin aria-hidden="true" />
+              </a>
+              <a
+                className="footer__social"
+                href="https://www.whatsapp.com/"
+                aria-label="WhatsApp"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <FaWhatsapp aria-hidden="true" />
+              </a>
+              <a
+                className="footer__social"
+                href="https://www.facebook.com/"
+                aria-label="Facebook"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <FaFacebookF aria-hidden="true" />
+              </a>
+            </div>
           </div>
           <div className="footer__column">
             <h3>Navigation</h3>

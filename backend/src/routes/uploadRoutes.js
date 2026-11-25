@@ -3,7 +3,6 @@ const { authenticateToken } = require("../middlewares/authMiddleware");
 const {
   uploadImage,
   maxUploadBytes,
-  hasValidMagicBytes,
   validateFilename,
   validateImageUpload,
 } = require("../services/storage");

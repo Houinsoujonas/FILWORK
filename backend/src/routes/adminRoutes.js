@@ -8,9 +8,10 @@ const {
   getDashboardStats,
   getAdminUsers,
   getAdminCampaigns,
-   getAdminCollaborations,
-   getAdminDeliverables,
-   getAdminPayments,
+  getAdminApplications,
+  getAdminCollaborations,
+  getAdminDeliverables,
+  getAdminPayments,
   updateAdminUser,
   deactivateUser,
   reactivateUser,
@@ -45,6 +46,9 @@ router.patch("/users/:id/reactivate", reactivateUser);
 
 // Consulter et rechercher toutes les campagnes.
 router.get("/campaigns", getAdminCampaigns);
+
+// Consulter et filtrer toutes les candidatures, sans modifier leur statut.
+router.get("/applications", getAdminApplications);
 
 // Consulter et filtrer toutes les collaborations.
 router.get("/collaborations", getAdminCollaborations);

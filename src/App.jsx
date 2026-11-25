@@ -1,5 +1,5 @@
-import { Component, lazy, Suspense } from "react";
-import { Outlet, Route, Routes } from "react-router-dom";
+import { Component, lazy, Suspense, useLayoutEffect } from "react";
+import { Outlet, Route, Routes, useLocation } from "react-router-dom";
 
 import Footer from "./Components/Footer";
 import Navbar from "./Components/Navbar";
@@ -43,11 +43,22 @@ const CompanyInvitations = lazy(() => import("./Pages/CompanyInvitations"));
 const DashboardAdmin = lazy(() => import("./Pages/DashboardAdmin"));
 const AdminUsers = lazy(() => import("./Pages/AdminUsers"));
 const AdminCampaigns = lazy(() => import("./Pages/AdminCampaigns"));
+const AdminApplications = lazy(() => import("./Pages/AdminApplications"));
 const AdminCollaborations = lazy(() => import("./Pages/AdminCollaborations"));
 const AdminDeliverables = lazy(() => import("./Pages/AdminDeliverables"));
 const AdminPayments = lazy(() => import("./Pages/AdminPayments"));
 const AdminAnnouncements = lazy(() => import("./Pages/AdminAnnouncements"));
 const AdminAnnouncementCreate = lazy(() => import("./Pages/AdminAnnouncementCreate"));
+
+function ScrollToTop() {
+  const { pathname } = useLocation();
+
+  useLayoutEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  }, [pathname]);
+
+  return null;
+}
 
 function PublicLayout() {
   return (
@@ -88,15 +99,17 @@ class RouteErrorBoundary extends Component {
 
 function App() {
   return (
-    <RouteErrorBoundary>
-      <Suspense
-        fallback={
-          <main className="route-loading" role="status">
-            Chargement de la page…
-          </main>
-        }
-      >
-        <Routes>
+    <>
+      <ScrollToTop />
+      <RouteErrorBoundary>
+        <Suspense
+          fallback={
+            <main className="route-loading" role="status">
+              Chargement de la page…
+            </main>
+          }
+        >
+          <Routes>
           <Route element={<PublicLayout />}>
             <Route
               path="/"
@@ -185,6 +198,7 @@ function App() {
             <Route index element={<DashboardAdmin />} />
             <Route path="comptes" element={<AdminUsers />} />
             <Route path="campagnes" element={<AdminCampaigns />} />
+            <Route path="candidatures" element={<AdminApplications />} />
             <Route path="collaborations" element={<AdminCollaborations />} />
             <Route path="livrables" element={<AdminDeliverables />} />
             <Route path="paiements" element={<AdminPayments />} />
@@ -194,9 +208,10 @@ function App() {
             <Route path="annonces/:id/modifier" element={<AdminAnnouncementCreate />} />
             <Route path="preferences" element={<Preferences />} />
           </Route>
-        </Routes>
-      </Suspense>
-    </RouteErrorBoundary>
+          </Routes>
+        </Suspense>
+      </RouteErrorBoundary>
+    </>
   );
 }
 

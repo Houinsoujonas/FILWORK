@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { FiPlus, FiTrash2 } from "react-icons/fi";
+import { FiEdit2, FiPlus, FiTrash2, FiX } from "react-icons/fi";
 
 import { Alert, Badge, Field, Loading, Page, Panel } from "../Components/AppUI";
+import ImageUploadField from "../Components/ImageUploadField";
 import { useAuth } from "../context/useAuth";
 import { api, errorMessage } from "../lib/api";
 import { formatNumber, label } from "../lib/format";
@@ -47,7 +48,7 @@ function formFromProfile(profile) {
 }
 
 export default function CreatorProfilePage() {
-  const { profile, refreshProfile, loading: authLoading } = useAuth();
+  const { profile, profileError, refreshProfile, loading: authLoading } = useAuth();
   const [form, setForm] = useState(() =>
     profile ? formFromProfile(profile) : EMPTY_PROFILE,
   );
@@ -61,6 +62,8 @@ export default function CreatorProfilePage() {
     followerCount: "",
   });
   const [socialBusy, setSocialBusy] = useState(false);
+  const [editingSocialId, setEditingSocialId] = useState(null);
+  const [socialEdit, setSocialEdit] = useState(null);
   const [portfolio, setPortfolio] = useState({
     type: "LINK",
     title: "",
@@ -69,6 +72,8 @@ export default function CreatorProfilePage() {
     campaignName: "",
   });
   const [portfolioBusy, setPortfolioBusy] = useState(false);
+  const [editingPortfolioId, setEditingPortfolioId] = useState(null);
+  const [portfolioEdit, setPortfolioEdit] = useState(null);
 
   const loading = authLoading && !profile;
 
@@ -144,6 +149,32 @@ export default function CreatorProfilePage() {
     }
   };
 
+  const handleUpdateSocial = async (event) => {
+    event.preventDefault();
+    setError("");
+    setSuccess("");
+    setSocialBusy(true);
+
+    const body = {
+      platform: socialEdit.platform,
+      profileUrl: socialEdit.profileUrl.trim(),
+      followerCount:
+        socialEdit.followerCount === "" ? null : Number(socialEdit.followerCount),
+    };
+
+    try {
+      await api.put(`/profile/me/socials/${editingSocialId}`, body);
+      await refreshProfile();
+      setEditingSocialId(null);
+      setSocialEdit(null);
+      setSuccess("Réseau social modifié.");
+    } catch (requestError) {
+      setError(errorMessage(requestError));
+    } finally {
+      setSocialBusy(false);
+    }
+  };
+
   const handleAddPortfolio = async (event) => {
     event.preventDefault();
     setError("");
@@ -190,6 +221,31 @@ export default function CreatorProfilePage() {
     }
   };
 
+  const handleUpdatePortfolio = async (event) => {
+    event.preventDefault();
+    setError("");
+    setSuccess("");
+    setPortfolioBusy(true);
+
+    try {
+      await api.put(`/profile/me/portfolio/${editingPortfolioId}`, {
+        type: portfolioEdit.type,
+        title: portfolioEdit.title.trim(),
+        description: portfolioEdit.description.trim(),
+        url: portfolioEdit.url.trim(),
+        campaignName: portfolioEdit.campaignName.trim(),
+      });
+      await refreshProfile();
+      setEditingPortfolioId(null);
+      setPortfolioEdit(null);
+      setSuccess("Réalisation modifiée.");
+    } catch (requestError) {
+      setError(errorMessage(requestError));
+    } finally {
+      setPortfolioBusy(false);
+    }
+  };
+
   if (loading) {
     return (
       <Page eyebrow="ESPACE CRÉATEUR" title="Mon profil">
@@ -205,6 +261,7 @@ export default function CreatorProfilePage() {
       description="Un profil complet augmente vos chances d’être invité sur les campagnes."
     >
       <Alert type="error">{error}</Alert>
+      <Alert type="error">{profileError}</Alert>
       <Alert type="success">{success}</Alert>
 
       {profile && isPlaceholderName(profile.displayName) && (
@@ -305,6 +362,13 @@ export default function CreatorProfilePage() {
                 onChange={handleChange}
               />
             </Field>
+            <ImageUploadField
+              label="Importer une photo de profil"
+              disabled={saving}
+              onUploaded={(profileImageUrl) =>
+                setForm((current) => ({ ...current, profileImageUrl }))
+              }
+            />
 
             <Field label="Media kit" hint="URL complète en http:// ou https://">
               <input
@@ -347,25 +411,76 @@ export default function CreatorProfilePage() {
           <ul className="ui-list">
             {profile.creatorSocials.map((item) => (
               <li className="ui-list-item" key={item.id}>
-                <span className="ui-list-item__main">
-                  <strong>{label(item.platform)}</strong>
-                  <span>{item.profileUrl}</span>
-                  {item.followerCount !== null &&
-                    item.followerCount !== undefined && (
-                      <small>
-                        {formatNumber(item.followerCount)} abonnés
-                      </small>
-                    )}
-                </span>
-                <span className="ui-list-item__side">
-                  <button
-                    type="button"
-                    className="ui-button ui-button--danger ui-button--small"
-                    onClick={() => handleDeleteSocial(item.id)}
-                  >
-                    <FiTrash2 aria-hidden="true" /> Supprimer
-                  </button>
-                </span>
+                {editingSocialId === item.id ? (
+                  <form className="ui-inline-form" onSubmit={handleUpdateSocial}>
+                    <Field label="Plateforme">
+                      <select
+                        value={socialEdit.platform}
+                        onChange={(event) => setSocialEdit((current) => ({ ...current, platform: event.target.value }))}
+                      >
+                        {SOCIAL_PLATFORMS.map((platform) => (
+                          <option value={platform} key={platform}>{label(platform)}</option>
+                        ))}
+                      </select>
+                    </Field>
+                    <Field label="URL du profil">
+                      <input
+                        type="url"
+                        value={socialEdit.profileUrl}
+                        onChange={(event) => setSocialEdit((current) => ({ ...current, profileUrl: event.target.value }))}
+                        required
+                      />
+                    </Field>
+                    <Field label="Abonnés">
+                      <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={socialEdit.followerCount}
+                        onChange={(event) => setSocialEdit((current) => ({ ...current, followerCount: event.target.value }))}
+                      />
+                    </Field>
+                    <span className="ui-list-item__side">
+                      <button className="ui-button ui-button--small" type="submit" disabled={socialBusy}>Enregistrer</button>
+                      <button className="ui-button ui-button--ghost ui-button--small" type="button" onClick={() => { setEditingSocialId(null); setSocialEdit(null); }} disabled={socialBusy}>
+                        <FiX aria-hidden="true" /> Annuler
+                      </button>
+                    </span>
+                  </form>
+                ) : (
+                  <>
+                    <span className="ui-list-item__main">
+                      <strong>{label(item.platform)}</strong>
+                      <span>{item.profileUrl}</span>
+                      {item.followerCount !== null && item.followerCount !== undefined && (
+                        <small>{formatNumber(item.followerCount)} abonnés</small>
+                      )}
+                    </span>
+                    <span className="ui-list-item__side">
+                      <button
+                        type="button"
+                        className="ui-button ui-button--ghost ui-button--small"
+                        onClick={() => {
+                          setEditingSocialId(item.id);
+                          setSocialEdit({
+                            platform: item.platform,
+                            profileUrl: item.profileUrl,
+                            followerCount: item.followerCount ?? "",
+                          });
+                        }}
+                      >
+                        <FiEdit2 aria-hidden="true" /> Modifier
+                      </button>
+                      <button
+                        type="button"
+                        className="ui-button ui-button--danger ui-button--small"
+                        onClick={() => handleDeleteSocial(item.id)}
+                      >
+                        <FiTrash2 aria-hidden="true" /> Supprimer
+                      </button>
+                    </span>
+                  </>
+                )}
               </li>
             ))}
           </ul>
@@ -440,24 +555,80 @@ export default function CreatorProfilePage() {
           <ul className="ui-list">
             {profile.portfolioItems.map((item) => (
               <li className="ui-list-item" key={item.id}>
-                <span className="ui-list-item__main">
-                  <strong>
-                    {item.title} <Badge value={item.type} />
-                  </strong>
-                  <span>
-                    {item.campaignName || "Réalisation personnelle"} · {item.url}
-                  </span>
-                  {item.description && <small>{item.description}</small>}
-                </span>
-                <span className="ui-list-item__side">
-                  <button
-                    type="button"
-                    className="ui-button ui-button--danger ui-button--small"
-                    onClick={() => handleDeletePortfolio(item.id)}
-                  >
-                    <FiTrash2 aria-hidden="true" /> Supprimer
-                  </button>
-                </span>
+                {editingPortfolioId === item.id ? (
+                  <form className="ui-form" onSubmit={handleUpdatePortfolio}>
+                    <div className="ui-form-grid">
+                      <Field label="Type">
+                        <select
+                          value={portfolioEdit.type}
+                          onChange={(event) => setPortfolioEdit((current) => ({ ...current, type: event.target.value }))}
+                        >
+                          <option value="LINK">Lien</option>
+                          <option value="IMAGE">Image</option>
+                          <option value="VIDEO">Vidéo</option>
+                        </select>
+                      </Field>
+                      <Field label="Titre">
+                        <input value={portfolioEdit.title} onChange={(event) => setPortfolioEdit((current) => ({ ...current, title: event.target.value }))} maxLength={150} required />
+                      </Field>
+                      <Field label="URL">
+                        <input type="url" value={portfolioEdit.url} onChange={(event) => setPortfolioEdit((current) => ({ ...current, url: event.target.value }))} required />
+                      </Field>
+                      {portfolioEdit.type === "IMAGE" && (
+                        <ImageUploadField
+                          label="Importer l’image de la réalisation"
+                          disabled={portfolioBusy}
+                          onUploaded={(url) => setPortfolioEdit((current) => ({ ...current, url }))}
+                        />
+                      )}
+                      <Field label="Campagne associée (facultatif)">
+                        <input value={portfolioEdit.campaignName} onChange={(event) => setPortfolioEdit((current) => ({ ...current, campaignName: event.target.value }))} maxLength={150} />
+                      </Field>
+                      <Field label="Description" wide>
+                        <textarea rows="3" value={portfolioEdit.description} onChange={(event) => setPortfolioEdit((current) => ({ ...current, description: event.target.value }))} maxLength={3000} />
+                      </Field>
+                    </div>
+                    <div className="ui-form__actions">
+                      <button className="ui-button ui-button--small" type="submit" disabled={portfolioBusy}>Enregistrer</button>
+                      <button className="ui-button ui-button--ghost ui-button--small" type="button" onClick={() => { setEditingPortfolioId(null); setPortfolioEdit(null); }} disabled={portfolioBusy}>
+                        <FiX aria-hidden="true" /> Annuler
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  <>
+                    <span className="ui-list-item__main">
+                      <strong>{item.title} <Badge value={item.type} /></strong>
+                      <span>{item.campaignName || "Réalisation personnelle"} · {item.url}</span>
+                      {item.description && <small>{item.description}</small>}
+                    </span>
+                    <span className="ui-list-item__side">
+                      <button
+                        type="button"
+                        className="ui-button ui-button--ghost ui-button--small"
+                        onClick={() => {
+                          setEditingPortfolioId(item.id);
+                          setPortfolioEdit({
+                            type: item.type,
+                            title: item.title,
+                            description: item.description || "",
+                            url: item.url,
+                            campaignName: item.campaignName || "",
+                          });
+                        }}
+                      >
+                        <FiEdit2 aria-hidden="true" /> Modifier
+                      </button>
+                      <button
+                        type="button"
+                        className="ui-button ui-button--danger ui-button--small"
+                        onClick={() => handleDeletePortfolio(item.id)}
+                      >
+                        <FiTrash2 aria-hidden="true" /> Supprimer
+                      </button>
+                    </span>
+                  </>
+                )}
               </li>
             ))}
           </ul>
@@ -492,7 +663,7 @@ export default function CreatorProfilePage() {
                     title: event.target.value,
                   }))
                 }
-                maxLength={200}
+                maxLength={150}
                 required
               />
             </Field>
@@ -510,6 +681,15 @@ export default function CreatorProfilePage() {
                 required
               />
             </Field>
+            {portfolio.type === "IMAGE" && (
+              <ImageUploadField
+                label="Importer l’image de la réalisation"
+                disabled={portfolioBusy}
+                onUploaded={(url) =>
+                  setPortfolio((current) => ({ ...current, url }))
+                }
+              />
+            )}
 
             <Field label="Campagne associée (facultatif)">
               <input
@@ -520,7 +700,7 @@ export default function CreatorProfilePage() {
                     campaignName: event.target.value,
                   }))
                 }
-                maxLength={200}
+                maxLength={150}
               />
             </Field>
 
@@ -534,7 +714,7 @@ export default function CreatorProfilePage() {
                     description: event.target.value,
                   }))
                 }
-                maxLength={2000}
+                maxLength={3000}
               />
             </Field>
           </div>

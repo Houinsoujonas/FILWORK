@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { FiUsers, FiBriefcase } from "react-icons/fi";
 
@@ -7,6 +8,25 @@ import collaborationVideo from "../assets/collaboration.mp4";
 
 function CTASection() {
   const shouldReduceMotion = useReducedMotion() ?? true;
+  const sectionRef = useRef(null);
+  const [videoReady, setVideoReady] = useState(false);
+
+  useEffect(() => {
+    const section = sectionRef.current;
+    if (!section || shouldReduceMotion) return undefined;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) return;
+        setVideoReady(true);
+        observer.disconnect();
+      },
+      { rootMargin: "240px 0px" },
+    );
+
+    observer.observe(section);
+    return () => observer.disconnect();
+  }, [shouldReduceMotion]);
 
   const contentVariants = {
     hidden: {
@@ -40,20 +60,20 @@ function CTASection() {
   };
 
   return (
-    <section className="cta-section">
-      {!shouldReduceMotion && (
-      <video
-        className="cta-section__video"
-        autoPlay
-        muted
-        loop
-        playsInline
-        preload="none"
-        aria-hidden="true"
-        tabIndex={-1}
-      >
-        <source src={collaborationVideo} type="video/mp4" />
-      </video>
+    <section className="cta-section" ref={sectionRef}>
+      {videoReady && (
+        <video
+          className="cta-section__video"
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="metadata"
+          aria-hidden="true"
+          tabIndex={-1}
+        >
+          <source src={collaborationVideo} type="video/mp4" />
+        </video>
       )}
 
       <div className="cta-section__overlay" />

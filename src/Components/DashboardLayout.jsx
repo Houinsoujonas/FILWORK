@@ -67,6 +67,7 @@ const navigation = {
       ["Vue d’ensemble", "/administration", FiGrid],
       ["Comptes", "/administration/comptes", FiUsers],
       ["Campagnes", "/administration/campagnes", FiBriefcase],
+      ["Candidatures", "/administration/candidatures", FiSend],
       ["Collaborations", "/administration/collaborations", FiLayers],
       ["Livrables", "/administration/livrables", FiFileText],
       ["Paiements", "/administration/paiements", FiCreditCard],
@@ -86,7 +87,7 @@ function currentSection(config, pathname) {
 
 export default function DashboardLayout({ role }) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
+  const [unreadCount, setUnreadCount] = useState(null);
   const [loggingOut, setLoggingOut] = useState(false);
   const { user, profile, logout } = useAuth();
   const { pathname } = useLocation();
@@ -111,7 +112,7 @@ export default function DashboardLayout({ role }) {
       })
       .catch(() => {
         if (active) {
-          setUnreadCount(0);
+          setUnreadCount(null);
         }
       });
 
@@ -142,7 +143,7 @@ export default function DashboardLayout({ role }) {
     navigate("/connexion", { replace: true });
   };
 
-  const badge = unreadCount > 9 ? "9+" : unreadCount;
+  const badge = unreadCount === null ? null : unreadCount > 9 ? "9+" : unreadCount;
 
   return (
     <div className="workspace">
@@ -185,7 +186,7 @@ export default function DashboardLayout({ role }) {
           <div className="workspace__identity">
             <span className="workspace__account-avatar" aria-hidden="true">
               {avatarUrl ? (
-                <img src={avatarUrl} alt="" />
+                <img src={avatarUrl} alt="" loading="lazy" decoding="async" />
               ) : (
                 initials(displayName || user?.email)
               )}

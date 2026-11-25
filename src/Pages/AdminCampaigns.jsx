@@ -90,7 +90,7 @@ export default function AdminCampaigns() {
 
       {loading ? (
         <Loading label="Chargement des campagnes…" />
-      ) : campaigns.length === 0 ? (
+      ) : error ? null : campaigns.length === 0 ? (
         <Panel title="Aucune campagne">
           <p className="ui-muted ui-small">
             Aucune campagne ne correspond à ces critères.

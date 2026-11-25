@@ -30,7 +30,7 @@ export default function CollaborationList() {
 
       {loading ? (
         <Loading />
-      ) : collaborations.length === 0 ? (
+      ) : error ? null : collaborations.length === 0 ? (
         <Panel title="Aucune collaboration">
           <p className="ui-muted ui-small">
             Les collaborations apparaissent dès qu’une candidature ou une

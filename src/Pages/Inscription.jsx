@@ -120,8 +120,6 @@ function Inscription() {
         </Link>
 
         <div className="register-heading">
-          <span className="register-eyebrow">Inscription gratuite</span>
-
           <h1>Créez votre compte</h1>
 
           <p>Quelques informations suffisent pour commencer à collaborer.</p>

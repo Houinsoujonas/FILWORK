@@ -15,8 +15,6 @@
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { after } = require("node:test");
-
 process.env.NODE_ENV = "test";
 process.env.TEST_DATABASE_URL =
   process.env.TEST_DATABASE_URL ||
@@ -47,7 +45,7 @@ function authHeaders(token) {
   return { ...headers, Authorization: `Bearer ${token}` };
 }
 
-test("Permissions et transitions de paiement", async (t) => {
+test("Permissions et transitions de paiement", async () => {
   const creatorEmail = process.env.TEST_CREATOR_EMAIL;
   const creatorPassword = process.env.TEST_CREATOR_PASSWORD;
   const companyEmail = process.env.TEST_COMPANY_EMAIL;

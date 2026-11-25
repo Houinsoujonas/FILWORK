@@ -1,6 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const { execFileSync } = require("node:child_process");
+const path = require("node:path");
 
 process.env.NODE_ENV = "test";
 process.env.TEST_DATABASE_URL =
@@ -10,7 +11,7 @@ process.env.PROD_DATABASE_URL =
   "postgresql://prod:prod@127.0.0.1:5432/should_not_leak";
 process.env.JWT_SECRET = process.env.JWT_SECRET || "x".repeat(64);
 
-const backendRoot = "C:\\Users\\SYKO Electronics\\FILWORK\\backend";
+const backendRoot = path.resolve(__dirname, "..");
 
 function runNode(script) {
   return execFileSync(process.execPath, ["-e", script], {

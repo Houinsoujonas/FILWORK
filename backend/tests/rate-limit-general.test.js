@@ -8,11 +8,10 @@ process.env.NODE_ENV = "test";
 process.env.JWT_SECRET = process.env.JWT_SECRET || "x".repeat(64);
 process.env.CORS_ORIGINS = "http://localhost:5173";
 
-const BACKEND = "C:\\Users\\SYKO Electronics\\FILWORK\\backend";
+const BACKEND = path.resolve(__dirname, "..");
 require(path.join(BACKEND, "node_modules", "dotenv")).config({
   path: path.join(BACKEND, ".env.test"),
 });
-process.env.TEST_DATABASE_URL = process.env.TEST_DATABASE_URL;
 // Neutralise le public read limiter pour tester uniquement le generalLimiter.
 process.env.RATE_LIMIT_PUBLIC_READ_PER_MINUTE = "10000";
 process.env.RATE_LIMIT_GENERAL_PER_MINUTE = "3";

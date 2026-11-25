@@ -91,7 +91,7 @@ export default function AdminPayments() {
 
       {loading ? (
         <Loading label="Chargement des paiements…" />
-      ) : payments.length === 0 ? (
+      ) : error ? null : payments.length === 0 ? (
         <Panel title="Aucun paiement">
           <p className="ui-muted ui-small">
             Aucun paiement ne correspond à ces critères.

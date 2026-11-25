@@ -8,6 +8,7 @@ import { api, errorMessage } from "../lib/api";
 const SECTIONS = [
   { key: "users", title: "Comptes", to: "/administration/comptes" },
   { key: "campaigns", title: "Campagnes", to: "/administration/campagnes" },
+  { key: "applications", title: "Candidatures", to: "/administration/candidatures" },
   {
     key: "collaborations",
     title: "Collaborations",

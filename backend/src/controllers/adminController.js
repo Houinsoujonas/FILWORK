@@ -20,7 +20,7 @@ async function countOtherActiveAdmins(tx, targetId) {
 
 /**
  * Tableau de bord administratif.
- * Seul un utilisateur ADMIN peut accÃ©der Ã  cette fonctionnalitÃ©.
+ * Seul un utilisateur ADMIN peut accÃ©der Ã  cette fonctionnalitÃ©.
  */
 async function getDashboardStats(req, res) {
   try {
@@ -506,6 +506,124 @@ async function getAdminCampaigns(req, res) {
     return res.status(500).json({
       success: false,
       message: "Impossible de rÃ©cupÃ©rer les campagnes.",
+    });
+  }
+}
+
+/**
+ * Consulter les candidatures de FILWORK depuis le back-office.
+ * La décision reste réservée à l'entreprise propriétaire de la campagne.
+ */
+async function getAdminApplications(req, res) {
+  try {
+    const page = Number(req.query.page ?? 1);
+    const limit = Number(req.query.limit ?? 20);
+
+    if (!Number.isInteger(page) || page < 1) {
+      return res.status(400).json({
+        success: false,
+        message: "Le numéro de page doit être un entier positif.",
+      });
+    }
+
+    if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
+      return res.status(400).json({
+        success: false,
+        message: "La limite doit être comprise entre 1 et 100.",
+      });
+    }
+
+    const allowedStatuses = ["PENDING", "ACCEPTED", "REJECTED", "WITHDRAWN"];
+    let status;
+
+    if (req.query.status !== undefined) {
+      if (typeof req.query.status !== "string") {
+        return res.status(400).json({
+          success: false,
+          message: "Le statut fourni est invalide.",
+        });
+      }
+
+      status = req.query.status.trim().toUpperCase();
+      if (!allowedStatuses.includes(status)) {
+        return res.status(400).json({
+          success: false,
+          message: "Le statut doit être PENDING, ACCEPTED, REJECTED ou WITHDRAWN.",
+        });
+      }
+    }
+
+    let search;
+    if (req.query.search !== undefined) {
+      if (typeof req.query.search !== "string") {
+        return res.status(400).json({
+          success: false,
+          message: "Le terme de recherche est invalide.",
+        });
+      }
+
+      search = req.query.search.trim();
+      if (search.length > 100) {
+        return res.status(400).json({
+          success: false,
+          message: "La recherche ne doit pas dépasser 100 caractères.",
+        });
+      }
+    }
+
+    const where = {};
+    if (status) where.status = status;
+    if (search) {
+      where.OR = [
+        { campaign: { title: { contains: search, mode: "insensitive" } } },
+        { creatorProfile: { displayName: { contains: search, mode: "insensitive" } } },
+        { campaign: { companyProfile: { companyName: { contains: search, mode: "insensitive" } } } },
+      ];
+    }
+
+    const [total, applications] = await Promise.all([
+      prisma.application.count({ where }),
+      prisma.application.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        skip: (page - 1) * limit,
+        take: limit,
+        select: {
+          id: true,
+          message: true,
+          status: true,
+          createdAt: true,
+          updatedAt: true,
+          creatorProfile: {
+            select: { id: true, displayName: true, profileImageUrl: true },
+          },
+          campaign: {
+            select: {
+              id: true,
+              title: true,
+              status: true,
+              companyProfile: {
+                select: { id: true, companyName: true, logoUrl: true },
+              },
+            },
+          },
+        },
+      }),
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      count: applications.length,
+      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+      applications,
+    });
+  } catch (error) {
+    if (sendPrismaError(res, error)) return;
+
+    console.error("Erreur lors de la récupération des candidatures administratives :", error);
+    return res.status(500).json({
+      success: false,
+      message: "Impossible de récupérer les candidatures.",
     });
   }
 }
@@ -1366,13 +1484,13 @@ async function updateAdminUser(req, res) {
     if (outcome.type === "duplicate-email") {
       return res.status(409).json({
         success: false,
-        message: "Cette adresse e-mail est dÃ©jÃ  utilisÃ©e.",
+        message: "Cette adresse e-mail est dÃ©jÃ  utilisÃ©e.",
       });
     }
 
     return res.status(200).json({
       success: true,
-      message: "Utilisateur mis Ã  jour avec succÃ¨s.",
+      message: "Utilisateur mis Ã  jour avec succÃ¨s.",
       user: outcome.user,
     });
   } catch (error) {
@@ -1380,11 +1498,11 @@ async function updateAdminUser(req, res) {
       return;
     }
 
-    console.error("Erreur lors de la mise Ã  jour de l'utilisateur :", error.message);
+    console.error("Erreur lors de la mise Ã  jour de l'utilisateur :", error.message);
 
     return res.status(500).json({
       success: false,
-      message: "Impossible de mettre Ã  jour l'utilisateur.",
+      message: "Impossible de mettre Ã  jour l'utilisateur.",
     });
   }
 }
@@ -1433,7 +1551,7 @@ async function deactivateUser(req, res) {
     if (!targetUser.isActive) {
       return res.status(409).json({
         success: false,
-        message: "Ce compte est dÃ©jÃ  dÃ©sactivÃ©.",
+        message: "Ce compte est dÃ©jÃ  dÃ©sactivÃ©.",
       });
     }
 
@@ -1527,7 +1645,7 @@ async function reactivateUser(req, res) {
     if (targetUser.isActive) {
       return res.status(409).json({
         success: false,
-        message: "Ce compte est dÃ©jÃ  actif.",
+        message: "Ce compte est dÃ©jÃ  actif.",
       });
     }
 
@@ -1579,6 +1697,7 @@ module.exports = {
   getDashboardStats,
   getAdminUsers,
   getAdminCampaigns,
+  getAdminApplications,
   getAdminCollaborations,
   getAdminDeliverables,
   getAdminPayments,

@@ -28,14 +28,11 @@ const AVAILABILITIES = [
 ];
 
 export default function AnnuaireCreateurs() {
-  const { user, loading: authLoading } = useAuth();
   const [query, setQuery] = useState("");
   const [search, setSearch] = useState("");
   const [platform, setPlatform] = useState("");
   const [availabilityStatus, setAvailabilityStatus] = useState("");
   const [page, setPage] = useState(1);
-
-  const isCompany = user?.role === "COMPANY";
 
   const { data, loading, error } = useApiQuery(
     () =>
@@ -54,7 +51,6 @@ export default function AnnuaireCreateurs() {
         })),
     [search, platform, availabilityStatus, page],
     EMPTY_CREATORS,
-    { enabled: isCompany },
   );
 
   const creators = data.creators;
@@ -77,155 +73,123 @@ export default function AnnuaireCreateurs() {
         </p>
       </header>
 
-      {authLoading ? (
-        <p className="public-search-status" role="status">
-          Vérification de votre session…
+      <form
+        className="listing-controls"
+        aria-label="Rechercher des créateurs"
+        onSubmit={handleSearch}
+      >
+        <label className="listing-search">
+          <FiSearch aria-hidden="true" />
+          <span className="sr-only">Rechercher un créateur</span>
+          <input
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Rechercher un créateur ou une spécialité"
+          />
+        </label>
+
+        <select
+          className="listing-select"
+          value={platform}
+          onChange={(event) => {
+            setPlatform(event.target.value);
+            setPage(1);
+          }}
+          aria-label="Filtrer par plateforme"
+        >
+          {PLATFORMS.map(([value, text]) => (
+            <option key={value || "all"} value={value}>
+              {text}
+            </option>
+          ))}
+        </select>
+
+        <select
+          className="listing-select"
+          value={availabilityStatus}
+          onChange={(event) => {
+            setAvailabilityStatus(event.target.value);
+            setPage(1);
+          }}
+          aria-label="Filtrer par disponibilité"
+        >
+          {AVAILABILITIES.map(([value, text]) => (
+            <option key={value || "all"} value={value}>
+              {text}
+            </option>
+          ))}
+        </select>
+
+        <button type="submit" className="filter-button">
+          Rechercher
+        </button>
+      </form>
+
+      {error && (
+        <p className="form-notice form-notice--error" role="alert">
+          {error}
         </p>
-      ) : !user ? (
+      )}
+
+      {loading ? (
+        <p className="public-search-status" role="status">
+          Chargement des profils…
+        </p>
+      ) : error ? null : creators.length === 0 ? (
         <EmptyState
-          title="Connexion requise"
-          description="L’annuaire des créateurs est réservé aux entreprises partenaires. Connectez-vous avec un compte entreprise pour consulter les profils."
-          action={
-            <Link
-              className="public-button"
-              to="/connexion"
-              state={{ from: "/annuaire-createurs" }}
-            >
-              Se connecter
-            </Link>
+          title={
+            search || platform || availabilityStatus
+              ? "Aucun résultat pour ces critères"
+              : "Les profils arriveront ici"
           }
-        />
-      ) : !isCompany ? (
-        <EmptyState
-          title="Accès réservé aux entreprises"
-          description="Seul un compte entreprise peut consulter l’annuaire et inviter des créateurs. Votre espace créateur reste accessible depuis votre tableau de bord."
-          action={
-            <Link className="public-button" to="/espace/createur">
-              Retour à mon espace
-            </Link>
+          description={
+            search || platform || availabilityStatus
+              ? "Essayez un autre terme ou retirez un filtre."
+              : "Les profils créateurs apparaîtront ici dès qu’ils seront disponibles."
           }
         />
       ) : (
-        <>
-          <form
-            className="listing-controls"
-            aria-label="Rechercher des créateurs"
-            onSubmit={handleSearch}
-          >
-            <label className="listing-search">
-              <FiSearch aria-hidden="true" />
-              <span className="sr-only">Rechercher un créateur</span>
-              <input
-                type="search"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Rechercher un créateur ou une spécialité"
-              />
-            </label>
+        <section className="public-results" aria-live="polite">
+          <p className="public-results__count">
+            {meta.total} profil{meta.total > 1 ? "s" : ""} disponible
+            {meta.total > 1 ? "s" : ""}
+          </p>
 
-            <select
-              className="listing-select"
-              value={platform}
-              onChange={(event) => {
-                setPlatform(event.target.value);
-                setPage(1);
-              }}
-              aria-label="Filtrer par plateforme"
-            >
-              {PLATFORMS.map(([value, text]) => (
-                <option key={value || "all"} value={value}>
-                  {text}
-                </option>
-              ))}
-            </select>
+          <div className="public-card-grid">
+            {creators.map((creator) => (
+              <CreatorCard key={creator.id} creator={creator} />
+            ))}
+          </div>
 
-            <select
-              className="listing-select"
-              value={availabilityStatus}
-              onChange={(event) => {
-                setAvailabilityStatus(event.target.value);
-                setPage(1);
-              }}
-              aria-label="Filtrer par disponibilité"
-            >
-              {AVAILABILITIES.map(([value, text]) => (
-                <option key={value || "all"} value={value}>
-                  {text}
-                </option>
-              ))}
-            </select>
-
-            <button type="submit" className="filter-button">
-              Rechercher
-            </button>
-          </form>
-
-          {error && (
-            <p className="form-notice form-notice--error" role="alert">
-              {error}
-            </p>
+          {meta.totalPages > 1 && (
+            <nav className="pagination" aria-label="Pagination des profils">
+              <button
+                type="button"
+                onClick={() =>
+                  setPage((current) => Math.max(1, current - 1))
+                }
+                disabled={page <= 1}
+              >
+                Précédent
+              </button>
+              <span>
+                Page {page} sur {meta.totalPages}
+              </span>
+              <button
+                type="button"
+                onClick={() =>
+                  setPage((current) =>
+                    Math.min(meta.totalPages, current + 1),
+                  )
+                }
+                disabled={page >= meta.totalPages}
+              >
+                Suivant
+              </button>
+            </nav>
           )}
-
-          {loading ? (
-            <p className="public-search-status" role="status">
-              Chargement des profils…
-            </p>
-          ) : error ? null : creators.length === 0 ? (
-            <EmptyState
-              title={
-                search || platform || availabilityStatus
-                  ? "Aucun résultat pour ces critères"
-                  : "Les profils arriveront ici"
-              }
-              description={
-                search || platform || availabilityStatus
-                  ? "Essayez un autre terme ou retirez un filtre."
-                  : "Les profils créateurs apparaîtront ici dès qu’ils seront disponibles."
-              }
-            />
-          ) : (
-            <section className="public-results" aria-live="polite">
-              <p className="public-results__count">
-                {meta.total} profil{meta.total > 1 ? "s" : ""} disponible
-                {meta.total > 1 ? "s" : ""}
-              </p>
-
-              <div className="public-card-grid">
-                {creators.map((creator) => (
-                  <CreatorCard key={creator.id} creator={creator} />
-                ))}
-              </div>
-
-              {meta.totalPages > 1 && (
-                <nav className="pagination" aria-label="Pagination des profils">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setPage((current) => Math.max(1, current - 1))
-                    }
-                    disabled={page <= 1}
-                  >
-                    Précédent
-                  </button>
-                  <span>
-                    Page {page} sur {meta.totalPages}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setPage((current) =>
-                        Math.min(meta.totalPages, current + 1),
-                      )
-                    }
-                    disabled={page >= meta.totalPages}
-                  >
-                    Suivant
-                  </button>
-                </nav>
-              )}
-            </section>
-          )}
-        </>
+        </section>
       )}
     </main>
   );

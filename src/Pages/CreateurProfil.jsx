@@ -16,7 +16,7 @@ import { useApiQuery } from "../lib/useApiQuery";
 
 export default function CreateurProfil() {
   const { creatorId } = useParams();
-  const { user, loading: authLoading } = useAuth();
+  const { user } = useAuth();
   const isCompany = user?.role === "COMPANY";
   const [form, setForm] = useState({
     campaignId: "",
@@ -29,19 +29,23 @@ export default function CreateurProfil() {
   const [submitting, setSubmitting] = useState(false);
 
   const { data, loading, error } = useApiQuery(
-    () =>
-      Promise.all([
-        api.get(`/creators/${creatorId}`),
-        api.get("/campaigns/my-campaigns"),
-      ]).then(([creatorData, campaignData]) => ({
-        creator: creatorData.creator,
-        campaigns: (campaignData.campaigns || []).filter(
-          (campaign) => campaign.status === "PUBLISHED",
-        ),
-      })),
-    [creatorId],
+    () => {
+      const creatorPromise = api.get(`/creators/${creatorId}`);
+      const campaignsPromise = isCompany
+        ? api.get("/campaigns/my-campaigns").catch(() => ({ campaigns: [] }))
+        : Promise.resolve({ campaigns: [] });
+
+      return Promise.all([creatorPromise, campaignsPromise]).then(
+        ([creatorData, campaignData]) => ({
+          creator: creatorData.creator,
+          campaigns: (campaignData.campaigns || []).filter(
+            (campaign) => campaign.status === "PUBLISHED",
+          ),
+        }),
+      );
+    },
+    [creatorId, isCompany],
     { creator: null, campaigns: [] },
-    { enabled: isCompany },
   );
 
   const creator = data.creator;
@@ -89,39 +93,6 @@ export default function CreateurProfil() {
       setSubmitting(false);
     }
   };
-
-  if (authLoading) {
-    return (
-      <main className="public-page detail-page">
-        <p className="public-search-status" role="status">
-          Vérification de votre session…
-        </p>
-      </main>
-    );
-  }
-
-  if (!user || !isCompany) {
-    return (
-      <main className="public-page detail-page">
-        <Link to="/annuaire-createurs" className="back-link">
-          <FiArrowLeft aria-hidden="true" /> Annuaire des créateurs
-        </Link>
-        <EmptyState
-          title="Profil réservé aux entreprises"
-          description="Connectez-vous avec un compte entreprise pour consulter le profil détaillé d’un créateur et l’inviter sur une campagne."
-          action={
-            <Link
-              className="public-button"
-              to={user ? "/espace/createur" : "/connexion"}
-              state={user ? undefined : { from: `/annuaire-createurs/${creatorId}` }}
-            >
-              {user ? "Retour à mon espace" : "Se connecter"}
-            </Link>
-          }
-        />
-      </main>
-    );
-  }
 
   if (loading) {
     return (
@@ -258,7 +229,18 @@ export default function CreateurProfil() {
         <aside className="public-panel">
           <h2>Inviter sur une campagne</h2>
 
-          {campaigns.length === 0 ? (
+          {!isCompany ? (
+            <p className="ui-small">
+              L’envoi d’invitations est réservé aux entreprises partenaires.{" "}
+              <Link
+                to={user ? "/espace/createur" : "/connexion"}
+                state={user ? undefined : { from: `/annuaire-createurs/${creatorId}` }}
+              >
+                {user ? "Accéder à votre espace" : "Connectez-vous avec un compte entreprise"}
+              </Link>{" "}
+              pour proposer un projet à ce créateur.
+            </p>
+          ) : campaigns.length === 0 ? (
             <p className="ui-small">
               Vous n’avez aucune campagne publiée.{" "}
               <Link to="/espace/entreprise/campagnes/nouvelle">

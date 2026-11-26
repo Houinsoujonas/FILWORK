@@ -1350,8 +1350,11 @@ async function closeCampaign(req, res) {
 
 
 /**
- * Supprimer un brouillon appartenant à l'entreprise connectée.
- * La suppression est interdite si la campagne possède des candidatures.
+ * Supprimer une campagne appartenant à l'entreprise connectée.
+ * La suppression physique est autorisée si la campagne n'a aucune candidature
+ * ni invitation active. Si des candidatures ou invitations existent, la suppression
+ * physique est bloquée et l'entreprise est invitée à clôturer la campagne
+ * pour préserver l'historique métier.
  */
 async function deleteCampaign(req, res) {
   try {
@@ -1374,19 +1377,35 @@ async function deleteCampaign(req, res) {
       });
     }
 
-    if (result.campaign.status !== "DRAFT") {
+    const campaignId = result.campaign.id;
+    const companyProfileId = result.campaign.companyProfileId;
+
+    // Vérifier si des candidatures ou invitations sont associées
+    const [applicationsCount, invitationsCount] = await Promise.all([
+      prisma.application.count({
+        where: { campaignId },
+      }),
+      prisma.invitation.count({
+        where: { campaignId },
+      }),
+    ]);
+
+    if (applicationsCount > 0 || invitationsCount > 0) {
       return res.status(409).json({
         success: false,
-        message: "Seuls les brouillons peuvent être supprimés.",
+        message:
+          "Cette campagne comporte des candidatures ou invitations enregistrées. Clôturez-la pour la retirer du site public tout en préservant l'historique.",
       });
     }
 
     const deletion = await prisma.campaign.deleteMany({
       where: {
-        id: result.campaign.id,
-        companyProfileId: result.campaign.companyProfileId,
-        status: "DRAFT",
+        id: campaignId,
+        companyProfileId,
         applications: {
+          none: {},
+        },
+        invitations: {
           none: {},
         },
       },
@@ -1396,13 +1415,13 @@ async function deleteCampaign(req, res) {
       return res.status(409).json({
         success: false,
         message:
-          "La campagne ne peut pas être supprimée. Vérifiez son statut et ses candidatures.",
+          "La campagne ne peut pas être supprimée. Vérifiez son statut et ses relations.",
       });
     }
 
     return res.status(200).json({
       success: true,
-      message: "Brouillon supprimé avec succès.",
+      message: "Campagne supprimée avec succès.",
     });
   } catch (error) {
     if (sendPrismaError(res, error)) {

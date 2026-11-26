@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   FiEdit,
   FiMail,
   FiPause,
   FiPlay,
   FiSend,
+  FiTrash2,
   FiUsers,
   FiX,
 } from "react-icons/fi";
@@ -61,6 +62,7 @@ async function fetchCampaignBundle(campaignId) {
 
 export default function CompanyCampaignDetail() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [campaign, setCampaign] = useState(null);
   const [applications, setApplications] = useState([]);
   const [invitations, setInvitations] = useState([]);
@@ -197,6 +199,33 @@ export default function CompanyCampaignDetail() {
       );
       notify("success", data.message || "Invitation retirée.");
       await load();
+    } catch (requestError) {
+      notify("error", errorMessage(requestError));
+    } finally {
+      setBusy("");
+    }
+  };
+
+  const remove = async () => {
+    if (!campaign) {
+      return;
+    }
+
+    const confirmationText =
+      campaign.status === "DRAFT"
+        ? `Supprimer définitivement le brouillon « ${campaign.title} » ?`
+        : `Supprimer définitivement la campagne « ${campaign.title} » ? Elle ne sera plus accessible publiquement.`;
+
+    if (!window.confirm(confirmationText)) {
+      return;
+    }
+
+    setBusy("delete");
+    setFeedback("");
+
+    try {
+      await api.delete(`/campaigns/${campaign.id}`);
+      navigate("/espace/entreprise/campagnes");
     } catch (requestError) {
       notify("error", errorMessage(requestError));
     } finally {
@@ -392,6 +421,16 @@ export default function CompanyCampaignDetail() {
               <FiX aria-hidden="true" /> Clôturer
             </button>
           )}
+
+          <button
+            type="button"
+            className="ui-button ui-button--danger ui-button--ghost"
+            onClick={remove}
+            disabled={busy === "delete"}
+            style={{ marginTop: 10 }}
+          >
+            <FiTrash2 aria-hidden="true" /> Supprimer la campagne
+          </button>
 
           <hr className="ui-divider" />
           <p className="ui-small ui-muted">

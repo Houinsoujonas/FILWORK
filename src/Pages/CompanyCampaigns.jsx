@@ -74,11 +74,12 @@ export default function CompanyCampaigns() {
   };
 
   const remove = async (campaign) => {
-    if (
-      !window.confirm(
-        `Supprimer définitivement le brouillon « ${campaign.title} » ?`,
-      )
-    ) {
+    const confirmationText =
+      campaign.status === "DRAFT"
+        ? `Supprimer définitivement le brouillon « ${campaign.title} » ?`
+        : `Supprimer définitivement la campagne « ${campaign.title} » ? Elle ne sera plus accessible publiquement.`;
+
+    if (!window.confirm(confirmationText)) {
       return;
     }
 
@@ -88,7 +89,7 @@ export default function CompanyCampaigns() {
 
     try {
       const data = await api.delete(`/campaigns/${campaign.id}`);
-      setSuccess(data.message || "Campagne supprimée.");
+      setSuccess(data.message || "Campagne supprimée avec succès.");
       await load();
     } catch (requestError) {
       setError(errorMessage(requestError));
@@ -221,16 +222,14 @@ export default function CompanyCampaigns() {
                   </button>
                 )}
 
-                {campaign.status === "DRAFT" && (
-                  <button
-                    type="button"
-                    className="ui-button ui-button--danger ui-button--small"
-                    onClick={() => remove(campaign)}
-                    disabled={busy === `${campaign.id}-delete`}
-                  >
-                    <FiTrash2 aria-hidden="true" /> Supprimer
-                  </button>
-                )}
+                <button
+                  type="button"
+                  className="ui-button ui-button--danger ui-button--small"
+                  onClick={() => remove(campaign)}
+                  disabled={busy === `${campaign.id}-delete`}
+                >
+                  <FiTrash2 aria-hidden="true" /> Supprimer
+                </button>
               </div>
             </article>
           ))}

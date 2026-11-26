@@ -94,20 +94,11 @@ function readInteger(value, field, defaultValue, maxValue) {
 }
 
 /**
- * Recherche des créateurs pour les entreprises connectées.
+ * Recherche des créateurs pour l'annuaire public et les entreprises.
  *
  * GET /api/creators
  */
 async function getCreatorDirectory(req, res) {
-  // Le répertoire est réservé aux entreprises.
-  if (req.user.role !== "COMPANY") {
-    return res.status(403).json({
-      success: false,
-      message:
-        "Seules les entreprises peuvent consulter le répertoire des créateurs.",
-    });
-  }
-
   try {
     const query = req.query || {};
 
@@ -449,18 +440,9 @@ async function getCreatorDirectory(req, res) {
  *
  * GET /api/creators/:id
  *
- * Même périmètre que l'annuaire : réservé aux entreprises
- * authentifiées.
+ * Accessible publiquement pour les créateurs éligibles.
  */
 async function getCreatorById(req, res) {
-  if (req.user.role !== "COMPANY") {
-    return res.status(403).json({
-      success: false,
-      message:
-        "Seules les entreprises peuvent consulter le répertoire des créateurs.",
-    });
-  }
-
   try {
     const creatorId =
       typeof req.params.id === "string" ? req.params.id.trim() : "";

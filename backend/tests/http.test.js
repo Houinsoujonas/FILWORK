@@ -616,6 +616,17 @@ test("un profil créateur incomplet ou de démonstration n'est pas découvrable"
     false,
   );
 
+  // Profil complet mais compte désactivé (isActive = false) : non découvrable.
+  assert.equal(
+    isCreatorProfileVisible({
+      displayName: "Créateur Désactivé",
+      bio: "Bio valide",
+      niche: "Tech",
+      user: { role: "CREATOR", email: "awa.kone@filwork.local", isActive: false },
+    }),
+    false,
+  );
+
   // Profil complet mais sur un domaine de documentation : non découvrable.
   assert.equal(
     isCreatorProfileVisible({
@@ -684,6 +695,15 @@ test("un profil entreprise incomplet ou de démonstration n'est pas publiable", 
 
   assert.equal(
     isCompanyProfilePublic({
+      companyName: "Entreprise Inactive",
+      description: "Description valide.",
+      user: { role: "COMPANY", email: "contact@entreprise.com", isActive: false },
+    }),
+    false,
+  );
+
+  assert.equal(
+    isCompanyProfilePublic({
       companyName: "Entreprise démo",
       description: "Description.",
       user: { role: "COMPANY", email: "contact@example.net" },
@@ -727,10 +747,11 @@ test("seules les campagnes publiées d'entreprises complètes sont publiques", (
     false,
   );
 
-  // Les conditions Prisma ne contiennent aucun filtre sur le nom.
+  // Les conditions Prisma ne contiennent aucun filtre sur le nom et exigent un compte actif.
   const serialized = JSON.stringify(CREATOR_DISCOVERY_CONDITIONS);
 
   assert.equal(serialized.includes("displayName\":{\"contains"), false);
+  assert.equal(serialized.includes('"isActive":true'), true);
   assert.equal(
     JSON.stringify(PUBLIC_CAMPAIGN_CONDITIONS).includes('"status":"PUBLISHED"'),
     true,

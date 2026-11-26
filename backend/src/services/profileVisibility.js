@@ -81,6 +81,7 @@ const CREATOR_DISCOVERY_CONDITIONS = Object.freeze([
     user: {
       is: {
         role: "CREATOR",
+        isActive: true,
         NOT: RESERVED_EMAIL_CONDITIONS,
       },
     },
@@ -95,7 +96,7 @@ const CREATOR_DISCOVERY_CONDITIONS = Object.freeze([
 /**
  * Conditions Prisma d'un profil entreprise publiable :
  *   - nom et description renseignés ;
- *   - e-mail hors domaines de documentation.
+ *   - compte actif et e-mail hors domaines de documentation.
  */
 const COMPANY_PUBLIC_CONDITIONS = Object.freeze([
   { companyName: { not: "" } },
@@ -104,6 +105,7 @@ const COMPANY_PUBLIC_CONDITIONS = Object.freeze([
   {
     user: {
       is: {
+        isActive: true,
         NOT: RESERVED_EMAIL_CONDITIONS,
       },
     },
@@ -143,6 +145,10 @@ function isCreatorProfileVisible(profile) {
       return false;
     }
 
+    if (user.isActive === false) {
+      return false;
+    }
+
     if (isReservedDocumentationEmail(user.email)) {
       return false;
     }
@@ -162,8 +168,14 @@ function isCompanyProfilePublic(profile) {
 
   const user = profile.user;
 
-  if (user && typeof user === "object" && isReservedDocumentationEmail(user.email)) {
-    return false;
+  if (user && typeof user === "object") {
+    if (user.isActive === false) {
+      return false;
+    }
+
+    if (isReservedDocumentationEmail(user.email)) {
+      return false;
+    }
   }
 
   return hasText(profile.companyName) && hasText(profile.description);
